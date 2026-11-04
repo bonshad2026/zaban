@@ -10,14 +10,6 @@
   <style>
     .landing { min-height: 100vh; background: #0b0b0e; color: #f4efe6; }
     .wrap-l { max-width: 1200px; margin: 0 auto; padding: 0 40px; }
-    .nav { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 28px 0; flex-wrap: wrap; }
-    .brand-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); margin-left: 10px; }
-    .nav-links { display: flex; gap: 28px; font-size: 15px; color: var(--muted); flex-wrap: wrap; }
-    .nav-links a:hover { color: var(--text); }
-    .nav-cta { display: flex; gap: 12px; align-items: center; }
-    .pill { padding: 12px 20px; border: 1px solid var(--border); border-radius: 999px; font-size: 15px; color: var(--text); }
-    .pill.gold { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
-    .pill:hover { border-color: var(--accent); }
     .hero-l { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: 64px; align-items: center; padding: 72px 0 96px; }
     .eyebrow { font-family: "Cormorant Garamond", serif; font-style: italic; color: var(--accent); font-size: 18px; letter-spacing: 1px; }
     .hero-l h1 { font-family: "Cormorant Garamond", "Vazirmatn", serif; font-weight: 500; font-size: 72px; line-height: 1.05; margin: 20px 0 28px; }
@@ -46,8 +38,6 @@
     .band { background: var(--card); border: 1px solid var(--border); border-radius: 28px; padding: 56px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 40px; align-items: center; margin-bottom: 96px; }
     .band h2 { font-family: "Cormorant Garamond", "Vazirmatn", serif; font-weight: 500; font-size: 44px; margin: 0 0 14px; }
     .band p { margin: 0; font-size: 17px; line-height: 1.9; color: var(--muted); }
-    .foot { border-top: 1px solid var(--border); padding: 32px 0 48px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 14px; color: #8c8794; }
-    .foot a:hover { color: var(--text); }
     @media (max-width: 820px) {
       .wrap-l { padding: 0 16px; }
       .hero-l { grid-template-columns: 1fr; gap: 40px; padding: 40px 0 64px; }
@@ -59,23 +49,10 @@
     }
   </style>
 </head>
-<body>
+<body data-bilingual>
+<!--site-header-->
 <div class="landing">
   <div class="wrap-l">
-    <header class="nav">
-      <div><span class="brand-dot"></span><span style="font-size:22px;font-weight:800">زبان</span></div>
-      <nav class="nav-links">
-        <a href="#principles">چرا زبان</a>
-        <a href="/demo">دمو</a>
-        <a href="/consult">مشاوره</a>
-      </nav>
-      <div class="nav-cta">
-        <button id="langToggle" class="lang-toggle" type="button">English</button>
-        <a class="pill" href="/parent">ورود</a>
-        <a class="pill gold" href="/signup">ثبت‌نام</a>
-      </div>
-    </header>
-
     <section class="hero-l">
       <div>
         <span class="eyebrow" data-fa="یادگیری یک‌به‌یک" data-en="One-to-one learning">یادگیری یک‌به‌یک</span>
@@ -135,13 +112,9 @@
       </div>
       <a class="pill gold" href="/consult" style="white-space:nowrap" data-fa="درخواست مشاوره" data-en="Request a call">درخواست مشاوره</a>
     </section>
-
-    <footer class="foot">
-      <span>© زبان — یادگیری انگلیسی با Niko</span>
-      <span style="display:flex;gap:24px"><a href="/demo" data-fa="دمو" data-en="Demo">دمو</a><a href="/consult" data-fa="مشاوره" data-en="Consult">مشاوره</a><a href="/admin" data-fa="مدیریت" data-en="Admin">مدیریت</a></span>
-    </footer>
   </div>
 </div>
+<!--site-footer-->
 
   <script src="/static/js/common.js"></script>
   <script>document.addEventListener("DOMContentLoaded", () => Z.initLang());</script>

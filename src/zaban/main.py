@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from zaban import models  # noqa: F401  (registers tables before create_all)
@@ -19,6 +19,7 @@ from zaban.services.sms import dev_outbox
 from zaban.web import router as web_router
 
 STATIC_DIR = Path(__file__).parent / "static"
+PARTIALS_DIR = STATIC_DIR / "partials"
 
 
 @asynccontextmanager
@@ -49,47 +50,58 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+def _page(name: str, current: str = "") -> HTMLResponse:
+    # Every page gets the same header and footer, so moving between pages keeps the same frame.
+    # The link to the current page is marked, so the menu shows where the visitor is.
+    header = (PARTIALS_DIR / "header.html").read_text(encoding="utf-8")
+    footer = (PARTIALS_DIR / "footer.html").read_text(encoding="utf-8")
+    if current:
+        header = header.replace(f'href="{current}"', f'href="{current}" aria-current="page"')
+    html = (STATIC_DIR / name).read_text(encoding="utf-8")
+    return HTMLResponse(html.replace("<!--site-header-->", header).replace("<!--site-footer-->", footer))
+
+
 @app.get("/", include_in_schema=False)
-def landing() -> FileResponse:
-    return FileResponse(STATIC_DIR / "landing.html")
+def landing() -> HTMLResponse:
+    return _page("landing.html", "/")
 
 
 @app.get("/student", include_in_schema=False)
-def student_page() -> FileResponse:
-    return FileResponse(STATIC_DIR / "student.html")
+def student_page() -> HTMLResponse:
+    return _page("student.html", "/student")
 
 
 @app.get("/parent", include_in_schema=False)
-def parent_page() -> FileResponse:
-    return FileResponse(STATIC_DIR / "parent.html")
+def parent_page() -> HTMLResponse:
+    return _page("parent.html", "/parent")
 
 
 @app.get("/signup", include_in_schema=False)
-def signup_page() -> FileResponse:
-    return FileResponse(STATIC_DIR / "signup.html")
+def signup_page() -> HTMLResponse:
+    return _page("signup.html", "/signup")
 
 
 @app.get("/demo", include_in_schema=False)
-def demo_page() -> FileResponse:
-    return FileResponse(STATIC_DIR / "demo.html")
+def demo_page() -> HTMLResponse:
+    return _page("demo.html", "/demo")
 
 
 @app.get("/consult", include_in_schema=False)
-def consult_page() -> FileResponse:
-    return FileResponse(STATIC_DIR / "consult.html")
+def consult_page() -> HTMLResponse:
+    return _page("consult.html", "/consult")
 
 
 @app.get("/admin", include_in_schema=False)
-def admin_page() -> FileResponse:
-    return FileResponse(STATIC_DIR / "admin.html")
+def admin_page() -> HTMLResponse:
+    return _page("admin.html", "/admin")
 
 
 # Development only: a stand-in bank page and a view of the SMS codes that would have been sent.
 @app.get("/dev/pay/{payment_id}", include_in_schema=False)
-def dev_pay_page(payment_id: str) -> FileResponse:
+def dev_pay_page(payment_id: str) -> HTMLResponse:
     if settings.environment != "development":
         raise HTTPException(status_code=404)
-    return FileResponse(STATIC_DIR / "dev-pay.html")
+    return _page("dev-pay.html")
 
 
 @app.get("/dev/sms-outbox", include_in_schema=False)
