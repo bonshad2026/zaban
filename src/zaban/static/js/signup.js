@@ -5,8 +5,9 @@
     Z.showError($("signupError"), "");
     const phone = $("signupPhone").value.trim();
     try {
-      await Z.request("POST", "/v1/web/user/otp/request", { phone, purpose: "signup" });
+      const sent = await Z.request("POST", "/v1/web/user/otp/request", { phone, purpose: "signup" });
       Z.show($("signupStep"), true);
+      Z.showDevCode($("signupDevHint"), $("signupCode"), sent.dev_code);
       $("signupCode").focus();
     } catch (err) {
       Z.showError($("signupError"), err.message);

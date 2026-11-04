@@ -303,8 +303,9 @@
   async function sendResetCode() {
     Z.showError($("resetError"), "");
     try {
-      await Z.request("POST", "/v1/web/user/otp/request", { phone: $("resetPhone").value.trim(), purpose: "reset" });
+      const sent = await Z.request("POST", "/v1/web/user/otp/request", { phone: $("resetPhone").value.trim(), purpose: "reset" });
       Z.show($("resetStep"), true);
+      Z.showDevCode($("resetDevHint"), $("resetCode"), sent.dev_code);
       $("resetCode").focus();
     } catch (err) {
       Z.showError($("resetError"), err.message);

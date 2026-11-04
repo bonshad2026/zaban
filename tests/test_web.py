@@ -179,6 +179,18 @@ def test_forgotten_password_is_reset_with_a_code_and_older_sign_ins_end(client):
     assert TestClient(app).post("/v1/web/user/login", json={"phone": phone, "password": new_password}).status_code == 200
 
 
+def test_development_returns_the_code_so_sign_up_can_be_tried_without_sms(client):
+    phone = "09121230005"
+    _clear_codes(phone)
+    sent = client.post("/v1/web/user/otp/request", json={"phone": phone, "purpose": "signup"}).json()
+    assert sent["dev_code"] == _sms_code(phone)
+    created = client.post(
+        "/v1/web/user/signup",
+        json={"phone": phone, "code": sent["dev_code"], "full_name": "No SMS", "password": ADULT_PASSWORD, "age_confirmed": True},
+    )
+    assert created.status_code == 201
+
+
 def test_reset_for_an_unknown_number_gives_the_same_answer(client):
     # The form must not reveal which numbers have accounts.
     response = client.post("/v1/web/user/otp/request", json={"phone": "09129998877", "purpose": "reset"})

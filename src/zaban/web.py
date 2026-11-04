@@ -9,7 +9,7 @@ from zaban.db import get_db
 from zaban.models import Consent, Guardian, Student, Tenant, utcnow
 from zaban.schemas import OtpRequest, PasswordReset, SignUpCreate, StudentLogin, UserLogin
 from zaban.security import WEB_COOKIE_NAMES, issue_web_session, read_web_session, session_is_current
-from zaban.services.otp import check_code, normalize_phone, request_code
+from zaban.services.otp import check_code, development_code, normalize_phone, request_code
 from zaban.services.passwords import hash_password, verify_password
 from zaban.services.payments import has_active_plan, require_plan
 
@@ -72,8 +72,8 @@ def request_otp(body: OtpRequest, request: Request, db: DBSession = Depends(get_
         # Same answer as a real reset, so the form does not reveal which numbers have accounts.
         return {"ok": True, "resend_in_seconds": 60}
     ip = request.client.host if request.client else None
-    request_code(db, phone, ip)
-    return {"ok": True, "resend_in_seconds": 60}
+    code = request_code(db, phone, ip)
+    return {"ok": True, "resend_in_seconds": 60, "dev_code": development_code(code)}
 
 
 @router.post("/user/signup", status_code=201)

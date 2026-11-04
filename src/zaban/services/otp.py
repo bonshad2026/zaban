@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session as DBSession
 
 from zaban.config import settings
 from zaban.models import OtpCode, utcnow
-from zaban.services.sms import get_sms_sender
+from zaban.services.sms import DevSms, get_sms_sender
 
 RESEND_SECONDS = 60
 MAX_CODES_PER_PHONE_PER_HOUR = 5
@@ -38,7 +38,7 @@ def _hash_code(phone: str, code: str) -> str:
     return hmac.new(settings.secret_key.encode(), f"{phone}:{code}".encode(), hashlib.sha256).hexdigest()
 
 
-def request_code(db: DBSession, phone: str, ip: str | None) -> None:
+def request_code(db: DBSession, phone: str, ip: str | None) -> str:
     now = utcnow()
     last = db.query(OtpCode).filter(OtpCode.phone == phone).order_by(OtpCode.created_at.desc()).first()
     if last and (now - last.created_at).total_seconds() < RESEND_SECONDS:
@@ -67,6 +67,14 @@ def request_code(db: DBSession, phone: str, ip: str | None) -> None:
         get_sms_sender().send_otp(phone, code)
     except RuntimeError:
         raise HTTPException(status_code=502, detail="The SMS could not be sent. Please try again")
+    return code
+
+
+def development_code(code: str) -> str | None:
+    # Development without an SMS provider: the code is shown on screen so sign-up can be tried. Never in production.
+    if settings.environment == "development" and isinstance(get_sms_sender(), DevSms):
+        return code
+    return None
 
 
 def check_code(db: DBSession, phone: str, code: str) -> bool:

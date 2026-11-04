@@ -101,6 +101,17 @@ const Z = (() => {
     node.hidden = !on;
   }
 
+  // Development only: when no SMS provider is set, the server returns the code and it is filled in here.
+  function showDevCode(hint, input, code) {
+    if (!code) {
+      hint.hidden = true;
+      return;
+    }
+    input.value = code;
+    hint.textContent = `حالت آزمایشی: پیامک ارسال نشد. کد ${code} خودکار وارد شد.`;
+    hint.hidden = false;
+  }
+
   function showError(node, message) {
     node.textContent = message || "";
     node.hidden = !message;
@@ -156,7 +167,7 @@ const Z = (() => {
   }
 
   return {
-    request, friendly, pageRole, parseUtc, fmtDate, fmtDateTime, el, show, showError, initLang,
+    request, friendly, pageRole, parseUtc, fmtDate, fmtDateTime, el, show, showError, showDevCode, initLang,
     STATUS_FA, SUGGESTION_FA, LEVEL_FA, SESSION_FA,
   };
 })();
