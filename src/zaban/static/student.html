@@ -27,10 +27,6 @@
 
   <!-- App view -->
   <div id="appView" hidden>
-    <header class="topbar app-top">
-      <div class="who" id="who"></div>
-      <a class="pill" id="backToParent" href="/parent" hidden>برگشت به پنل والد</a>
-    </header>
 
     <nav class="tabs">
       <button class="tab is-active" type="button" data-tab="lesson">جلسه</button>
@@ -43,6 +39,14 @@
           <h2>شروع یک جلسه</h2>
           <p class="muted">Niko، معلم انگلیسی‌ات، منتظر توست. مدت جلسه را انتخاب کن و شروع کن.</p>
           <p class="notice" id="levelNotice" hidden></p>
+          <div id="levelTestBox" hidden>
+            <p><button id="levelTestStart" type="button" class="ghost">تعیین سطح با ۶ سؤال کوتاه</button></p>
+            <form id="levelTestForm" hidden>
+              <div id="levelQuestions"></div>
+              <p><button type="submit">ثبت پاسخ‌ها</button></p>
+            </form>
+            <p class="error" id="levelTestError" hidden></p>
+          </div>
           <label for="duration">مدت جلسه</label>
           <select id="duration">
             <option value="5">۵ دقیقه</option>

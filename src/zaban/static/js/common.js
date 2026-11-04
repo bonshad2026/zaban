@@ -221,10 +221,12 @@ const Z = (() => {
     const box = document.getElementById("siteActions");
     if (!box) return;
     const signedIn = [];
+    let greeting = "";
     for (const role of ["parent", "student"]) {
       try {
-        await request("GET", `/v1/web/me?role=${role}`);
+        const me = await request("GET", `/v1/web/me?role=${role}`);
         signedIn.push(role);
+        greeting = greeting || me.name;
       } catch (_) { /* not signed in to this area */ }
     }
     if (!signedIn.length) return;
@@ -240,6 +242,7 @@ const Z = (() => {
     const toggle = document.getElementById("langToggle");
     box.replaceChildren();
     if (toggle) box.appendChild(toggle);
+    box.appendChild(el("span", "site-greeting", `${english ? "Hi" : "سلام"} ${greeting}`));
     if (signedIn.includes("parent")) box.appendChild(labelled("a", "pill", "/parent", "پنل والد", "Parent area"));
     if (signedIn.includes("student")) box.appendChild(labelled("a", "pill", "/student", "یادگیری من", "My learning"));
     const logout = labelled("button", "ghost", null, "خروج", "Sign out");

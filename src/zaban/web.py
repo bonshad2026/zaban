@@ -7,9 +7,10 @@ from sqlalchemy.orm import Session as DBSession
 from zaban.config import settings
 from zaban.db import get_db
 from zaban.models import Consent, Guardian, Student, Tenant, utcnow
-from zaban.schemas import OtpRequest, PasswordReset, SignUpCreate, StudentLogin, UserLogin
+from zaban.schemas import LevelTestAnswers, OtpRequest, PasswordReset, SignUpCreate, StudentLogin, UserLogin
 from zaban.security import WEB_COOKIE_NAMES, issue_web_session, read_web_session, session_is_current
 from zaban.services.learner import set_learner_profile
+from zaban.services.placement import level_for_score, public_questions, score_answers
 from zaban.services.otp import check_code, development_code, normalize_phone, request_code
 from zaban.services.passwords import hash_password, verify_password
 from zaban.services.payments import has_active_plan, require_plan
@@ -236,6 +237,36 @@ def logout_everywhere(
 def logout(response: Response, role: Role = "student") -> dict:
     response.delete_cookie(WEB_COOKIE_NAMES[role], path="/")
     return {"ok": True}
+
+
+def _student_from_cookie(db: DBSession, token: str | None) -> Student:
+    payload = read_web_session(token) if token else None
+    student = db.get(Student, payload["sid"]) if payload and payload["role"] == "student" else None
+    if not session_is_current(payload or {}, student):
+        raise HTTPException(status_code=401, detail="Please sign in")
+    return student
+
+
+# The learner's own short level check. It works only while the level is not set yet.
+@router.get("/student/level-test")
+def level_test_questions(zaban_student: str | None = Cookie(default=None), db: DBSession = Depends(get_db)) -> list[dict]:
+    _student_from_cookie(db, zaban_student)
+    return public_questions()
+
+
+@router.post("/student/level-test")
+def submit_level_test(
+    body: LevelTestAnswers,
+    zaban_student: str | None = Cookie(default=None),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    student = _student_from_cookie(db, zaban_student)
+    if student.cefr_level:
+        raise HTTPException(status_code=409, detail="Level is already set")
+    score = score_answers(body.answers)
+    student.cefr_level = level_for_score(score)
+    db.commit()
+    return {"score": score, "total": len(body.answers), "level": student.cefr_level}
 
 
 @router.get("/me")

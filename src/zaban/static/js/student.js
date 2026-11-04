@@ -15,9 +15,7 @@
   }
 
   async function enterApp() {
-    $("who").textContent = `سلام ${me.name}`;
     showView("app");
-    showBackToParent();
     showLevel();
     selectTab("lesson");
     const { session } = await Z.request("GET", `/v1/students/${me.id}/sessions/active`);
@@ -152,27 +150,69 @@
   }
 
 
-  // The learner sees their level before a lesson. Without one, they are told who sets it.
+  // The learner sees their level before a lesson. Without one, they can take a short check or ask a parent.
   async function showLevel() {
     try {
       const student = await Z.request("GET", `/v1/students/${me.id}`);
       const notice = $("levelNotice");
-      notice.textContent = student.cefr_level
-        ? `سطح شما: ${student.cefr_level} (${Z.LEVEL_FA[student.cefr_level]})`
-        : "سطح شما هنوز تعیین نشده است. از والدتان بخواهید سطح شما را انتخاب کنند. تا آن زمان Niko از سطح مقدماتی شروع می‌کند.";
+      if (student.cefr_level) {
+        notice.textContent = `سطح شما: ${student.cefr_level} (${Z.LEVEL_FA[student.cefr_level]})`;
+        Z.show($("levelTestBox"), false);
+      } else {
+        notice.textContent = "سطح شما هنوز تعیین نشده است. با ۶ سؤال کوتاه سطحتان را پیدا کنید، یا والدتان می‌توانند آن را انتخاب کنند. تا آن زمان Niko از سطح مقدماتی شروع می‌کند.";
+        Z.show($("levelTestBox"), true);
+      }
       Z.show(notice, true);
     } catch (_) {
       Z.show($("levelNotice"), false);
     }
   }
 
-  // A parent who started learning for themself can go back to the parent area without signing in again.
-  async function showBackToParent() {
+  async function startLevelTest() {
+    Z.showError($("levelTestError"), "");
     try {
-      await Z.request("GET", "/v1/web/me?role=parent");
-      Z.show($("backToParent"), true);
-    } catch (_) {
-      Z.show($("backToParent"), false);
+      const questions = await Z.request("GET", "/v1/web/student/level-test");
+      const box = $("levelQuestions");
+      box.replaceChildren();
+      questions.forEach((question, i) => {
+        const fieldset = document.createElement("fieldset");
+        fieldset.appendChild(Z.el("legend", null, `${i + 1}. ${question.text}`));
+        question.options.forEach((option, j) => {
+          const label = Z.el("label", "inline");
+          const input = document.createElement("input");
+          input.type = "radio";
+          input.name = `q${i}`;
+          input.value = String(j);
+          input.required = true;
+          label.append(input, document.createTextNode(` ${option}`));
+          fieldset.appendChild(label);
+        });
+        box.appendChild(fieldset);
+      });
+      Z.show($("levelTestStart"), false);
+      Z.show($("levelTestForm"), true);
+    } catch (err) {
+      Z.showError($("levelTestError"), err.message);
+    }
+  }
+
+  async function submitLevelTest(event) {
+    event.preventDefault();
+    const form = event.target;
+    Z.showError($("levelTestError"), "");
+    const count = $("levelQuestions").querySelectorAll("fieldset").length;
+    const answers = [];
+    for (let i = 0; i < count; i++) {
+      answers.push(Number(form.querySelector(`input[name="q${i}"]:checked`).value));
+    }
+    try {
+      const result = await Z.request("POST", "/v1/web/student/level-test", { answers });
+      Z.show($("levelTestForm"), false);
+      Z.show($("levelTestStart"), false);
+      $("levelNotice").textContent = `سطح شما تعیین شد: ${result.level} (${Z.LEVEL_FA[result.level]}). ${result.score} از ${result.total} پاسخ درست بود.`;
+      Z.show($("levelTestBox"), false);
+    } catch (err) {
+      Z.showError($("levelTestError"), err.message);
     }
   }
 
@@ -181,6 +221,8 @@
     Lesson.init({ onEnded: () => { showLesson(false); } });
     $("loginForm").addEventListener("submit", login);
     $("startBtn").addEventListener("click", startLesson);
+    $("levelTestStart").addEventListener("click", startLevelTest);
+    $("levelTestForm").addEventListener("submit", submitLevelTest);
     document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => selectTab(tab.dataset.tab)));
 
     try {

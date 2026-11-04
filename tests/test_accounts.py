@@ -38,3 +38,28 @@ def test_placement_needs_exactly_one_of_level_or_score(client):
     assert client.post(
         f"/v1/students/{student_id}/placement", headers=DEMO, json={"level": "A1", "score": 10}
     ).status_code == 422
+
+
+def test_learner_level_test_sets_the_level_once(client):
+    created = client.post(
+        "/v1/students",
+        headers=DEMO,
+        json={"age_band": "11-14", "display_name": "Quiz Kid", "username": "quiz-kid-1", "password": "4444"},
+    )
+    assert created.status_code == 201, created.text
+    learner = TestClient(app)
+    assert learner.post("/v1/web/student/login", json={"username": "quiz-kid-1", "password": "4444"}).status_code == 200
+
+    questions = learner.get("/v1/web/student/level-test").json()
+    assert len(questions) == 6 and "answer" not in questions[0]
+
+    # Every answer correct gives C1; the level then cannot be changed by the learner.
+    right = [0, 1, 2, 0, 0, 0]
+    done = learner.post("/v1/web/student/level-test", json={"answers": right})
+    assert done.status_code == 200, done.text
+    assert done.json() == {"score": 6, "total": 6, "level": "C1"}
+    assert learner.post("/v1/web/student/level-test", json={"answers": right}).status_code == 409
+
+
+def test_level_test_needs_a_learner_sign_in(client):
+    assert TestClient(app).get("/v1/web/student/level-test").status_code == 401

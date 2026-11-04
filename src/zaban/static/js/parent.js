@@ -10,7 +10,6 @@
   }
 
   async function enterApp() {
-    $("who").textContent = `سلام ${me.name}`;
     showView("app");
     showPaymentNotice();
     await loadBilling();
