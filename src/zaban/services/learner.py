@@ -1,8 +1,24 @@
 from sqlalchemy.orm import Session as DBSession
 
-from zaban.models import AppSetting, TutorProfile
+from zaban.models import AppSetting, LearnerPreference, TutorProfile
+from zaban.services.accents import ACCENTS, DEFAULT_ACCENT
 
 GLOBAL_PROMPT_KEY = "global_prompt"
+
+
+def get_accent(db: DBSession, student_id: str) -> str:
+    row = db.get(LearnerPreference, student_id)
+    return row.accent if row else DEFAULT_ACCENT
+
+
+def set_accent(db: DBSession, student_id: str, accent: str) -> None:
+    if accent not in ACCENTS:
+        raise ValueError("unknown accent")
+    row = db.get(LearnerPreference, student_id)
+    if row is None:
+        db.add(LearnerPreference(student_id=student_id, accent=accent))
+    else:
+        row.accent = accent
 
 
 def get_global_prompt(db: DBSession) -> str:

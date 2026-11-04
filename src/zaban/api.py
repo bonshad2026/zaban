@@ -22,7 +22,7 @@ from zaban.schemas import (
 )
 from zaban.security import Auth, get_auth, get_student_for_auth, issue_student_token, require_manager
 from zaban.services.ai import tutor_reply
-from zaban.services.learner import get_global_prompt, set_learner_profile
+from zaban.services.learner import get_accent, get_global_prompt, set_learner_profile
 from zaban.services.metering import ensure_quota, record_usage
 from zaban.services.payments import require_plan
 from zaban.services.passwords import hash_password
@@ -429,6 +429,7 @@ def send_message(
         session.duration_minutes,
         get_global_prompt(db),
         db.get(TutorProfile, student.id),
+        get_accent(db, student.id),
     )
     reply = tutor_reply(system_prompt, history)
 

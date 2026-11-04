@@ -96,10 +96,10 @@ const Lesson = (() => {
       setPhase("speaking");
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "en-US";
+      utterance.lang = Accents.current;
       utterance.rate = 0.95;
-      const english = window.speechSynthesis.getVoices().find((v) => v.lang.startsWith("en"));
-      if (english) utterance.voice = english;
+      const voice = Accents.voiceFor(Accents.current);
+      if (voice) utterance.voice = voice;
       let finished = false;
       const finish = () => {
         if (finished) return;
@@ -159,7 +159,7 @@ const Lesson = (() => {
     if (!SpeechRec || S.phase !== "your_turn") return;
     S.lastError = "";
     const rec = new SpeechRec();
-    rec.lang = "en-US";
+    rec.lang = Accents.current;
     rec.continuous = true;
     rec.interimResults = true;
     const typed = $("msgInput").value.trimEnd();

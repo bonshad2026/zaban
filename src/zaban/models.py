@@ -160,6 +160,14 @@ class AppSetting(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
 
+class LearnerPreference(Base):
+    # Choices the learner makes for themself, such as the English accent they practise.
+    __tablename__ = "learner_preferences"
+
+    student_id: Mapped[str] = mapped_column(ForeignKey("students.id"), primary_key=True)
+    accent: Mapped[str] = mapped_column(String(10), default="en-US")
+
+
 class Consent(Base):
     __tablename__ = "consents"
 

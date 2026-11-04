@@ -30,6 +30,7 @@
 
     <nav class="tabs">
       <button class="tab is-active" type="button" data-tab="lesson">جلسه</button>
+      <button class="tab" type="button" data-tab="accent">لهجه</button>
       <button class="tab" type="button" data-tab="report">گزارش من</button>
     </nav>
 
@@ -85,6 +86,15 @@
         </div>
       </section>
 
+      <section id="tab-accent" hidden>
+        <div class="card">
+          <h2>لهجه‌ی تمرین</h2>
+          <p class="muted">لهجه‌ای را انتخاب کنید. Niko با همان لهجه صحبت می‌کند و درک صدای شما هم بر همان اساس انجام می‌شود. برای شنیدن نمونه، روی «پخش نمونه» بزنید.</p>
+          <p class="notice" id="accentNotice" hidden></p>
+          <div class="accent-list" id="accentList"></div>
+        </div>
+      </section>
+
       <section id="tab-report" hidden>
         <div class="card" id="reportBox"></div>
       </section>
@@ -93,6 +103,7 @@
 
   <!--site-footer-->
   <script src="/static/js/common.js"></script>
+  <script src="/static/js/accents.js"></script>
   <script src="/static/js/lesson.js"></script>
   <script src="/static/js/student.js"></script>
 </body>

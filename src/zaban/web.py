@@ -7,9 +7,9 @@ from sqlalchemy.orm import Session as DBSession
 from zaban.config import settings
 from zaban.db import get_db
 from zaban.models import Consent, Guardian, Student, Tenant, utcnow
-from zaban.schemas import LevelTestAnswers, OtpRequest, PasswordReset, SignUpCreate, StudentLogin, UserLogin
+from zaban.schemas import AccentChoice, LevelTestAnswers, OtpRequest, PasswordReset, SignUpCreate, StudentLogin, UserLogin
 from zaban.security import WEB_COOKIE_NAMES, issue_web_session, read_web_session, session_is_current
-from zaban.services.learner import set_learner_profile
+from zaban.services.learner import get_accent, set_accent, set_learner_profile
 from zaban.services.placement import level_for_score, public_questions, score_answers
 from zaban.services.otp import check_code, development_code, normalize_phone, request_code
 from zaban.services.passwords import hash_password, verify_password
@@ -245,6 +245,24 @@ def _student_from_cookie(db: DBSession, token: str | None) -> Student:
     if not session_is_current(payload or {}, student):
         raise HTTPException(status_code=401, detail="Please sign in")
     return student
+
+
+@router.get("/student/accent")
+def read_accent(zaban_student: str | None = Cookie(default=None), db: DBSession = Depends(get_db)) -> dict:
+    student = _student_from_cookie(db, zaban_student)
+    return {"accent": get_accent(db, student.id)}
+
+
+@router.post("/student/accent")
+def choose_accent(
+    body: AccentChoice,
+    zaban_student: str | None = Cookie(default=None),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    student = _student_from_cookie(db, zaban_student)
+    set_accent(db, student.id, body.accent)
+    db.commit()
+    return {"accent": body.accent}
 
 
 # The learner's own short level check. It works only while the level is not set yet.

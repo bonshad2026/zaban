@@ -10,13 +10,73 @@
   function selectTab(name) {
     document.querySelectorAll(".tab").forEach((tab) => tab.classList.toggle("is-active", tab.dataset.tab === name));
     Z.show($("tab-lesson"), name === "lesson");
+    Z.show($("tab-accent"), name === "accent");
     Z.show($("tab-report"), name === "report");
+    if (name === "accent") renderAccents();
     if (name === "report") loadReport();
+  }
+
+  // ----- Accent -----
+
+  let accentCode = "en-US";
+
+  async function loadAccent() {
+    try {
+      const data = await Z.request("GET", "/v1/web/student/accent");
+      accentCode = data.accent;
+    } catch (_) {
+      accentCode = "en-US";
+    }
+    Accents.setCurrent(accentCode);
+  }
+
+  function renderAccents() {
+    const list = $("accentList");
+    list.replaceChildren();
+    const missing = Accents.LIST.filter((a) => !Accents.voiceFor(a.code));
+    Z.show($("accentNotice"), missing.length > 0);
+    $("accentNotice").textContent = missing.length
+      ? "این دستگاه بعضی لهجه‌ها را ندارد. برای همه‌ی لهجه‌ها، Chrome یا Edge را با صدای انگلیسی نصب‌شده امتحان کنید."
+      : "";
+    Accents.LIST.forEach((accent) => {
+      const selected = accent.code === accentCode;
+      const card = Z.el("div", "accent-card" + (selected ? " is-selected" : ""));
+      card.appendChild(Z.el("strong", null, `${accent.name} (${accent.nameEn})`));
+      card.appendChild(Z.el("p", "sample", accent.sample));
+      const actions = Z.el("div", "actions");
+      const play = Z.el("button", "ghost", "پخش نمونه");
+      play.type = "button";
+      play.addEventListener("click", () => {
+        if (!Accents.speakSample(accent.code)) {
+          Z.showError($("accentNotice"), "صدای این لهجه روی این دستگاه پیدا نشد.");
+        }
+      });
+      const choose = Z.el("button", "", selected ? "انتخاب‌شده" : "انتخاب این لهجه");
+      choose.type = "button";
+      choose.disabled = selected;
+      choose.addEventListener("click", () => chooseAccent(accent.code));
+      actions.append(play, choose);
+      card.appendChild(actions);
+      list.appendChild(card);
+    });
+  }
+
+  async function chooseAccent(code) {
+    Z.showError($("accentNotice"), "");
+    try {
+      await Z.request("POST", "/v1/web/student/accent", { accent: code });
+      accentCode = code;
+      Accents.setCurrent(code);
+      renderAccents();
+    } catch (err) {
+      Z.showError($("accentNotice"), err.message);
+    }
   }
 
   async function enterApp() {
     showView("app");
     showLevel();
+    loadAccent();
     selectTab("lesson");
     const { session } = await Z.request("GET", `/v1/students/${me.id}/sessions/active`);
     if (session) {

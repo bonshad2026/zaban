@@ -63,3 +63,31 @@ def test_learner_level_test_sets_the_level_once(client):
 
 def test_level_test_needs_a_learner_sign_in(client):
     assert TestClient(app).get("/v1/web/student/level-test").status_code == 401
+
+
+def test_learner_chooses_an_accent_and_the_lesson_prompt_uses_it(client):
+    from zaban.db import SessionLocal
+    from zaban.models import Student
+    from zaban.services.learner import get_accent, set_accent
+    from zaban.services.sessions import build_system_prompt
+
+    created = client.post(
+        "/v1/students",
+        headers=DEMO,
+        json={"age_band": "11-14", "display_name": "Accent Kid", "username": "accent-kid-1", "password": "5555"},
+    )
+    assert created.status_code == 201, created.text
+    learner = TestClient(app)
+    learner.post("/v1/web/student/login", json={"username": "accent-kid-1", "password": "5555"})
+
+    assert learner.get("/v1/web/student/accent").json() == {"accent": "en-US"}
+    assert learner.post("/v1/web/student/accent", json={"accent": "en-GB"}).status_code == 200
+    assert learner.get("/v1/web/student/accent").json() == {"accent": "en-GB"}
+    assert learner.post("/v1/web/student/accent", json={"accent": "fr-FR"}).status_code == 422
+
+    student_id = created.json()["id"]
+    with SessionLocal() as db:
+        assert get_accent(db, student_id) == "en-GB"
+        prompt = build_system_prompt(db.get(Student, student_id), None, "warm_up", 10, "", None, "en-GB")
+    assert "British spelling" in prompt
+    set_accent  # imported for completeness of the service API

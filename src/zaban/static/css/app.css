@@ -264,6 +264,12 @@ ul.plain { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
 .pill.gold { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
 .pill.gold:hover { background: var(--accent-dark); color: var(--on-accent); }
 .site-greeting { color: var(--muted); font-size: 15px; white-space: nowrap; }
+.accent-list { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.accent-card { border: 1px solid var(--border); background: var(--card-raised); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.accent-card.is-selected { border-color: var(--accent); }
+.accent-card strong { font-size: 17px; }
+.accent-card .sample { font-style: italic; color: var(--muted); direction: ltr; text-align: left; margin: 0; }
+.accent-card .actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .page-actions { display: flex; justify-content: flex-end; margin: 16px 0 0; }
 .site-menu { position: relative; }
 .site-menu > summary { list-style: none; cursor: pointer; }

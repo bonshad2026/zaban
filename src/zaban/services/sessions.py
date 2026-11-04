@@ -2,6 +2,7 @@ import re
 from datetime import datetime
 
 from zaban.models import Plan, Student, TutorProfile, TutorSession
+from zaban.services.accents import DEFAULT_ACCENT, accent_note
 
 ALLOWED_BLOCK_HINTS = {
     "warm_up": "Greet the student and ask one easy warm-up question.",
@@ -67,11 +68,13 @@ def build_system_prompt(
     duration_minutes: int,
     global_prompt: str = "",
     profile: TutorProfile | None = None,
+    accent: str = DEFAULT_ACCENT,
 ) -> str:
     goal = plan.goal if plan else "general conversational English"
     level = student.cefr_level or "unknown (assume A2)"
     return f"""You are Niko, a friendly English teacher in a private one-to-one lesson.
 Student age band: {student.age_band}. Estimated CEFR level: {level}. Lesson goal: {goal}.
+Accent the student is practising: {accent_note(accent)} Use it in your words and spelling.
 Lesson length: {duration_minutes} minutes. Current block: {block}. Block task: {ALLOWED_BLOCK_HINTS[block]}
 {_guidance_section(global_prompt, profile)}
 Rules:
