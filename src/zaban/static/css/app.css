@@ -89,7 +89,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent-soft
   content: "";
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: none;
 }
 .hero > * { position: relative; }
 .topbar {
