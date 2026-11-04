@@ -10,6 +10,7 @@ from zaban.models import Consent, Guardian, Student, Tenant, utcnow
 from zaban.schemas import OtpRequest, OtpVerify, StudentLogin
 from zaban.security import WEB_COOKIE_NAMES, issue_web_session, read_web_session, session_is_current
 from zaban.services.otp import check_code, normalize_phone, request_code
+from zaban.services.payments import has_active_plan, require_plan
 from zaban.services.passwords import verify_password
 
 # Sign-in endpoints for the website. They set an HttpOnly cookie, so the browser never holds an API key.
@@ -118,6 +119,7 @@ def start_own_learning(
 ) -> dict:
     # An adult who wants to learn for themself gets one learner profile. Only that adult can see its reports.
     guardian = _guardian_from_cookie(db, zaban_parent)
+    require_plan(guardian)
     student = _self_profile(db, guardian)
     if student is None:
         student = Student(
@@ -186,5 +188,6 @@ def me(
                 "role": "parent",
                 "name": guardian.full_name,
                 "has_own_learning": _self_profile(db, guardian) is not None,
+                "has_active_plan": has_active_plan(guardian),
             }
     raise HTTPException(status_code=401, detail="Please sign in")

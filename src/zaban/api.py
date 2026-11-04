@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session as DBSession
 
 from zaban.config import settings
 from zaban.db import get_db
-from zaban.models import Consent, Message, Plan, Student, TutorSession, new_id, utcnow
+from zaban.models import Consent, Guardian, Message, Plan, Student, TutorSession, new_id, utcnow
 from zaban.schemas import (
     ConsentCreate,
     MessageCreate,
@@ -23,6 +23,7 @@ from zaban.schemas import (
 from zaban.security import Auth, get_auth, get_student_for_auth, issue_student_token, require_manager
 from zaban.services.ai import tutor_reply
 from zaban.services.metering import ensure_quota, record_usage
+from zaban.services.payments import require_plan
 from zaban.services.passwords import hash_password
 from zaban.services.progress import build_milestones, cefr_from_score
 from zaban.services.sessions import (
@@ -36,6 +37,13 @@ from zaban.services.sessions import (
 router = APIRouter()
 
 GUARD_REPLY = "Let's keep our lesson on English. Can you say that in a different way?"
+
+
+def _require_student_plan(db: DBSession, student: Student) -> None:
+    # Children and self-learners need their adult's plan. Students created through a customer's API key are billed to that customer.
+    owner_id = student.guardian_id or student.self_owner_id
+    if owner_id:
+        require_plan(db.get(Guardian, owner_id))
 
 
 def _check_pin_if_guardian(auth: Auth, password: str) -> None:
@@ -137,6 +145,8 @@ def create_student(
     if auth.guardian_id and body.age_band == "adult":
         # Adults sign in with their own mobile number and learn for themself. A guardian cannot create them.
         raise HTTPException(status_code=403, detail="Adults must create their own account")
+    if auth.guardian_id:
+        require_plan(db.get(Guardian, auth.guardian_id))
 
     username = None
     password_hash = None
@@ -348,6 +358,7 @@ def start_session(
 ) -> dict:
     student = get_student_for_auth(db, auth, student_id)
     _require_consent(db, student)
+    _require_student_plan(db, student)
     ensure_quota(auth.tenant)
 
     now = utcnow()

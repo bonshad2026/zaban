@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>درگاه آزمایشی | زبان</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  <main class="hero">
+    <div class="auth-wrap">
+      <section class="auth-card">
+        <p class="muted">درگاه آزمایشی (فقط برای توسعه)</p>
+        <h1>آزمایش پرداخت</h1>
+        <p>این صفحه به‌جای درگاه واقعی نشان داده می‌شود. با یکی از گزینه‌ها، نتیجه‌ی پرداخت شبیه‌سازی می‌شود.</p>
+        <button type="button" id="okBtn" class="wide">پرداخت موفق</button>
+        <p></p>
+        <button type="button" id="failBtn" class="ghost wide">پرداخت ناموفق</button>
+        <p class="error" id="devError" hidden></p>
+      </section>
+    </div>
+  </main>
+  <script>
+    (() => {
+      const paymentId = location.pathname.split("/").pop();
+      const error = document.getElementById("devError");
+
+      async function confirm(ok) {
+        error.hidden = true;
+        try {
+          const res = await fetch("/v1/web/billing/fake/confirm", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ payment_id: paymentId, ok }),
+          });
+          if (!res.ok) throw new Error("payment");
+          location.href = "/parent?payment=" + (ok ? "ok" : "failed");
+        } catch (_) {
+          error.textContent = "ثبت نتیجه انجام نشد. ابتدا با حساب والد وارد شوید.";
+          error.hidden = false;
+        }
+      }
+
+      document.getElementById("okBtn").addEventListener("click", () => confirm(true));
+      document.getElementById("failBtn").addEventListener("click", () => confirm(false));
+    })();
+  </script>
+</body>
+</html>

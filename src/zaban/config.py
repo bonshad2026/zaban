@@ -18,6 +18,9 @@ class Settings:
     kavenegar_api_key: str | None
     kavenegar_otp_template: str
     otp_ttl_seconds: int
+    # "fake" is for development only. "zarinpal" needs the merchant ID from the company account.
+    payment_gateway: str
+    zarinpal_merchant_id: str | None
     # Demo values are read from the environment only. Nothing is stored in the code.
     demo_api_key: str | None
     demo_parent_phone: str | None
@@ -41,6 +44,8 @@ def load_settings() -> Settings:
         kavenegar_api_key=os.getenv("KAVENEGAR_API_KEY") or None,
         kavenegar_otp_template=os.getenv("KAVENEGAR_OTP_TEMPLATE", "zaban-otp"),
         otp_ttl_seconds=int(os.getenv("OTP_TTL_SECONDS", "300")),
+        payment_gateway=os.getenv("PAYMENT_GATEWAY", "fake"),
+        zarinpal_merchant_id=os.getenv("ZARINPAL_MERCHANT_ID") or None,
         demo_api_key=os.getenv("ZABAN_DEMO_API_KEY") or None,
         demo_parent_phone=os.getenv("ZABAN_DEMO_PARENT_PHONE") or None,
         demo_student_username=os.getenv("ZABAN_DEMO_STUDENT_USERNAME") or None,

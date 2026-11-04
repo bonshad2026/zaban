@@ -39,11 +39,44 @@ class Guardian(Base):
     phone: Mapped[str] = mapped_column(String(16), unique=True, index=True)
     full_name: Mapped[str] = mapped_column(String(120))
     email: Mapped[str | None] = mapped_column(String(190), unique=True, nullable=True)
-    # Bumped on logout-everywhere, so older sign-in cookies stop working.
+    # Set at sign-up. Used with the phone number at sign-in. Forgotten passwords are reset with an SMS code.
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    failed_logins: Mapped[int] = mapped_column(Integer, default=0)
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # The account can use the service until this time. Empty means no plan has been activated yet.
+    plan_expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # Bumped on logout-everywhere and password reset, so older sign-in cookies stop working.
     session_version: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
     students: Mapped[list["Student"]] = relationship(back_populates="guardian", foreign_keys="Student.guardian_id")
+
+
+class BillingPlan(Base):
+    # A plan an adult buys. Prices are in toman. A plan gives access for a number of days.
+    __tablename__ = "billing_plans"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    name: Mapped[str] = mapped_column(String(80))
+    description: Mapped[str] = mapped_column(Text, default="")
+    price_toman: Mapped[int] = mapped_column(Integer)
+    days: Mapped[int] = mapped_column(Integer)
+    active: Mapped[bool] = mapped_column(default=True)
+
+
+class Payment(Base):
+    # A payment request. It becomes "confirmed" only after the gateway reports success, checked on the server.
+    __tablename__ = "payments"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    guardian_id: Mapped[str] = mapped_column(ForeignKey("guardians.id"), index=True)
+    plan_id: Mapped[str] = mapped_column(ForeignKey("billing_plans.id"))
+    amount_toman: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending, confirmed, failed
+    gateway: Mapped[str] = mapped_column(String(20), default="fake")
+    gateway_ref: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class OtpCode(Base):

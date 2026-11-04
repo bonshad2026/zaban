@@ -1,10 +1,27 @@
 from sqlalchemy.orm import Session
 
+from datetime import timedelta
+
 from zaban.config import Settings
-from zaban.models import Consent, Guardian, Student, Tenant
+from zaban.models import BillingPlan, Consent, Guardian, Student, Tenant, utcnow
 from zaban.security import hash_api_key
-from zaban.services.passwords import hash_password
 from zaban.services.otp import normalize_phone
+from zaban.services.passwords import hash_password
+
+# Development prices. The real prices are set by the company, not in code.
+DEMO_PLANS = [
+    ("مقدماتی (نمونه)", "نمونه برای آزمایش", 1_000_000, 30),
+    ("پیشرفته (نمونه)", "نمونه برای آزمایش", 2_000_000, 90),
+]
+
+
+def seed_demo_plans(db: Session) -> None:
+    """Create sample plans for local development. Does nothing when plans already exist."""
+    if db.query(BillingPlan).first() is not None:
+        return
+    for name, description, price, days in DEMO_PLANS:
+        db.add(BillingPlan(name=name, description=description, price_toman=price, days=days))
+    db.commit()
 
 
 def seed_demo_tenant(db: Session, raw_key: str | None) -> Tenant | None:
@@ -36,7 +53,13 @@ def seed_demo_accounts(db: Session, tenant: Tenant | None, settings: Settings) -
 
     guardian = db.query(Guardian).filter(Guardian.phone == phone).first()
     if guardian is None:
-        guardian = Guardian(tenant_id=tenant.id, phone=phone, full_name="Demo Parent")
+        # Demo only: the demo adult starts with a plan so the lesson flow can be tried right away.
+        guardian = Guardian(
+            tenant_id=tenant.id,
+            phone=phone,
+            full_name="Demo Parent",
+            plan_expires_at=utcnow() + timedelta(days=365),
+        )
         db.add(guardian)
         db.commit()
 

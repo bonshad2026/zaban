@@ -45,6 +45,17 @@ def _adult_login(client, phone: str = PARENT_PHONE, name: str = "Test Adult"):
     )
 
 
+def _buy_plan(client) -> None:
+    # Uses the development gateway: checkout, then the fake "pay" button.
+    plans = client.get("/v1/web/billing/plans").json()
+    paid = client.post("/v1/web/billing/checkout", json={"plan_id": plans[0]["id"]})
+    assert paid.status_code == 201, paid.text
+    confirmed = client.post(
+        "/v1/web/billing/fake/confirm", json={"payment_id": paid.json()["payment_id"], "ok": True}
+    )
+    assert confirmed.json()["status"] == "confirmed"
+
+
 def _student_login(client, pin: str = STUDENT_PASSWORD, username: str = STUDENT_USERNAME):
     return client.post("/v1/web/student/login", json={"username": username, "password": pin})
 
@@ -166,6 +177,54 @@ def test_adult_creates_child_who_signs_in_with_pin_and_starts_a_lesson(client):
     assert lesson.status_code == 201, lesson.text
 
 
+def test_adult_without_a_plan_cannot_create_a_child(client):
+    fresh = TestClient(app)
+    _adult_login(fresh, "09129990000", "No Plan Yet")
+    response = _create_child(fresh, "no-plan-child", "1234")
+    assert response.status_code == 402
+    assert "plan" in response.json()["detail"].lower()
+
+
+def test_failed_payment_does_not_activate_a_plan(client):
+    adult = TestClient(app)
+    _adult_login(adult, "09129991111", "Failed Payment")
+    plans = adult.get("/v1/web/billing/plans").json()
+    paid = adult.post("/v1/web/billing/checkout", json={"plan_id": plans[0]["id"]}).json()
+    failed = adult.post("/v1/web/billing/fake/confirm", json={"payment_id": paid["payment_id"], "ok": False})
+    assert failed.json()["status"] == "failed"
+    assert adult.get("/v1/web/me?role=parent").json()["has_active_plan"] is False
+
+
+def test_successful_payment_activates_the_plan_and_unlocks_children(client):
+    adult = TestClient(app)
+    _adult_login(adult, "09129992222", "Paid Parent")
+    assert adult.get("/v1/web/me?role=parent").json()["has_active_plan"] is False
+    _buy_plan(adult)
+    assert adult.get("/v1/web/me?role=parent").json()["has_active_plan"] is True
+    status = adult.get("/v1/web/billing/status").json()
+    assert status["has_active_plan"] is True
+    assert status["payments"][0]["status"] == "confirmed"
+    assert _create_child(adult, "after-plan-child", "1234").status_code == 201
+
+
+def test_payment_cannot_be_confirmed_by_another_adult(client):
+    owner = TestClient(app)
+    _adult_login(owner, "09129993333", "Owner")
+    plans = owner.get("/v1/web/billing/plans").json()
+    paid = owner.post("/v1/web/billing/checkout", json={"plan_id": plans[0]["id"]}).json()
+
+    other = TestClient(app)
+    _adult_login(other, "09129994444", "Someone Else")
+    response = other.post("/v1/web/billing/fake/confirm", json={"payment_id": paid["payment_id"], "ok": True})
+    assert response.status_code == 404
+
+
+def test_dev_sms_outbox_shows_codes_only_in_development(client):
+    response = client.get("/dev/sms-outbox")
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
+
+
 def test_child_pin_must_be_four_to_six_digits(client):
     _adult_login(client)
     assert _create_child(client, "pin-format-child", "abcd").status_code == 400
@@ -216,6 +275,7 @@ def test_adult_usage_and_report_are_structured_without_raw_codes(client):
 def test_adult_can_learn_for_themself_and_guardian_cannot_see_it(client):
     adult = TestClient(app)
     assert _adult_login(adult, "09126667788", "Self Learner").status_code == 200
+    _buy_plan(adult)
     started = adult.post("/v1/web/user/self")
     assert started.status_code == 200, started.text
     self_id = started.json()["id"]
@@ -233,6 +293,7 @@ def test_adult_can_learn_for_themself_and_guardian_cannot_see_it(client):
 def test_self_learning_profile_is_created_once(client):
     adult = TestClient(app)
     _adult_login(adult, "09127778899", "Repeat Learner")
+    _buy_plan(adult)
     first = adult.post("/v1/web/user/self").json()["id"]
     second = adult.post("/v1/web/user/self").json()["id"]
     assert first == second
@@ -241,6 +302,7 @@ def test_self_learning_profile_is_created_once(client):
 def test_logout_everywhere_ends_adult_and_learner_sessions(client):
     adult = TestClient(app)
     _adult_login(adult, "09128889900", "Logout Everywhere")
+    _buy_plan(adult)
     adult.post("/v1/web/user/self")
     assert adult.get("/v1/web/me?role=student").status_code == 200
 

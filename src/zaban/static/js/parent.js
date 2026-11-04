@@ -12,7 +12,53 @@
   async function enterApp() {
     $("who").textContent = `سلام ${me.name}`;
     showView("app");
+    showPaymentNotice();
+    await loadBilling();
     await loadStudents();
+  }
+
+  // ----- Plan and payment -----
+
+  function showPaymentNotice() {
+    const result = new URLSearchParams(location.search).get("payment");
+    if (!result) return;
+    $("paymentNotice").textContent = result === "ok"
+      ? "پرداخت با موفقیت ثبت شد و پلن شما فعال است."
+      : "پرداخت انجام نشد. دوباره تلاش کنید.";
+    Z.show($("paymentNotice"), true);
+    history.replaceState(null, "", location.pathname);
+  }
+
+  async function loadBilling() {
+    const [plans, status] = await Promise.all([
+      Z.request("GET", "/v1/web/billing/plans"),
+      Z.request("GET", "/v1/web/billing/status"),
+    ]);
+    $("planStatus").textContent = status.has_active_plan
+      ? `پلن شما فعال است تا ${Z.fmtDate(status.plan_expires_at)}.`
+      : "برای استفاده از زبان، ابتدا یک پلن را انتخاب و پرداخت کنید.";
+    const list = $("planList");
+    list.innerHTML = "";
+    for (const plan of plans) {
+      const card = Z.el("div", "stat");
+      card.appendChild(Z.el("strong", null, plan.name));
+      card.appendChild(Z.el("span", "muted", `${plan.days} روز · ${plan.price_toman.toLocaleString("fa-IR")} تومان`));
+      const pay = Z.el("button", null, "انتخاب و پرداخت");
+      pay.type = "button";
+      pay.addEventListener("click", () => choosePlan(plan.id));
+      card.appendChild(pay);
+      list.appendChild(card);
+    }
+  }
+
+  async function choosePlan(planId) {
+    Z.showError($("billingError"), "");
+    try {
+      const paid = await Z.request("POST", "/v1/web/billing/checkout", { plan_id: planId });
+      location.href = paid.redirect;
+    } catch (err) {
+      Z.showError($("billingError"), err.message);
+    }
   }
 
   // ----- Student list and creation -----
