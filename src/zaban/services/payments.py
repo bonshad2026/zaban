@@ -40,9 +40,16 @@ def get_gateway() -> PaymentGateway:
     return FakeGateway()
 
 
+def mark_paid(db: DBSession, payment: Payment) -> None:
+    # The buyer says they paid. The plan waits for an administrator to confirm it, so nothing is extended yet.
+    if payment.status == "pending":
+        payment.status = "paid"
+        db.commit()
+
+
 def confirm_payment(db: DBSession, payment: Payment, ok: bool) -> None:
     # Only the server decides this. A confirmed payment extends the guardian's plan period.
-    if payment.status != "pending":
+    if payment.status not in ("pending", "paid"):
         return
     if not ok:
         payment.status = "failed"

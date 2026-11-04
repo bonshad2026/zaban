@@ -119,7 +119,7 @@
   // ----- Payments -----
 
   async function loadPayments() {
-    const rows = await Z.request("GET", `${API}/payments?status=pending`);
+    const rows = await Z.request("GET", `${API}/payments?status=paid`);
     // Confirming adds the plan's days to the adult's plan period, counted from today or from the current end date.
     fill($("paymentTable"), ["زمان", "نام", "شماره", "پلن", "مدت (روز)", "مبلغ (تومان)", "درگاه", "عملیات"],
       rows.map((p) => [

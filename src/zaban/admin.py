@@ -129,9 +129,9 @@ def list_adults(db: DBSession = Depends(get_db)) -> list[dict]:
     ]
 
 
-
+# "paid" lists payments the buyer has paid and that wait for the administrator's decision.
 @router.get("/payments", dependencies=[Depends(require_admin)])
-def list_payments(status: str = "pending", db: DBSession = Depends(get_db)) -> list[dict]:
+def list_payments(status: str = "paid", db: DBSession = Depends(get_db)) -> list[dict]:
     query = db.query(Payment).order_by(Payment.created_at.desc())
     if status != "all":
         query = query.filter(Payment.status == status)

@@ -64,14 +64,18 @@ def _adult_login(client, phone: str = PARENT_PHONE, name: str = "Test Adult"):
 
 
 def _buy_plan(client) -> None:
-    # Uses the development gateway: checkout, then the fake "pay" button.
+    # Uses the development gateway: checkout, the fake "pay" button, then the administrator confirms the payment.
     plans = client.get("/v1/web/billing/plans").json()
     paid = client.post("/v1/web/billing/checkout", json={"plan_id": plans[0]["id"]})
     assert paid.status_code == 201, paid.text
-    confirmed = client.post(
-        "/v1/web/billing/fake/confirm", json={"payment_id": paid.json()["payment_id"], "ok": True}
-    )
-    assert confirmed.json()["status"] == "confirmed"
+    payment_id = paid.json()["payment_id"]
+    marked = client.post("/v1/web/billing/fake/confirm", json={"payment_id": payment_id, "ok": True})
+    assert marked.json()["status"] == "paid"
+
+    admin = TestClient(app)
+    assert admin.post("/v1/admin/api/login", json={"password": os.environ["ADMIN_PASSWORD"]}).status_code == 200
+    decided = admin.post(f"/v1/admin/api/payments/{payment_id}/decision", json={"ok": True})
+    assert decided.json()["status"] == "confirmed"
 
 
 def _student_login(client, pin: str = STUDENT_PASSWORD, username: str = STUDENT_USERNAME):

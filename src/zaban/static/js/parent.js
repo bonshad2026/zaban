@@ -23,7 +23,7 @@
     const result = new URLSearchParams(location.search).get("payment");
     if (!result) return;
     $("paymentNotice").textContent = result === "ok"
-      ? "پرداخت با موفقیت ثبت شد و پلن شما فعال است."
+      ? "پرداخت شما ثبت شد. بعد از تأیید پشتیبانی، پلن شما فعال می‌شود."
       : "پرداخت انجام نشد. دوباره تلاش کنید.";
     Z.show($("paymentNotice"), true);
     history.replaceState(null, "", location.pathname);

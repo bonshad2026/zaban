@@ -265,6 +265,13 @@ body[data-bilingual] .site-header .lang-toggle { display: inline-block; }
 .pill:hover { border-color: var(--accent); color: var(--text); }
 .pill.gold { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
 .pill.gold:hover { background: var(--accent-dark); color: var(--on-accent); }
+.site-menu { position: relative; }
+.site-menu > summary { list-style: none; cursor: pointer; }
+.site-menu > summary::-webkit-details-marker { display: none; }
+.site-menu[open] > summary { border-color: var(--accent); }
+.site-menu-list { position: absolute; top: calc(100% + 8px); inset-inline-end: 0; z-index: 20; min-width: 220px; display: grid; gap: 4px; padding: 8px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); }
+.site-menu-list a { padding: 10px 14px; border-radius: 10px; text-decoration: none; color: var(--text); }
+.site-menu-list a:hover { background: var(--accent-soft); color: var(--accent-dark); }
 .site-footer { border-top: 1px solid var(--border); background: var(--card); font-size: 14px; color: var(--muted); }
 .site-footer-inner { padding: 28px 24px 40px; }
 .site-footer .site-nav { gap: 24px; font-size: 14px; }

@@ -166,8 +166,46 @@ const Z = (() => {
     }
   }
 
+  // Shows who is signed in on this browser. A visitor who is signed out keeps the static "ورود" menu.
+  // A sign-in that is missing is normal here, so each check only decides which buttons appear.
+  async function initSiteHeader() {
+    const box = document.getElementById("siteActions");
+    if (!box) return;
+    const signedIn = [];
+    for (const role of ["parent", "student"]) {
+      try {
+        await request("GET", `/v1/web/me?role=${role}`);
+        signedIn.push(role);
+      } catch (_) { /* not signed in to this area */ }
+    }
+    if (!signedIn.length) return;
+
+    const english = document.documentElement.lang === "en";
+    const labelled = (tag, className, href, fa, en) => {
+      const node = el(tag, className, english ? en : fa);
+      node.dataset.fa = fa;
+      node.dataset.en = en;
+      if (href) node.href = href;
+      return node;
+    };
+    const toggle = document.getElementById("langToggle");
+    box.replaceChildren();
+    if (toggle) box.appendChild(toggle);
+    if (signedIn.includes("parent")) box.appendChild(labelled("a", "pill", "/parent", "پنل والد", "Parent area"));
+    if (signedIn.includes("student")) box.appendChild(labelled("a", "pill", "/student", "یادگیری من", "My learning"));
+    const logout = labelled("button", "ghost", null, "خروج", "Sign out");
+    logout.addEventListener("click", async () => {
+      await Promise.all(signedIn.map((role) => request("POST", `/v1/web/logout?role=${role}`).catch(() => {})));
+      location.href = "/";
+    });
+    box.appendChild(logout);
+    box.dataset.state = "member";
+  }
+
   return {
     request, friendly, pageRole, parseUtc, fmtDate, fmtDateTime, el, show, showError, showDevCode, initLang,
-    STATUS_FA, SUGGESTION_FA, LEVEL_FA, SESSION_FA,
+    initSiteHeader, STATUS_FA, SUGGESTION_FA, LEVEL_FA, SESSION_FA,
   };
 })();
+
+document.addEventListener("DOMContentLoaded", () => Z.initSiteHeader());

@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session as DBSession
 from zaban.config import settings
 from zaban.db import get_db
 from zaban.models import BillingPlan, Payment, utcnow
-from zaban.services.payments import confirm_payment, get_gateway, has_active_plan
+from zaban.services.payments import confirm_payment, get_gateway, has_active_plan, mark_paid
 from zaban.web import _guardian_from_cookie
 
 # Plans, checkout and payment status for adult accounts. The browser never decides that a payment succeeded.
@@ -103,5 +103,8 @@ def fake_confirm(
     payment = db.get(Payment, body.payment_id)
     if payment is None or payment.guardian_id != guardian.id or payment.gateway != "fake":
         raise HTTPException(status_code=404, detail="Payment not found")
-    confirm_payment(db, payment, body.ok)
+    if body.ok:
+        mark_paid(db, payment)
+    else:
+        confirm_payment(db, payment, False)
     return {"status": payment.status}

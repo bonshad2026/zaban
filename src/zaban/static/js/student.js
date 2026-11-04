@@ -17,6 +17,7 @@
   async function enterApp() {
     $("who").textContent = `سلام ${me.name}`;
     showView("app");
+    showBackToParent();
     selectTab("lesson");
     const { session } = await Z.request("GET", `/v1/students/${me.id}/sessions/active`);
     if (session) {
@@ -152,6 +153,16 @@
   async function logout() {
     await Z.request("POST", "/v1/web/logout?role=student").catch(() => {});
     location.reload();
+  }
+
+  // A parent who started learning for themself can go back to the parent area without signing in again.
+  async function showBackToParent() {
+    try {
+      await Z.request("GET", "/v1/web/me?role=parent");
+      Z.show($("backToParent"), true);
+    } catch (_) {
+      Z.show($("backToParent"), false);
+    }
   }
 
   async function boot() {

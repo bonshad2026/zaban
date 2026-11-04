@@ -6,9 +6,16 @@
       <a href="/demo" data-fa="دمو" data-en="Demo">دمو</a>
       <a href="/consult" data-fa="مشاوره" data-en="Consult">مشاوره</a>
     </nav>
-    <div class="site-actions">
+    <!-- The script in common.js replaces the guest buttons below when someone is signed in. -->
+    <div class="site-actions" id="siteActions" data-state="guest">
       <button id="langToggle" class="lang-toggle" type="button">English</button>
-      <a class="pill" href="/parent" data-fa="ورود" data-en="Sign in">ورود</a>
+      <details class="site-menu">
+        <summary class="pill" data-fa="ورود" data-en="Sign in">ورود</summary>
+        <div class="site-menu-list">
+          <a href="/parent" data-fa="والد یا بزرگسال" data-en="Parent or adult">والد یا بزرگسال</a>
+          <a href="/student" data-fa="دانش‌آموز" data-en="Learner">دانش‌آموز</a>
+        </div>
+      </details>
       <a class="pill gold" href="/signup" data-fa="ثبت‌نام" data-en="Sign up">ثبت‌نام</a>
     </div>
   </div>

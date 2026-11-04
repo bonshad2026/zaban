@@ -70,11 +70,14 @@ def test_admin_can_confirm_a_pending_payment_by_hand(client):
     )
     plans = adult.get("/v1/web/billing/plans").json()
     paid = adult.post("/v1/web/billing/checkout", json={"plan_id": plans[0]["id"]}).json()
+    # The buyer presses "pay" on the test gateway. That only marks the payment as paid.
+    adult.post("/v1/web/billing/fake/confirm", json={"payment_id": paid["payment_id"], "ok": True})
+    assert adult.get("/v1/web/me?role=parent").json()["has_active_plan"] is False
 
     admin = TestClient(app)
     _admin(admin)
-    pending = [p for p in admin.get("/v1/admin/api/payments?status=pending").json() if p["id"] == paid["payment_id"]]
-    assert pending, "the new payment should be listed as pending"
+    waiting = [p for p in admin.get("/v1/admin/api/payments").json() if p["id"] == paid["payment_id"]]
+    assert waiting, "a paid payment should be listed for the administrator"
     decided = admin.post(f"/v1/admin/api/payments/{paid['payment_id']}/decision", json={"ok": True})
     assert decided.json()["status"] == "confirmed"
     assert adult.get("/v1/web/me?role=parent").json()["has_active_plan"] is True
