@@ -321,7 +321,15 @@ def me(
     if payload["role"] == "student":
         student = db.get(Student, payload["sid"])
         if session_is_current(payload, student):
-            return {"role": "student", "name": student.display_name or student.username, "id": student.id}
+            # Lessons need the plan of the adult who owns this learner profile.
+            owner_id = student.guardian_id or student.self_owner_id
+            owner = db.get(Guardian, owner_id) if owner_id else None
+            return {
+                "role": "student",
+                "name": student.display_name or student.username,
+                "id": student.id,
+                "has_active_plan": True if owner is None else has_active_plan(owner),
+            }
     if payload["role"] == "guardian":
         guardian = db.get(Guardian, payload["sid"])
         if session_is_current(payload, guardian):

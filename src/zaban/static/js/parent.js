@@ -35,7 +35,10 @@
     ]);
     $("planStatus").textContent = status.has_active_plan
       ? `پلن شما فعال است تا ${Z.fmtDate(status.plan_expires_at)}.`
-      : "برای استفاده از زبان، ابتدا یک پلن را انتخاب و پرداخت کنید.";
+      : "برای استفاده از زبان، ابتدا یک پلن را انتخاب و پرداخت کنید. تا وقتی پلن فعال نباشد، بقیه‌ی بخش‌ها نمایش داده نمی‌شوند.";
+    // Without an active plan the parent sees only the plan section. Nothing else can be used yet.
+    ["selfCard", "childrenCard", "addChildCard"].forEach((id) => Z.show($(id), status.has_active_plan));
+    if (!status.has_active_plan) Z.show($("detailBox"), false);
     const list = $("planList");
     list.innerHTML = "";
     for (const plan of plans) {

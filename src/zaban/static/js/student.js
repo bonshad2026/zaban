@@ -101,6 +101,11 @@
     showView("app");
     showLevel();
     loadAccent();
+    // Lessons need the plan of the adult who owns this profile. Without it, the learner is told why and cannot start.
+    if (me.has_active_plan === false) {
+      $("startBtn").disabled = true;
+      Z.showError($("startError"), "پلن والدتان فعال نیست، بنابراین جلسه فعلاً شروع نمی‌شود. لطفاً به والدتان بگویید پلن را فعال کنند.");
+    }
     selectTab("lesson");
     const { session } = await Z.request("GET", `/v1/students/${me.id}/sessions/active`);
     if (session) {
