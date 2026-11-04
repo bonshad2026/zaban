@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ورود دانش‌آموز | زبان</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  <!-- Sign-in view -->
+  <section id="loginView" class="hero" hidden>
+    <div class="auth-wrap">
+      <form id="loginForm" class="auth-card" autocomplete="on">
+        <a class="back" href="/">بازگشت به صفحه‌ی اصلی</a>
+        <h1>ورود دانش‌آموز</h1>
+        <label for="studentUsername">نام کاربری</label>
+        <input id="studentUsername" name="username" class="ltr-field" autocomplete="username" required autofocus>
+        <label for="studentPassword">رمز عبور</label>
+        <input id="studentPassword" name="password" type="password" class="ltr-field" autocomplete="current-password" required>
+        <p></p>
+        <button type="submit" class="wide">ورود</button>
+        <p class="error" id="loginError" hidden></p>
+      </form>
+    </div>
+  </section>
+
+  <!-- App view -->
+  <div id="appView" hidden>
+    <header class="topbar app-top">
+      <div class="brand">زبان</div>
+      <div class="who" id="who"></div>
+      <button id="logoutBtn" class="ghost" type="button">خروج</button>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab is-active" type="button" data-tab="lesson">جلسه</button>
+      <button class="tab" type="button" data-tab="report">گزارش من</button>
+    </nav>
+
+    <main class="wrap">
+      <section id="tab-lesson">
+        <div class="card" id="setupBox" hidden>
+          <h2>شروع یک جلسه</h2>
+          <p class="muted">Niko، معلم انگلیسی‌ات، منتظر توست. مدت جلسه را انتخاب کن و شروع کن.</p>
+          <label for="duration">مدت جلسه</label>
+          <select id="duration">
+            <option value="5">۵ دقیقه</option>
+            <option value="10" selected>۱۰ دقیقه</option>
+            <option value="15">۱۵ دقیقه</option>
+            <option value="20">۲۰ دقیقه</option>
+            <option value="30">۳۰ دقیقه</option>
+          </select>
+          <p><button id="startBtn" type="button">شروع جلسه</button></p>
+          <p class="error" id="startError" hidden></p>
+        </div>
+
+        <div class="card lesson" id="lessonBox" hidden>
+          <div class="lesson-top">
+            <span class="chip" id="turnChip"></span>
+            <span class="timer" id="timeLeft"></span>
+            <button id="endBtn" class="ghost" type="button">پایان جلسه</button>
+          </div>
+
+          <div class="chat" id="chat" aria-live="polite"></div>
+
+          <div class="composer">
+            <button id="micBtn" class="mic" type="button" aria-label="میکروفون" aria-pressed="false">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
+            </button>
+            <textarea id="msgInput" class="ltr-field" rows="2" maxlength="500" placeholder="Type or speak your English here..."></textarea>
+            <button id="sendBtn" class="send" type="button">ارسال</button>
+          </div>
+          <p class="hint" id="composerHint"></p>
+
+          <div class="options">
+            <label class="inline"><input type="checkbox" id="autoSpeak" checked> پاسخ صوتی Niko</label>
+            <label class="inline"><input type="checkbox" id="autoListen" checked> بعد از جواب Niko، میکروفون خودکار باز شود</label>
+          </div>
+          <p class="notice" id="voiceNotice" hidden></p>
+        </div>
+      </section>
+
+      <section id="tab-report" hidden>
+        <div class="card" id="reportBox"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/lesson.js"></script>
+  <script src="/static/js/student.js"></script>
+</body>
+</html>

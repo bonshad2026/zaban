@@ -10,6 +10,10 @@ requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.115",
     "uvicorn>=0.30",
+    "sqlalchemy>=2.0",
+    "psycopg[binary]>=3.2",
+    "anthropic>=0.40",
+    "itsdangerous>=2.2",
 ]
 
 [project.optional-dependencies]
@@ -20,3 +24,6 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+zaban = ["static/*.html", "static/css/*", "static/js/*", "static/img/*"]
