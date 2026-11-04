@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session as DBSession
 
 from zaban.config import settings
 from zaban.db import get_db
-from zaban.models import Consent, Guardian, Student, Tenant, utcnow
+from zaban.models import Consent, Guardian, Student, Tenant, VoiceSample, utcnow
 from zaban.schemas import AccentChoice, LevelTestAnswers, OtpRequest, PasswordReset, SignUpCreate, StudentLogin, UserLogin
 from zaban.security import WEB_COOKIE_NAMES, issue_web_session, read_web_session, session_is_current
 from zaban.services.learner import get_accent, set_accent, set_learner_profile
@@ -245,6 +245,26 @@ def _student_from_cookie(db: DBSession, token: str | None) -> Student:
     if not session_is_current(payload or {}, student):
         raise HTTPException(status_code=401, detail="Please sign in")
     return student
+
+
+@router.get("/student/voice-samples")
+def list_voice_samples(zaban_student: str | None = Cookie(default=None), db: DBSession = Depends(get_db)) -> list[dict]:
+    _student_from_cookie(db, zaban_student)
+    rows = db.query(VoiceSample).order_by(VoiceSample.created_at.desc()).all()
+    return [{"id": s.id, "name": s.name, "accent": s.accent} for s in rows]
+
+
+@router.get("/student/voice-samples/{sample_id}/audio")
+def voice_sample_audio(
+    sample_id: str,
+    zaban_student: str | None = Cookie(default=None),
+    db: DBSession = Depends(get_db),
+) -> Response:
+    _student_from_cookie(db, zaban_student)
+    sample = db.get(VoiceSample, sample_id)
+    if sample is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    return Response(content=sample.data, media_type=sample.mime, headers={"Cache-Control": "private, max-age=3600"})
 
 
 @router.get("/student/accent")

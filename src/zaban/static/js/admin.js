@@ -67,11 +67,12 @@
     plans: loadPlans,
     students: loadStudents,
     global: loadGlobalPrompt,
+    voices: loadVoices,
   };
 
   function openTab(name) {
     document.querySelectorAll(".admin-tabs .tab").forEach((t) => t.classList.toggle("is-active", t.dataset.tab === name));
-    ["consults", "adults", "payments", "plans", "students", "global"].forEach((n) => show(`tab-${n}`, n === name));
+    ["consults", "adults", "payments", "plans", "students", "global", "voices"].forEach((n) => show(`tab-${n}`, n === name));
     return run(loaders[name]);
   }
 
@@ -215,6 +216,78 @@
     $("profileInterests").focus();
   }
 
+  // ----- Voice samples -----
+
+  const VOICE_TYPES = { "audio/mpeg": "audio/mpeg", "audio/mp3": "audio/mpeg", "audio/wav": "audio/wav", "audio/x-wav": "audio/wav", "audio/wave": "audio/wav", "audio/ogg": "audio/ogg", "audio/mp4": "audio/mp4", "audio/x-m4a": "audio/mp4", "audio/m4a": "audio/mp4" };
+  const VOICE_EXT = { mp3: "audio/mpeg", wav: "audio/wav", ogg: "audio/ogg", m4a: "audio/mp4", mp4: "audio/mp4" };
+  const VOICE_LIMIT = 3 * 1024 * 1024;
+
+  async function loadVoices() {
+    const rows = await Z.request("GET", `${API}/voice-samples`);
+    fill($("voiceTable"), ["نام", "لهجه", "حجم", "افزوده شده", "عملیات"],
+      rows.map((s) => [
+        s.name,
+        s.accent,
+        `${Math.round(s.size_bytes / 1024)} KB`,
+        Z.fmtDate(s.created_at),
+        actions(button("حذف", () => deleteVoice(s.id))),
+      ]));
+  }
+
+  // The file type comes from the browser, or from the extension when the browser sends none.
+  function audioTypeOf(file) {
+    if (VOICE_TYPES[file.type]) return VOICE_TYPES[file.type];
+    const ext = file.name.split(".").pop().toLowerCase();
+    return VOICE_EXT[ext] || null;
+  }
+
+  function readAsBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(",")[1]);
+      reader.onerror = () => reject(new Error("فایل خوانده نشد."));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function addVoice(event) {
+    event.preventDefault();
+    Z.showError($("voiceError"), "");
+    Z.show($("voiceOk"), false);
+    const file = $("voiceFile").files[0];
+    if (!file) return;
+    const mime = audioTypeOf(file);
+    if (!mime) {
+      Z.showError($("voiceError"), "این نوع فایل پشتیبانی نمی‌شود. فایل mp3، wav، ogg یا m4a انتخاب کنید.");
+      return;
+    }
+    if (file.size > VOICE_LIMIT) {
+      Z.showError($("voiceError"), "فایل بزرگ‌تر از ۳ مگابایت است.");
+      return;
+    }
+    try {
+      await Z.request("POST", `${API}/voice-samples`, {
+        name: $("voiceName").value.trim(),
+        accent: $("voiceAccent").value,
+        mime,
+        data_base64: await readAsBase64(file),
+      });
+      event.target.reset();
+      $("voiceOk").textContent = "نمونه ذخیره شد.";
+      Z.show($("voiceOk"), true);
+      await loadVoices();
+    } catch (err) {
+      Z.showError($("voiceError"), err.message);
+    }
+  }
+
+  function deleteVoice(id) {
+    return run(async () => {
+      await Z.request("DELETE", `${API}/voice-samples/${id}`);
+      await loadVoices();
+    });
+  }
+
   // ----- General prompt -----
 
   async function loadGlobalPrompt() {
@@ -296,6 +369,7 @@
     $("planForm").addEventListener("submit", addPlan);
     $("profileForm").addEventListener("submit", saveProfile);
     $("globalForm").addEventListener("submit", saveGlobalPrompt);
+    $("voiceForm").addEventListener("submit", addVoice);
     $("globalText").addEventListener("input", updateGlobalCount);
     $("profileText").addEventListener("input", updateProfileCount);
     $("profileCancel").addEventListener("click", () => {

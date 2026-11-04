@@ -105,3 +105,11 @@ class PasswordReset(BaseModel):
 
 # A PIN is what a child types on a phone or tablet, so it is 4 to 6 digits.
 PIN_PATTERN = r"^\d{4,6}$"
+
+
+class VoiceSampleCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    accent: Literal["en-US", "en-GB", "en-AU", "en-CA"]
+    mime: Literal["audio/mpeg", "audio/wav", "audio/ogg", "audio/mp4"]
+    # The file as base64, so no separate upload parser is needed. The server limits the decoded size.
+    data_base64: str = Field(min_length=4, max_length=7_000_000)

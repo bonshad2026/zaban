@@ -40,6 +40,7 @@
         <button type="button" class="tab" data-tab="payments">پرداخت‌ها</button>
         <button type="button" class="tab" data-tab="plans">پلن‌ها</button>
         <button type="button" class="tab" data-tab="global">پرامپت کلی</button>
+        <button type="button" class="tab" data-tab="voices">نمونه صدا</button>
         <button type="button" class="tab" data-tab="students">دانش‌آموزان و پرامپت</button>
       </nav>
 
@@ -105,6 +106,28 @@
           <p class="error" id="profileError" hidden></p>
           <p class="ok-msg" id="profileOk" hidden></p>
         </form>
+      </section>
+
+      <section class="card" id="tab-voices" hidden>
+        <h2>نمونه صدای لهجه‌ها</h2>
+        <p class="muted">فایل صوتی یک جمله‌ی انگلیسی را با یک نام انتخاب کنید. این نمونه‌ها روی کارت هر لهجه برای دانش‌آموز پخش می‌شوند. فایل‌های mp3، wav، ogg یا m4a تا ۳ مگابایت.</p>
+        <form id="voiceForm" class="row">
+          <div><label for="voiceName">نام نمونه</label><input id="voiceName" maxlength="80" placeholder="مثلاً: Sarah - American" required></div>
+          <div>
+            <label for="voiceAccent">لهجه</label>
+            <select id="voiceAccent">
+              <option value="en-US">امریکایی</option>
+              <option value="en-GB">بریتانیایی</option>
+              <option value="en-AU">استرالیایی</option>
+              <option value="en-CA">کانادایی</option>
+            </select>
+          </div>
+          <div><label for="voiceFile">فایل صوتی</label><input id="voiceFile" type="file" accept=".mp3,.wav,.ogg,.m4a,audio/*" required></div>
+          <button type="submit">ذخیره‌ی نمونه</button>
+        </form>
+        <p class="error" id="voiceError" hidden></p>
+        <p class="ok-msg" id="voiceOk" hidden></p>
+        <div class="table-box"><table class="admin-table" id="voiceTable"></table></div>
       </section>
 
       <p class="error" id="adminError" hidden></p>

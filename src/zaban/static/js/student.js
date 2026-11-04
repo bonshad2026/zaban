@@ -30,10 +30,36 @@
     Accents.setCurrent(accentCode);
   }
 
-  function renderAccents() {
+  // Recorded samples uploaded by the administrator. The newest sample for an accent is the one played.
+  let samples = [];
+
+  async function loadSamples() {
+    try {
+      samples = await Z.request("GET", "/v1/web/student/voice-samples");
+    } catch (_) {
+      samples = [];
+    }
+  }
+
+  function playAccent(code) {
+    const sample = samples.find((s) => s.accent === code);
+    if (sample) {
+      new Audio(`/v1/web/student/voice-samples/${sample.id}/audio`).play().catch(() => {
+        Z.showError($("accentNotice"), "نمونه‌ی صوتی پخش نشد. دوباره تلاش کنید.");
+      });
+      return;
+    }
+    if (!Accents.speakSample(code)) {
+      Z.showError($("accentNotice"), "صدای این لهجه روی این دستگاه پیدا نشد.");
+    }
+  }
+
+  async function renderAccents() {
+    await loadSamples();
     const list = $("accentList");
     list.replaceChildren();
-    const missing = Accents.LIST.filter((a) => !Accents.voiceFor(a.code));
+    const hasSound = (code) => samples.some((s) => s.accent === code) || Accents.voiceFor(code);
+    const missing = Accents.LIST.filter((a) => !hasSound(a.code));
     Z.show($("accentNotice"), missing.length > 0);
     $("accentNotice").textContent = missing.length
       ? "این دستگاه بعضی لهجه‌ها را ندارد. برای همه‌ی لهجه‌ها، Chrome یا Edge را با صدای انگلیسی نصب‌شده امتحان کنید."
@@ -43,14 +69,12 @@
       const card = Z.el("div", "accent-card" + (selected ? " is-selected" : ""));
       card.appendChild(Z.el("strong", null, `${accent.name} (${accent.nameEn})`));
       card.appendChild(Z.el("p", "sample", accent.sample));
+      const recorded = samples.find((s) => s.accent === accent.code);
+      if (recorded) card.appendChild(Z.el("p", "muted", `نمونه‌ی ضبط‌شده: ${recorded.name}`));
       const actions = Z.el("div", "actions");
       const play = Z.el("button", "ghost", "پخش نمونه");
       play.type = "button";
-      play.addEventListener("click", () => {
-        if (!Accents.speakSample(accent.code)) {
-          Z.showError($("accentNotice"), "صدای این لهجه روی این دستگاه پیدا نشد.");
-        }
-      });
+      play.addEventListener("click", () => playAccent(accent.code));
       const choose = Z.el("button", "", selected ? "انتخاب‌شده" : "انتخاب این لهجه");
       choose.type = "button";
       choose.disabled = selected;

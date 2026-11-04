@@ -7,8 +7,11 @@ from sqlalchemy.orm import Session as DBSession
 
 from zaban.config import settings
 from zaban.db import get_db
-from zaban.models import BillingPlan, ConsultRequest, Guardian, Payment, Student, TutorProfile
+import base64
+
+from zaban.models import BillingPlan, ConsultRequest, Guardian, Payment, Student, TutorProfile, VoiceSample
 from zaban.services.learner import get_global_prompt, set_global_prompt, set_learner_profile
+from zaban.schemas import VoiceSampleCreate
 from zaban.services.payments import confirm_payment
 
 # Operator page. One shared password from the environment (ADMIN_PASSWORD). Sessions last 12 hours.
@@ -248,5 +251,50 @@ def read_global_prompt(db: DBSession = Depends(get_db)) -> dict:
 @router.post("/global-prompt", dependencies=[Depends(require_admin)])
 def write_global_prompt(body: GlobalPromptUpdate, db: DBSession = Depends(get_db)) -> dict:
     set_global_prompt(db, body.text.strip())
+    db.commit()
+    return {"ok": True}
+
+
+MAX_SAMPLE_BYTES = 3 * 1024 * 1024
+
+
+@router.get("/voice-samples", dependencies=[Depends(require_admin)])
+def list_voice_samples(db: DBSession = Depends(get_db)) -> list[dict]:
+    rows = db.query(VoiceSample).order_by(VoiceSample.created_at.desc()).all()
+    return [
+        {
+            "id": s.id,
+            "name": s.name,
+            "accent": s.accent,
+            "mime": s.mime,
+            "size_bytes": len(s.data),
+            "created_at": s.created_at.isoformat(),
+        }
+        for s in rows
+    ]
+
+
+@router.post("/voice-samples", status_code=201, dependencies=[Depends(require_admin)])
+def add_voice_sample(body: VoiceSampleCreate, db: DBSession = Depends(get_db)) -> dict:
+    try:
+        data = base64.b64decode(body.data_base64, validate=True)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="The file could not be read")
+    if not data:
+        raise HTTPException(status_code=400, detail="The file is empty")
+    if len(data) > MAX_SAMPLE_BYTES:
+        raise HTTPException(status_code=413, detail="The file is too large. Use a file under 3 MB")
+    sample = VoiceSample(name=body.name.strip(), accent=body.accent, mime=body.mime, data=data)
+    db.add(sample)
+    db.commit()
+    return {"id": sample.id}
+
+
+@router.delete("/voice-samples/{sample_id}", dependencies=[Depends(require_admin)])
+def delete_voice_sample(sample_id: str, db: DBSession = Depends(get_db)) -> dict:
+    sample = db.get(VoiceSample, sample_id)
+    if sample is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    db.delete(sample)
     db.commit()
     return {"ok": True}
