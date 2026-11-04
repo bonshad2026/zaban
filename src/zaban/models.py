@@ -138,6 +138,16 @@ class Student(Base):
     sessions: Mapped[list["TutorSession"]] = relationship(back_populates="student", cascade="all, delete-orphan")
 
 
+class TutorProfile(Base):
+    # Notes an administrator writes for one student: interests, tone and topics. They shape the lesson prompt
+    # but never override its safety rules. Kept in its own table, so an existing database gets it from create_all.
+    __tablename__ = "tutor_profiles"
+
+    student_id: Mapped[str] = mapped_column(ForeignKey("students.id"), primary_key=True)
+    instructions: Mapped[str] = mapped_column(Text, default="")
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
 class Consent(Base):
     __tablename__ = "consents"
 

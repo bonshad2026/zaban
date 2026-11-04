@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session as DBSession
 
 from zaban.config import settings
 from zaban.db import get_db
-from zaban.models import Consent, Guardian, Message, Plan, Student, TutorSession, new_id, utcnow
+from zaban.models import Consent, Guardian, Message, Plan, Student, TutorProfile, TutorSession, new_id, utcnow
 from zaban.schemas import (
     ConsentCreate,
     MessageCreate,
@@ -418,7 +418,9 @@ def send_message(
 
     history = [{"role": m.role, "content": m.content} for m in session.messages]
     history.append({"role": "user", "content": text})
-    system_prompt = build_system_prompt(student, _active_plan(db, student), block, session.duration_minutes)
+    profile = db.get(TutorProfile, student.id)
+    notes = profile.instructions if profile else ""
+    system_prompt = build_system_prompt(student, _active_plan(db, student), block, session.duration_minutes, notes)
     reply = tutor_reply(system_prompt, history)
 
     db.add(Message(session_id=session.id, role="user", content=text))

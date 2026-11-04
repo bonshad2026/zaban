@@ -42,6 +42,7 @@
         <button type="button" class="tab" data-tab="adults">ثبت‌نام‌ها</button>
         <button type="button" class="tab" data-tab="payments">پرداخت‌ها</button>
         <button type="button" class="tab" data-tab="plans">پلن‌ها</button>
+        <button type="button" class="tab" data-tab="students">دانش‌آموزان و پرامپت</button>
       </nav>
 
       <section class="card" id="tab-consults">
@@ -71,6 +72,24 @@
           <button type="submit">افزودن</button>
         </form>
         <p class="error" id="planError" hidden></p>
+      </section>
+
+      <section class="card" id="tab-students" hidden>
+        <h2>دانش‌آموزان و پرامپت هرکدام</h2>
+        <p class="muted">یادداشت هر دانش‌آموز (علاقه‌ها، لحن و موضوع‌ها) در جلسه‌های همان دانش‌آموز استفاده می‌شود. قوانین ایمنی همیشه بالاتر از این یادداشت‌ها هستند.</p>
+        <div class="table-box"><table class="admin-table" id="studentTable"></table></div>
+        <form id="profileForm" hidden>
+          <h2 style="margin-top:20px" id="profileTitle"></h2>
+          <label for="profileText">پرامپت این دانش‌آموز</label>
+          <textarea id="profileText" rows="10" maxlength="2000" placeholder="مثلاً: علاقه‌مند به فوتبال و نقاشی است. با جمله‌های کوتاه و مثال‌های ساده صحبت کن. موضوع جلسه: خرید از فروشگاه."></textarea>
+          <p class="muted" id="profileCount"></p>
+          <div class="row">
+            <button type="submit">ذخیره</button>
+            <button type="button" class="ghost" id="profileCancel">انصراف</button>
+          </div>
+          <p class="error" id="profileError" hidden></p>
+          <p class="ok-msg" id="profileOk" hidden></p>
+        </form>
       </section>
 
       <p class="error" id="adminError" hidden></p>

@@ -65,11 +65,12 @@
     adults: loadAdults,
     payments: loadPayments,
     plans: loadPlans,
+    students: loadStudents,
   };
 
   function openTab(name) {
     document.querySelectorAll(".admin-tabs .tab").forEach((t) => t.classList.toggle("is-active", t.dataset.tab === name));
-    ["consults", "adults", "payments", "plans"].forEach((n) => show(`tab-${n}`, n === name));
+    ["consults", "adults", "payments", "plans", "students"].forEach((n) => show(`tab-${n}`, n === name));
     return run(loaders[name]);
   }
 
@@ -189,6 +190,57 @@
     }
   }
 
+  // ----- Students and their lesson notes -----
+
+  const PROFILE_LIMIT = 2000;
+  let editingStudent = null;
+
+  async function loadStudents() {
+    const rows = await Z.request("GET", `${API}/students`);
+    fill($("studentTable"), ["نام", "نوع", "نام کاربری", "سطح", "پرامپت", "عملیات"],
+      rows.map((s) => [
+        s.name || "—",
+        s.kind === "self" ? "بزرگسال" : "کودک",
+        s.username,
+        s.cefr_level,
+        s.instructions ? `${s.instructions.slice(0, 60)}…` : "بدون پرامپت",
+        actions(button("ویرایش پرامپت", () => openProfile(s))),
+      ]));
+  }
+
+  function openProfile(student) {
+    editingStudent = student;
+    setError("profileError", "");
+    Z.show($("profileOk"), false);
+    $("profileTitle").textContent = `پرامپت: ${student.name || student.username || "دانش‌آموز"}`;
+    $("profileText").value = student.instructions;
+    updateProfileCount();
+    show("profileForm", true);
+    $("profileText").focus();
+  }
+
+  function updateProfileCount() {
+    $("profileCount").textContent = `${$("profileText").value.length} / ${PROFILE_LIMIT}`;
+  }
+
+  async function saveProfile(event) {
+    event.preventDefault();
+    setError("profileError", "");
+    Z.show($("profileOk"), false);
+    try {
+      await Z.request("POST", `${API}/students/${editingStudent.id}/profile`, {
+        instructions: $("profileText").value,
+      });
+      editingStudent = null;
+      show("profileForm", false);
+      await loadStudents();
+      $("profileOk").textContent = "پرامپت ذخیره شد. از جلسه‌ی بعدی این دانش‌آموز استفاده می‌شود.";
+      Z.show($("profileOk"), true);
+    } catch (err) {
+      setError("profileError", err.message);
+    }
+  }
+
   // ----- Sign-in and boot -----
 
   async function signIn(event) {
@@ -219,6 +271,12 @@
     $("adminLoginForm").addEventListener("submit", signIn);
     $("adminLogout").addEventListener("click", signOut);
     $("planForm").addEventListener("submit", addPlan);
+    $("profileForm").addEventListener("submit", saveProfile);
+    $("profileText").addEventListener("input", updateProfileCount);
+    $("profileCancel").addEventListener("click", () => {
+      editingStudent = null;
+      show("profileForm", false);
+    });
     document.querySelectorAll(".admin-tabs .tab").forEach((t) =>
       t.addEventListener("click", () => openTab(t.dataset.tab)));
 

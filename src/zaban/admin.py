@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session as DBSession
 
 from zaban.config import settings
 from zaban.db import get_db
-from zaban.models import BillingPlan, ConsultRequest, Guardian, Payment, utcnow
+from zaban.models import BillingPlan, ConsultRequest, Guardian, Payment, Student, TutorProfile, utcnow
 from zaban.services.payments import confirm_payment
 
 # Operator page. One shared password from the environment (ADMIN_PASSWORD). Sessions last 12 hours.
@@ -53,6 +53,10 @@ class PlanCreate(BaseModel):
 
 class PlanUpdate(BaseModel):
     active: bool
+
+
+class ProfileUpdate(BaseModel):
+    instructions: str = Field(default="", max_length=2000)
 
 
 @router.post("/login")
@@ -193,5 +197,37 @@ def set_plan_active(plan_id: str, body: PlanUpdate, db: DBSession = Depends(get_
     if plan is None:
         raise HTTPException(status_code=404, detail="Not found")
     plan.active = body.active
+    db.commit()
+    return {"ok": True}
+
+
+@router.get("/students", dependencies=[Depends(require_admin)])
+def list_students(db: DBSession = Depends(get_db)) -> list[dict]:
+    rows = db.query(Student).order_by(Student.created_at.desc()).limit(300).all()
+    notes = {p.student_id: p.instructions for p in db.query(TutorProfile).all()}
+    return [
+        {
+            "id": s.id,
+            "name": s.display_name,
+            "kind": "self" if s.self_owner_id else "child",
+            "username": s.username,
+            "cefr_level": s.cefr_level,
+            "instructions": notes.get(s.id, ""),
+        }
+        for s in rows
+    ]
+
+
+# The notes the lesson prompt is built from. Empty text clears them.
+@router.post("/students/{student_id}/profile", dependencies=[Depends(require_admin)])
+def save_profile(student_id: str, body: ProfileUpdate, db: DBSession = Depends(get_db)) -> dict:
+    if db.get(Student, student_id) is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    text = body.instructions.strip()
+    profile = db.get(TutorProfile, student_id)
+    if profile is None:
+        db.add(TutorProfile(student_id=student_id, instructions=text))
+    else:
+        profile.instructions = text
     db.commit()
     return {"ok": True}
