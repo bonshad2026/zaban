@@ -105,37 +105,29 @@
 
   async function loadAdults() {
     const rows = await Z.request("GET", `${API}/adults`);
-    fill($("adultTable"), ["ثبت‌نام", "نام", "شماره", "هدف", "پلن تا", "عملیات"],
+    // Plans are extended only when a payment is confirmed in the payments tab, never by hand here.
+    fill($("adultTable"), ["ثبت‌نام", "نام", "شماره", "هدف", "پلن تا"],
       rows.map((a) => [
         Z.fmtDate(a.created_at),
         a.name,
         a.phone,
         a.goal,
         a.plan_expires_at ? Z.fmtDate(a.plan_expires_at) : "بدون پلن",
-        actions(
-          button("۳۰ روز اعتبار", () => grantDays(a.id, 30)),
-          button("۹۰ روز اعتبار", () => grantDays(a.id, 90)),
-        ),
       ]));
-  }
-
-  function grantDays(id, days) {
-    return run(async () => {
-      await Z.request("POST", `${API}/adults/${id}/grant`, { days });
-      await loadAdults();
-    });
   }
 
   // ----- Payments -----
 
   async function loadPayments() {
     const rows = await Z.request("GET", `${API}/payments?status=pending`);
-    fill($("paymentTable"), ["زمان", "نام", "شماره", "پلن", "مبلغ (تومان)", "درگاه", "عملیات"],
+    // Confirming adds the plan's days to the adult's plan period, counted from today or from the current end date.
+    fill($("paymentTable"), ["زمان", "نام", "شماره", "پلن", "مدت (روز)", "مبلغ (تومان)", "درگاه", "عملیات"],
       rows.map((p) => [
         Z.fmtDateTime(p.created_at),
         p.adult,
         p.phone,
         p.plan,
+        p.days,
         p.amount_toman.toLocaleString("fa-IR"),
         p.gateway,
         actions(

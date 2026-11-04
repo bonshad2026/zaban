@@ -1,10 +1,11 @@
 import os
+from datetime import timedelta
 
 from fastapi.testclient import TestClient
 
 from zaban.db import SessionLocal
 from zaban.main import app
-from zaban.models import Guardian
+from zaban.models import Guardian, utcnow
 from zaban.services.sms import dev_outbox
 
 ADMIN_PASSWORD = os.environ["ADMIN_PASSWORD"]
@@ -58,27 +59,6 @@ def test_admin_sees_consult_requests_and_updates_their_status(client):
     assert updated["status"] == "contacted"
 
 
-def test_admin_grants_days_to_an_adult(client):
-    phone = "09121230090"
-    signed = TestClient(app)
-    signed.post("/v1/web/user/otp/request", json={"phone": phone, "purpose": "signup"})
-    from zaban.services.sms import dev_outbox as outbox
-
-    code = [c for n, c in outbox() if n == phone][-1]
-    signed.post(
-        "/v1/web/user/signup",
-        json={"phone": phone, "code": code, "full_name": "Granted", "password": "granted-pass-1", "age_confirmed": True},
-    )
-    with SessionLocal() as db:
-        adult_id = db.query(Guardian).filter(Guardian.phone == phone).one().id
-
-    admin = TestClient(app)
-    _admin(admin)
-    response = admin.post(f"/v1/admin/api/adults/{adult_id}/grant", json={"days": 30})
-    assert response.status_code == 200
-    assert signed.get("/v1/web/me?role=parent").json()["has_active_plan"] is True
-
-
 def test_admin_can_confirm_a_pending_payment_by_hand(client):
     phone = "09121230091"
     adult = TestClient(app)
@@ -98,6 +78,11 @@ def test_admin_can_confirm_a_pending_payment_by_hand(client):
     decided = admin.post(f"/v1/admin/api/payments/{paid['payment_id']}/decision", json={"ok": True})
     assert decided.json()["status"] == "confirmed"
     assert adult.get("/v1/web/me?role=parent").json()["has_active_plan"] is True
+    # The plan's days are added to the adult's plan period when the payment is confirmed.
+    with SessionLocal() as db:
+        guardian = db.query(Guardian).filter(Guardian.phone == phone).one()
+        remaining = guardian.plan_expires_at - utcnow()
+    assert abs(remaining - timedelta(days=plans[0]["days"])) < timedelta(minutes=5)
 
 
 def test_admin_can_add_and_switch_off_a_plan(client):

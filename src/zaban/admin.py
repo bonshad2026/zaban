@@ -1,5 +1,4 @@
 import hmac
-from datetime import timedelta
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
@@ -8,7 +7,7 @@ from sqlalchemy.orm import Session as DBSession
 
 from zaban.config import settings
 from zaban.db import get_db
-from zaban.models import BillingPlan, ConsultRequest, Guardian, Payment, Student, TutorProfile, utcnow
+from zaban.models import BillingPlan, ConsultRequest, Guardian, Payment, Student, TutorProfile
 from zaban.services.learner import get_global_prompt, set_global_prompt, set_learner_profile
 from zaban.services.payments import confirm_payment
 
@@ -39,10 +38,6 @@ class StatusUpdate(BaseModel):
 
 class PaymentDecision(BaseModel):
     ok: bool
-
-
-class PlanGrant(BaseModel):
-    days: int = Field(ge=1, le=3650)
 
 
 class PlanCreate(BaseModel):
@@ -134,18 +129,6 @@ def list_adults(db: DBSession = Depends(get_db)) -> list[dict]:
     ]
 
 
-@router.post("/adults/{adult_id}/grant", dependencies=[Depends(require_admin)])
-def grant_days(adult_id: str, body: PlanGrant, db: DBSession = Depends(get_db)) -> dict:
-    # Manual extension, for example for a support case. The same rule as a paid plan applies.
-    guardian = db.get(Guardian, adult_id)
-    if guardian is None:
-        raise HTTPException(status_code=404, detail="Not found")
-    now = utcnow()
-    start = max(now, guardian.plan_expires_at) if guardian.plan_expires_at else now
-    guardian.plan_expires_at = start + timedelta(days=body.days)
-    db.commit()
-    return {"plan_expires_at": guardian.plan_expires_at.isoformat()}
-
 
 @router.get("/payments", dependencies=[Depends(require_admin)])
 def list_payments(status: str = "pending", db: DBSession = Depends(get_db)) -> list[dict]:
@@ -162,6 +145,7 @@ def list_payments(status: str = "pending", db: DBSession = Depends(get_db)) -> l
                 "adult": guardian.full_name if guardian else "",
                 "phone": guardian.phone if guardian else "",
                 "plan": plan.name if plan else "",
+                "days": plan.days if plan else 0,
                 "amount_toman": p.amount_toman,
                 "status": p.status,
                 "gateway": p.gateway,
