@@ -9,8 +9,8 @@ os.environ["DATABASE_URL"] = f"sqlite:///{_TMP_DIR}/test.db"
 os.environ["ENVIRONMENT"] = "development"
 os.environ["SECRET_KEY"] = secrets.token_urlsafe(32)
 os.environ["ZABAN_DEMO_API_KEY"] = secrets.token_urlsafe(24)
-os.environ["ZABAN_DEMO_PARENT_EMAIL"] = "test-parent@example.com"
-os.environ["ZABAN_DEMO_PARENT_PASSWORD"] = secrets.token_urlsafe(12)
+os.environ["ZABAN_DEMO_PARENT_PHONE"] = "09120000001"
+os.environ.pop("KAVENEGAR_API_KEY", None)  # Tests use the in-memory SMS sender, never a real provider.
 os.environ["ZABAN_DEMO_STUDENT_USERNAME"] = "test-student"
 os.environ["ZABAN_DEMO_STUDENT_PASSWORD"] = secrets.token_urlsafe(12)
 os.environ.pop("ANTHROPIC_API_KEY", None)

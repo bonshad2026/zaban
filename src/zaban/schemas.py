@@ -12,7 +12,8 @@ class StudentCreate(BaseModel):
     display_name: str = Field(default="", max_length=120)
     external_user_id: str | None = Field(default=None, min_length=1, max_length=120)
     username: str | None = Field(default=None, pattern=USERNAME_PATTERN)
-    password: str | None = Field(default=None, min_length=6, max_length=100)
+    # Guardians set a 4 to 6 digit PIN. Tenant API keys may send a longer password.
+    password: str | None = Field(default=None, min_length=4, max_length=100)
 
 
 class StudentUpdate(BaseModel):
@@ -21,7 +22,7 @@ class StudentUpdate(BaseModel):
 
 
 class PasswordSet(BaseModel):
-    password: str = Field(min_length=6, max_length=100)
+    password: str = Field(min_length=4, max_length=100)
 
 
 class ConsentCreate(BaseModel):
@@ -57,6 +58,16 @@ class StudentLogin(BaseModel):
     password: str = Field(min_length=1, max_length=100)
 
 
-class ParentLogin(BaseModel):
-    email: str = Field(min_length=3, max_length=190)
-    password: str = Field(min_length=1, max_length=100)
+class OtpRequest(BaseModel):
+    phone: str = Field(min_length=6, max_length=24)
+
+
+class OtpVerify(BaseModel):
+    phone: str = Field(min_length=6, max_length=24)
+    code: str = Field(min_length=4, max_length=8, pattern=r"^\d{4,8}$")
+    # Only needed the first time, when the account is created.
+    full_name: str | None = Field(default=None, max_length=120)
+
+
+# A PIN is what a child types on a phone or tablet, so it is 4 to 6 digits.
+PIN_PATTERN = r"^\d{4,6}$"

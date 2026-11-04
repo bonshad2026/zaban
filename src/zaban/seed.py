@@ -4,6 +4,7 @@ from zaban.config import Settings
 from zaban.models import Consent, Guardian, Student, Tenant
 from zaban.security import hash_api_key
 from zaban.services.passwords import hash_password
+from zaban.services.otp import normalize_phone
 
 
 def seed_demo_tenant(db: Session, raw_key: str | None) -> Tenant | None:
@@ -20,25 +21,22 @@ def seed_demo_tenant(db: Session, raw_key: str | None) -> Tenant | None:
 
 
 def seed_demo_accounts(db: Session, tenant: Tenant | None, settings: Settings) -> None:
-    """Create a demo parent and student for trying the website. Runs only when all demo values are set."""
+    """Create a demo adult and child for trying the website. Runs only when all demo values are set."""
     values = (
         tenant,
-        settings.demo_parent_email,
-        settings.demo_parent_password,
+        settings.demo_parent_phone,
         settings.demo_student_username,
         settings.demo_student_password,
     )
     if not all(values):
         return
+    phone = normalize_phone(settings.demo_parent_phone)
+    if phone is None:
+        return
 
-    guardian = db.query(Guardian).filter(Guardian.email == settings.demo_parent_email.lower()).first()
+    guardian = db.query(Guardian).filter(Guardian.phone == phone).first()
     if guardian is None:
-        guardian = Guardian(
-            tenant_id=tenant.id,
-            email=settings.demo_parent_email.lower(),
-            full_name="Demo Parent",
-            password_hash=hash_password(settings.demo_parent_password),
-        )
+        guardian = Guardian(tenant_id=tenant.id, phone=phone, full_name="Demo Parent")
         db.add(guardian)
         db.commit()
 

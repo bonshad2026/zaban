@@ -82,14 +82,14 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent-soft
 .hero {
   min-height: 100vh;
   background: #ffd60a url("/static/img/hero.svg") center / cover no-repeat;
-  color: #1d3557;
+  color: #f5f1ea;
   position: relative;
 }
 .hero::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0) 55%);
+  background: rgba(0, 0, 0, 0.6);
 }
 .hero > * { position: relative; }
 .topbar {
@@ -102,8 +102,8 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent-soft
   margin: 0 auto;
 }
 .brand { font-weight: 700; font-size: 20px; letter-spacing: 0.3px; }
-.lang-toggle { background: rgba(255, 255, 255, 0.75); color: #1d3557; border: 1px solid rgba(29, 53, 87, 0.2); }
-.lang-toggle:hover:not(:disabled) { background: #ffffff; }
+.lang-toggle { background: rgba(255, 255, 255, 0.12); color: #f5f1ea; border: 1px solid rgba(255, 255, 255, 0.35); }
+.lang-toggle:hover:not(:disabled) { background: rgba(255, 255, 255, 0.25); }
 .hero-content {
   max-width: 1000px;
   margin: 0 auto;

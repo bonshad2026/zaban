@@ -4,7 +4,7 @@ from datetime import timedelta
 from zaban.db import Base, SessionLocal, engine
 from zaban.models import Guardian, Tenant, utcnow
 from zaban.security import generate_api_key, hash_api_key
-from zaban.services.passwords import hash_password
+from zaban.services.otp import normalize_phone
 
 
 def _create_tenant(args: argparse.Namespace) -> None:
@@ -25,23 +25,18 @@ def _create_tenant(args: argparse.Namespace) -> None:
 
 
 def _create_parent(args: argparse.Namespace) -> None:
+    phone = normalize_phone(args.phone)
+    if phone is None:
+        raise SystemExit("The mobile number must look like 09121234567.")
     with SessionLocal() as db:
         tenant = db.query(Tenant).filter(Tenant.status == "active").order_by(Tenant.created_at).first()
         if tenant is None:
             raise SystemExit("No active tenant. Create one first with the 'tenant' command.")
-        email = args.email.strip().lower()
-        if db.query(Guardian).filter(Guardian.email == email).first():
-            raise SystemExit(f"A parent with the email {email} already exists.")
-        db.add(
-            Guardian(
-                tenant_id=tenant.id,
-                email=email,
-                full_name=args.name.strip(),
-                password_hash=hash_password(args.password),
-            )
-        )
+        if db.query(Guardian).filter(Guardian.phone == phone).first():
+            raise SystemExit("An account with this mobile number already exists.")
+        db.add(Guardian(tenant_id=tenant.id, phone=phone, full_name=args.name.strip()))
         db.commit()
-    print(f"Parent account created for {email}.")
+    print("Adult account created. The person signs in with an SMS code sent to that number.")
 
 
 def main() -> None:
@@ -54,10 +49,9 @@ def main() -> None:
     tenant.add_argument("--days", type=int, default=None, help="Days until the subscription expires")
     tenant.set_defaults(handler=_create_tenant)
 
-    parent = commands.add_parser("parent", help="Create a parent account for the website")
-    parent.add_argument("--email", required=True)
+    parent = commands.add_parser("parent", help="Create an adult account that signs in with an SMS code")
+    parent.add_argument("--phone", required=True, help="Mobile number, for example 09121234567")
     parent.add_argument("--name", required=True, help="Full name shown in the website")
-    parent.add_argument("--password", required=True, help="Initial password (change it after first sign-in)")
     parent.set_defaults(handler=_create_parent)
 
     args = parser.parse_args()

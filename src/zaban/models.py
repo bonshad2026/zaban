@@ -30,20 +30,40 @@ class Tenant(Base):
 
 
 class Guardian(Base):
-    # A parent who signs in to the website. Creates and manages their children's accounts.
+    # An adult account, signed in with a mobile number and an SMS code. It can manage children
+    # (guardian_id on Student) and can also learn for itself (self_owner_id on Student).
     __tablename__ = "guardians"
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
     tenant_id: Mapped[str] = mapped_column(ForeignKey("tenants.id"), index=True)
-    email: Mapped[str] = mapped_column(String(190), unique=True, index=True)
+    phone: Mapped[str] = mapped_column(String(16), unique=True, index=True)
     full_name: Mapped[str] = mapped_column(String(120))
-    password_hash: Mapped[str] = mapped_column(String(255))
+    email: Mapped[str | None] = mapped_column(String(190), unique=True, nullable=True)
+    # Bumped on logout-everywhere, so older sign-in cookies stop working.
+    session_version: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
-    students: Mapped[list["Student"]] = relationship(back_populates="guardian")
+    students: Mapped[list["Student"]] = relationship(back_populates="guardian", foreign_keys="Student.guardian_id")
+
+
+class OtpCode(Base):
+    # A one-time SMS code. Only its hash is stored.
+    __tablename__ = "otp_codes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    phone: Mapped[str] = mapped_column(String(16), index=True)
+    code_hash: Mapped[str] = mapped_column(String(64))
+    request_ip: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
 
 
 class Student(Base):
+    # A learner. Two kinds exist:
+    # - managed: a child under 18, created by a guardian (guardian_id), signs in with username and PIN.
+    # - self: an adult who learns for themself (self_owner_id). Only that adult can see their reports.
     __tablename__ = "students"
     __table_args__ = (UniqueConstraint("tenant_id", "external_user_id"),)
 
@@ -54,11 +74,16 @@ class Student(Base):
     username: Mapped[str | None] = mapped_column(String(60), unique=True, nullable=True)
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     guardian_id: Mapped[str | None] = mapped_column(ForeignKey("guardians.id"), index=True, nullable=True)
+    self_owner_id: Mapped[str | None] = mapped_column(ForeignKey("guardians.id"), index=True, nullable=True)
     age_band: Mapped[str] = mapped_column(String(20))
     cefr_level: Mapped[str | None] = mapped_column(String(4), nullable=True)
+    # PIN login protection: after repeated wrong PINs the login is paused for a while.
+    failed_logins: Mapped[int] = mapped_column(Integer, default=0)
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    session_version: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
-    guardian: Mapped[Guardian | None] = relationship(back_populates="students")
+    guardian: Mapped[Guardian | None] = relationship(back_populates="students", foreign_keys=[guardian_id])
     consents: Mapped[list["Consent"]] = relationship(back_populates="student", cascade="all, delete-orphan")
     plans: Mapped[list["Plan"]] = relationship(back_populates="student", cascade="all, delete-orphan")
     sessions: Mapped[list["TutorSession"]] = relationship(back_populates="student", cascade="all, delete-orphan")

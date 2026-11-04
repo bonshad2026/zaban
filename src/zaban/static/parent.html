@@ -3,22 +3,31 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ورود والدین | زبان</title>
+  <title>ورود والدین و بزرگسالان | زبان</title>
   <link rel="stylesheet" href="/static/css/app.css">
 </head>
 <body>
-  <!-- Sign-in view -->
+  <!-- Sign-in view: adults sign in with a mobile number and an SMS code -->
   <section id="loginView" class="hero" hidden>
     <div class="auth-wrap">
       <form id="loginForm" class="auth-card" autocomplete="on">
         <a class="back" href="/">بازگشت به صفحه‌ی اصلی</a>
-        <h1>ورود والدین</h1>
-        <label for="parentEmail">ایمیل</label>
-        <input id="parentEmail" name="email" type="email" class="ltr-field" autocomplete="username" required autofocus>
-        <label for="parentPassword">رمز عبور</label>
-        <input id="parentPassword" name="password" type="password" class="ltr-field" autocomplete="current-password" required>
-        <p></p>
-        <button type="submit" class="wide">ورود</button>
+        <h1>ورود والدین و بزرگسالان</h1>
+        <p class="muted">با شماره‌ی موبایل خودتان وارد شوید. کد ورود برایتان پیامک می‌شود.</p>
+        <label for="parentPhone">شماره‌ی موبایل</label>
+        <input id="parentPhone" name="phone" type="tel" inputmode="tel" class="ltr-field" autocomplete="tel" placeholder="09121234567" required autofocus>
+        <button type="button" id="sendCodeBtn" class="secondary wide">ارسال کد</button>
+
+        <div id="codeStep" hidden>
+          <label for="parentCode">کد پیامک شده</label>
+          <input id="parentCode" name="code" inputmode="numeric" class="ltr-field" autocomplete="one-time-code" maxlength="8">
+          <label for="parentName">نام و نام خانوادگی (فقط در اولین ورود)</label>
+          <input id="parentName" name="full_name" maxlength="120">
+          <p></p>
+          <button type="submit" class="wide">ورود</button>
+          <p><button type="button" id="resendBtn" class="ghost wide">ارسال دوباره‌ی کد</button></p>
+        </div>
+
         <p class="error" id="loginError" hidden></p>
       </form>
     </div>
@@ -29,10 +38,18 @@
     <header class="topbar app-top">
       <div class="brand">زبان</div>
       <div class="who" id="who"></div>
+      <button id="logoutAllBtn" class="ghost" type="button">خروج از همه‌ی دستگاه‌ها</button>
       <button id="logoutBtn" class="ghost" type="button">خروج</button>
     </header>
 
     <main class="wrap">
+      <section class="card">
+        <h2>یادگیری خودم</h2>
+        <p class="muted">اگر خودتان می‌خواهید انگلیسی یاد بگیرید، وارد بخش یادگیری خود شوید. گزارش‌های این بخش فقط برای خودتان است.</p>
+        <button id="selfBtn" type="button">ورود به یادگیری خودم</button>
+        <p class="error" id="selfError" hidden></p>
+      </section>
+
       <section class="card">
         <h2>فرزندان من</h2>
         <div class="student-list" id="studentList"></div>
@@ -40,7 +57,7 @@
 
       <section class="card">
         <h2>افزودن فرزند</h2>
-        <p class="muted">یک حساب برای فرزندتان بسازید. او با همین نام کاربری و رمز وارد می‌شود.</p>
+        <p class="muted">برای فرزندتان یک حساب بسازید. او با همین نام کاربری و PIN وارد می‌شود. فقط برای کودکان و نوجوانان زیر ۱۸ سال است؛ بزرگسالان خودشان حساب می‌سازند.</p>
         <form id="addForm">
           <div class="row">
             <div>
@@ -53,7 +70,6 @@
                 <option value="7-10">۷ تا ۱۰ سال</option>
                 <option value="11-14" selected>۱۱ تا ۱۴ سال</option>
                 <option value="15-18">۱۵ تا ۱۸ سال</option>
-                <option value="adult">بزرگسال</option>
               </select>
             </div>
           </div>
@@ -63,8 +79,8 @@
               <input id="newUsername" name="username" class="ltr-field" pattern="[a-zA-Z0-9_.\-]{3,30}" required>
             </div>
             <div>
-              <label for="newPassword">رمز عبور اولیه (حداقل ۶ کاراکتر)</label>
-              <input id="newPassword" name="password" type="password" class="ltr-field" minlength="6" required>
+              <label for="newPassword">PIN ورود (۴ تا ۶ رقم)</label>
+              <input id="newPassword" name="password" type="password" inputmode="numeric" class="ltr-field" pattern="\d{4,6}" required>
             </div>
           </div>
           <label class="inline" style="margin-top:14px">
@@ -90,7 +106,6 @@
                 <option value="7-10">۷ تا ۱۰ سال</option>
                 <option value="11-14">۱۱ تا ۱۴ سال</option>
                 <option value="15-18">۱۵ تا ۱۸ سال</option>
-                <option value="adult">بزرگسال</option>
               </select>
               <p><button type="submit" class="secondary">ذخیره‌ی اطلاعات</button></p>
               <p class="error" id="infoError" hidden></p>
@@ -148,8 +163,8 @@
 
             <form id="passwordForm" hidden>
               <h2 style="margin-top:18px">تغییر رمز ورود</h2>
-              <label for="newPasswordForChild">رمز تازه (حداقل ۶ کاراکتر)</label>
-              <input id="newPasswordForChild" type="password" class="ltr-field" minlength="6" required>
+              <label for="newPasswordForChild">PIN تازه (۴ تا ۶ رقم)</label>
+              <input id="newPasswordForChild" type="password" inputmode="numeric" class="ltr-field" pattern="\d{4,6}" required>
               <p><button type="submit" class="secondary">ذخیره‌ی رمز</button></p>
               <p class="error" id="passwordError" hidden></p>
               <p class="ok-msg" id="passwordOk" hidden></p>

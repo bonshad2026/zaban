@@ -227,17 +227,59 @@
     setTimeout(() => Z.show(node, false), 3500);
   }
 
+  // ----- Sign-in with a mobile number and an SMS code -----
+
+  // The number the code was sent to. Changing the number starts the steps again.
+  let phoneSent = null;
+
+  function resetCodeStep() {
+    phoneSent = null;
+    Z.show($("codeStep"), false);
+    $("parentCode").value = "";
+  }
+
+  async function sendCode() {
+    Z.showError($("loginError"), "");
+    const phone = $("parentPhone").value.trim();
+    try {
+      await Z.request("POST", "/v1/web/user/otp/request", { phone });
+      phoneSent = phone;
+      Z.show($("codeStep"), true);
+      $("parentCode").focus();
+    } catch (err) {
+      Z.showError($("loginError"), err.message);
+    }
+  }
+
   async function login(event) {
     event.preventDefault();
+    // Enter on the phone field sends the code first. The code and name are entered on the next step.
+    if (!phoneSent) return sendCode();
     const form = event.target;
     Z.showError($("loginError"), "");
     try {
-      await Z.request("POST", "/v1/web/parent/login", { email: form.email.value, password: form.password.value });
+      await Z.request("POST", "/v1/web/user/otp/verify", {
+        phone: phoneSent,
+        code: form.code.value.trim(),
+        full_name: form.full_name.value.trim() || null,
+      });
       me = await Z.request("GET", "/v1/web/me?role=parent");
-      form.password.value = "";
+      form.code.value = "";
       await enterApp();
     } catch (err) {
       Z.showError($("loginError"), err.message);
+    }
+  }
+
+  // ----- Learning for myself -----
+
+  async function startOwnLearning() {
+    Z.showError($("selfError"), "");
+    try {
+      await Z.request("POST", "/v1/web/user/self");
+      location.href = "/student";
+    } catch (err) {
+      Z.showError($("selfError"), err.message);
     }
   }
 
@@ -246,10 +288,21 @@
     location.reload();
   }
 
+  async function logoutEverywhere() {
+    if (!confirm("از همه‌ی دستگاه‌ها خارج شوید؟ دوباره باید با کد پیامکی وارد شوید.")) return;
+    await Z.request("POST", "/v1/web/user/logout-all").catch(() => {});
+    location.reload();
+  }
+
   async function boot() {
     Z.initLang();
     $("loginForm").addEventListener("submit", login);
+    $("sendCodeBtn").addEventListener("click", sendCode);
+    $("resendBtn").addEventListener("click", sendCode);
+    $("parentPhone").addEventListener("input", resetCodeStep);
+    $("selfBtn").addEventListener("click", startOwnLearning);
     $("logoutBtn").addEventListener("click", logout);
+    $("logoutAllBtn").addEventListener("click", logoutEverywhere);
     $("addForm").addEventListener("submit", addStudent);
     $("infoForm").addEventListener("submit", saveInfo);
     $("consentBtn").addEventListener("click", giveConsent);

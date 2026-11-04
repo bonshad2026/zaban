@@ -10,7 +10,8 @@ from zaban.config import settings
 from zaban.db import get_db
 from zaban.models import Guardian, Student, Tenant, utcnow
 
-# One cookie per role, so a parent and a child can be signed in on the same computer at the same time.
+# One cookie per role, so an adult and a child can be signed in on the same computer at the same time.
+# "parent" is the adult account (guardian and/or self-learner). Its sign-in is by mobile number and SMS code.
 WEB_COOKIE_NAMES = {"student": "zaban_student", "parent": "zaban_parent"}
 
 _token_serializer = URLSafeTimedSerializer(settings.secret_key, salt="student-token")
@@ -29,8 +30,8 @@ def issue_student_token(student: Student) -> str:
     return _token_serializer.dumps({"sid": student.id, "tid": student.tenant_id})
 
 
-def issue_web_session(role: str, subject_id: str, tenant_id: str) -> str:
-    return _web_serializer.dumps({"role": role, "sid": subject_id, "tid": tenant_id})
+def issue_web_session(role: str, subject_id: str, tenant_id: str, version: int) -> str:
+    return _web_serializer.dumps({"role": role, "sid": subject_id, "tid": tenant_id, "v": version})
 
 
 def read_web_session(token: str) -> dict | None:
@@ -38,6 +39,11 @@ def read_web_session(token: str) -> dict | None:
         return _web_serializer.loads(token, max_age=settings.web_session_ttl_seconds)
     except (BadSignature, SignatureExpired):
         return None
+
+
+def session_is_current(payload: dict, subject: Guardian | Student | None) -> bool:
+    # A sign-in stays valid only while the account's version has not changed (logout everywhere, PIN reset).
+    return subject is not None and payload.get("v") == subject.session_version
 
 
 def _read_student_token(token: str) -> dict:
@@ -87,10 +93,14 @@ def get_auth(
         if not payload:
             continue
         tenant = _check_tenant(db.get(Tenant, payload["tid"]))
-        if payload["role"] == "student" and db.get(Student, payload["sid"]):
-            return Auth(tenant=tenant, student_id=payload["sid"])
-        if payload["role"] == "guardian" and db.get(Guardian, payload["sid"]):
-            return Auth(tenant=tenant, guardian_id=payload["sid"])
+        if payload["role"] == "student":
+            student = db.get(Student, payload["sid"])
+            if session_is_current(payload, student):
+                return Auth(tenant=tenant, student_id=student.id)
+        if payload["role"] == "guardian":
+            guardian = db.get(Guardian, payload["sid"])
+            if session_is_current(payload, guardian):
+                return Auth(tenant=tenant, guardian_id=guardian.id)
 
     raise HTTPException(status_code=401, detail="Please sign in")
 

@@ -1,3 +1,4 @@
+import re
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Response
@@ -12,6 +13,7 @@ from zaban.schemas import (
     MessageCreate,
     PasswordSet,
     PlacementCreate,
+    PIN_PATTERN,
     PlanCreate,
     SessionCreate,
     StudentCreate,
@@ -34,6 +36,11 @@ from zaban.services.sessions import (
 router = APIRouter()
 
 GUARD_REPLY = "Let's keep our lesson on English. Can you say that in a different way?"
+
+
+def _check_pin_if_guardian(auth: Auth, password: str) -> None:
+    if auth.guardian_id and not re.fullmatch(PIN_PATTERN, password):
+        raise HTTPException(status_code=400, detail="The PIN must be 4 to 6 digits")
 
 
 def _student_out(student: Student) -> dict:
@@ -127,11 +134,16 @@ def create_student(
     if existing:
         return _student_out(existing)
 
+    if auth.guardian_id and body.age_band == "adult":
+        # Adults sign in with their own mobile number and learn for themself. A guardian cannot create them.
+        raise HTTPException(status_code=403, detail="Adults must create their own account")
+
     username = None
     password_hash = None
     if body.username:
         if not body.password:
             raise HTTPException(status_code=400, detail="A password is needed with a username")
+        _check_pin_if_guardian(auth, body.password)
         username = body.username.lower()
         if db.query(Student).filter(Student.username == username).first():
             raise HTTPException(status_code=409, detail="This username is already taken")
@@ -181,6 +193,8 @@ def update_student(
     if body.display_name is not None:
         student.display_name = body.display_name.strip()
     if body.age_band is not None:
+        if auth.guardian_id and body.age_band == "adult":
+            raise HTTPException(status_code=403, detail="Adults must create their own account")
         student.age_band = body.age_band
     db.commit()
     return _student_out(student)
@@ -196,7 +210,12 @@ def set_student_password(
     student = get_student_for_auth(db, auth, student_id)
     if not student.username:
         raise HTTPException(status_code=400, detail="This student has no login")
+    _check_pin_if_guardian(auth, body.password)
     student.password_hash = hash_password(body.password)
+    # A new PIN ends old child sessions and clears any lock from wrong attempts.
+    student.session_version += 1
+    student.failed_logins = 0
+    student.locked_until = None
     db.commit()
     return {"ok": True}
 

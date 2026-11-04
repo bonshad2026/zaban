@@ -14,10 +14,13 @@ class Settings:
     web_session_ttl_seconds: int
     input_price_per_mtok: float
     output_price_per_mtok: float
+    # SMS codes for adult sign-in (Kavenegar). Without a key, codes are kept in memory for development only.
+    kavenegar_api_key: str | None
+    kavenegar_otp_template: str
+    otp_ttl_seconds: int
     # Demo values are read from the environment only. Nothing is stored in the code.
     demo_api_key: str | None
-    demo_parent_email: str | None
-    demo_parent_password: str | None
+    demo_parent_phone: str | None
     demo_student_username: str | None
     demo_student_password: str | None
 
@@ -35,9 +38,11 @@ def load_settings() -> Settings:
         # Placeholder prices in USD per million tokens. Set the real values from Anthropic's price list.
         input_price_per_mtok=float(os.getenv("PRICE_INPUT_PER_MTOK", "1.0")),
         output_price_per_mtok=float(os.getenv("PRICE_OUTPUT_PER_MTOK", "5.0")),
+        kavenegar_api_key=os.getenv("KAVENEGAR_API_KEY") or None,
+        kavenegar_otp_template=os.getenv("KAVENEGAR_OTP_TEMPLATE", "zaban-otp"),
+        otp_ttl_seconds=int(os.getenv("OTP_TTL_SECONDS", "300")),
         demo_api_key=os.getenv("ZABAN_DEMO_API_KEY") or None,
-        demo_parent_email=os.getenv("ZABAN_DEMO_PARENT_EMAIL") or None,
-        demo_parent_password=os.getenv("ZABAN_DEMO_PARENT_PASSWORD") or None,
+        demo_parent_phone=os.getenv("ZABAN_DEMO_PARENT_PHONE") or None,
         demo_student_username=os.getenv("ZABAN_DEMO_STUDENT_USERNAME") or None,
         demo_student_password=os.getenv("ZABAN_DEMO_STUDENT_PASSWORD") or None,
     )
