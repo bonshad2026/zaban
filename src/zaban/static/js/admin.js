@@ -106,13 +106,14 @@
   async function loadAdults() {
     const rows = await Z.request("GET", `${API}/adults`);
     // Plans are extended only when a payment is confirmed in the payments tab, never by hand here.
-    fill($("adultTable"), ["ثبت‌نام", "نام", "شماره", "هدف", "پلن تا"],
+    fill($("adultTable"), ["ثبت‌نام", "نام", "شماره", "هدف", "نوع پلن", "اعتبار پلن تا"],
       rows.map((a) => [
         Z.fmtDate(a.created_at),
         a.name,
         a.phone,
         a.goal,
-        a.plan_expires_at ? Z.fmtDate(a.plan_expires_at) : "بدون پلن",
+        a.plan_name || "—",
+        a.plan_expires_at && new Date(a.plan_expires_at) > new Date() ? Z.fmtDate(a.plan_expires_at) : "بدون پلن فعال",
       ]));
   }
 

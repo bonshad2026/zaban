@@ -17,7 +17,7 @@
         <label for="studentUsername">نام کاربری</label>
         <input id="studentUsername" name="username" class="ltr-field" autocomplete="username" required autofocus>
         <label for="studentPassword">PIN ورود (۴ تا ۶ رقم)</label>
-        <input id="studentPassword" name="password" type="password" class="ltr-field" autocomplete="current-password" required>
+        <input id="studentPassword" name="password" type="password" inputmode="numeric" class="ltr-field" autocomplete="new-password" pattern="\d{4,6}" required>
         <p></p>
         <button type="submit" class="wide">ورود</button>
         <p class="error" id="loginError" hidden></p>
@@ -30,7 +30,6 @@
     <header class="topbar app-top">
       <div class="who" id="who"></div>
       <a class="pill" id="backToParent" href="/parent" hidden>برگشت به پنل والد</a>
-      <button id="logoutBtn" class="ghost" type="button">خروج</button>
     </header>
 
     <nav class="tabs">
@@ -43,6 +42,7 @@
         <div class="card" id="setupBox" hidden>
           <h2>شروع یک جلسه</h2>
           <p class="muted">Niko، معلم انگلیسی‌ات، منتظر توست. مدت جلسه را انتخاب کن و شروع کن.</p>
+          <p class="notice" id="levelNotice" hidden></p>
           <label for="duration">مدت جلسه</label>
           <select id="duration">
             <option value="5">۵ دقیقه</option>

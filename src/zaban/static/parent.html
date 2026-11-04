@@ -51,7 +51,6 @@
     <header class="topbar app-top">
       <div class="who" id="who"></div>
       <button id="logoutAllBtn" class="ghost" type="button">خروج از همه‌ی دستگاه‌ها</button>
-      <button id="logoutBtn" class="ghost" type="button">خروج</button>
     </header>
 
     <main class="wrap">
@@ -162,8 +161,15 @@
             </div>
 
             <form id="placementForm" hidden>
-              <label for="placementScore">نمره‌ی تعیین سطح (۰ تا ۱۰۰)</label>
-              <input id="placementScore" type="number" min="0" max="100" value="50" required>
+              <label for="placementLevel">سطح انگلیسی فرزند</label>
+              <select id="placementLevel" required>
+                <option value="A1">A1 — مبتدی (چند کلمه‌ی ساده)</option>
+                <option value="A2" selected>A2 — مقدماتی (جمله‌های کوتاه روزمره)</option>
+                <option value="B1">B1 — متوسط (گفت‌وگوی روزمره)</option>
+                <option value="B2">B2 — متوسط بالا (بحث درباره‌ی موضوع‌های مختلف)</option>
+                <option value="C1">C1 — پیشرفته (صحبت روان و دقیق)</option>
+              </select>
+              <p class="muted">اگر مطمئن نیستید، A2 را انتخاب کنید. سطح بعداً قابل تغییر است.</p>
               <p><button type="submit">ثبت سطح</button></p>
               <p class="error" id="placementError" hidden></p>
               <p class="ok-msg" id="placementOk" hidden></p>

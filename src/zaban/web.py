@@ -126,6 +126,11 @@ def adult_login(body: UserLogin, response: Response, db: DBSession = Depends(get
 
     guardian.failed_logins = 0
     guardian.locked_until = None
+    # One sign-in per account: a new sign-in ends the older ones on other devices, the adult's and their own learning.
+    guardian.session_version += 1
+    self_profile = _self_profile(db, guardian)
+    if self_profile:
+        self_profile.session_version += 1
     db.commit()
     _set_adult_cookie(response, guardian)
     return _adult_out(guardian)
@@ -167,6 +172,8 @@ def student_login(body: StudentLogin, response: Response, db: DBSession = Depend
 
     student.failed_logins = 0
     student.locked_until = None
+    # One sign-in per learner: the newest sign-in ends older ones on other devices.
+    student.session_version += 1
     db.commit()
     _set_session_cookie(
         response, "student", issue_web_session("student", student.id, student.tenant_id, student.session_version)

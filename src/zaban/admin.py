@@ -116,17 +116,28 @@ def update_consult(consult_id: int, body: StatusUpdate, db: DBSession = Depends(
 @router.get("/adults", dependencies=[Depends(require_admin)])
 def list_adults(db: DBSession = Depends(get_db)) -> list[dict]:
     rows = db.query(Guardian).order_by(Guardian.created_at.desc()).limit(300).all()
-    return [
-        {
-            "id": g.id,
-            "name": g.full_name,
-            "phone": g.phone,
-            "goal": g.goal,
-            "plan_expires_at": g.plan_expires_at.isoformat() if g.plan_expires_at else None,
-            "created_at": g.created_at.isoformat(),
-        }
-        for g in rows
-    ]
+    out = []
+    for g in rows:
+        # The plan type comes from the latest confirmed payment, since that is what extended the period.
+        last = (
+            db.query(Payment)
+            .filter(Payment.guardian_id == g.id, Payment.status == "confirmed")
+            .order_by(Payment.confirmed_at.desc())
+            .first()
+        )
+        plan = db.get(BillingPlan, last.plan_id) if last else None
+        out.append(
+            {
+                "id": g.id,
+                "name": g.full_name,
+                "phone": g.phone,
+                "goal": g.goal,
+                "plan_name": plan.name if plan else None,
+                "plan_expires_at": g.plan_expires_at.isoformat() if g.plan_expires_at else None,
+                "created_at": g.created_at.isoformat(),
+            }
+        )
+    return out
 
 
 # "paid" lists payments the buyer has paid and that wait for the administrator's decision.

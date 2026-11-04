@@ -36,16 +36,59 @@ const Z = (() => {
     ["Consent must be accepted", "برای ادامه، باید رضایت والد را تأیید کنید."],
   ];
 
+  // English messages for the same server errors, matched by the same keys, in the same order.
+  const ERROR_TEXT_EN = [
+    ["already taken", "This username is already taken. Please choose another one."],
+    ["Wrong username or PIN", "The username or PIN is wrong."],
+    ["Too many wrong PINs", "Too many wrong PINs. Please try again in 15 minutes."],
+    ["Invalid or expired code", "The code is wrong or has expired. Please request a new one."],
+    ["Please wait a minute", "Please wait a minute, then request a new code."],
+    ["Too many codes", "Too many codes were requested. Please try again later."],
+    ["Enter a valid mobile number", "Please enter a valid mobile number, for example 09121234567."],
+    ["Your name is needed", "Please enter your full name."],
+    ["SMS could not be sent", "The SMS could not be sent. Please try again."],
+    ["The PIN must be", "The PIN must be 4 to 6 digits."],
+    ["Adults must create", "Adults must create their own account."],
+    ["not ready yet", "The service is not ready yet. Please try again later."],
+    ["Choose a plan first", "Please choose and pay for a plan first."],
+    ["Wrong phone number or password", "The phone number or password is wrong."],
+    ["Too many wrong passwords", "Too many wrong passwords. Please try again in 15 minutes."],
+    ["already registered", "This number is already registered. Please sign in instead."],
+    ["Only adults can create", "Only adults can create an account here."],
+    ["Password must", "The password must be at least 8 characters."],
+    ["Too many requests", "Too many requests. Please try again later."],
+    ["Wrong password", "The password is wrong."],
+    ["not available", "This plan is not available right now."],
+    ["Parent consent is required", "A parent's consent is needed before a lesson can start."],
+    ["quota", "Lessons are not available right now. Please contact support."],
+    ["Subscription expired", "Your subscription has ended."],
+    ["already running", "A lesson is already running."],
+    ["This lesson is closed", "This lesson has ended."],
+    ["Please sign in", "Please sign in again."],
+    ["Not allowed", "You are not allowed to do this."],
+    ["not found", "This item was not found."],
+    ["Student not found", "This learner was not found."],
+    ["A password is needed", "A password is needed to create a sign-in."],
+    ["Consent must be accepted", "The parent's consent must be accepted to continue."],
+  ];
+
+  function isEnglish() {
+    return document.documentElement.lang === "en";
+  }
+
+  // Picks the message in the language the page is showing, so Persian pages stay Persian.
   function friendly(detail, status) {
+    const english = isEnglish();
     if (typeof detail === "string") {
-      const match = ERROR_TEXT.find(([key]) => detail.includes(key));
+      const table = english ? ERROR_TEXT_EN : ERROR_TEXT;
+      const match = table.find(([key]) => detail.includes(key));
       if (match) return match[1];
     }
-    if (status === 401) return "لطفاً دوباره وارد شوید.";
-    if (status === 403) return "شما اجازه‌ی انجام این کار را ندارید.";
-    if (status === 404) return "این مورد پیدا نشد.";
-    if (status === 409) return "این کار هم‌اکنون امکان‌پذیر نیست.";
-    return "مشکلی پیش آمد. لطفاً دوباره تلاش کنید.";
+    if (status === 401) return english ? "Please sign in again." : "لطفاً دوباره وارد شوید.";
+    if (status === 403) return english ? "You are not allowed to do this." : "شما اجازه‌ی انجام این کار را ندارید.";
+    if (status === 404) return english ? "This item was not found." : "این مورد پیدا نشد.";
+    if (status === 409) return english ? "This action is not possible right now." : "این کار هم‌اکنون امکان‌پذیر نیست.";
+    return english ? "Something went wrong. Please try again." : "مشکلی پیش آمد. لطفاً دوباره تلاش کنید.";
   }
 
   // Set by each page ("student" or "parent") so the server uses the right sign-in.
@@ -62,7 +105,9 @@ const Z = (() => {
     try {
       res = await fetch(path, options);
     } catch (_) {
-      throw new Error("اتصال به سرور برقرار نشد. اینترنت یا اتصال سیستم را بررسی کنید.");
+      throw new Error(isEnglish()
+        ? "Could not reach the server. Please check your internet connection."
+        : "اتصال به سرور برقرار نشد. اینترنت یا اتصال سیستم را بررسی کنید.");
     }
     if (res.status === 204) return null;
     const data = await res.json().catch(() => ({}));
@@ -152,7 +197,11 @@ const Z = (() => {
     if (toggle) toggle.textContent = lang === "en" ? "فارسی" : "English";
   }
 
+  // Runs once per page. Pages may call it again without adding a second click handler.
+  let langReady = false;
   function initLang() {
+    if (langReady) return;
+    langReady = true;
     let lang = "fa";
     try { lang = localStorage.getItem("zaban-lang") || "fa"; } catch (_) { /* storage blocked */ }
     applyLang(lang);
@@ -208,4 +257,8 @@ const Z = (() => {
   };
 })();
 
-document.addEventListener("DOMContentLoaded", () => Z.initSiteHeader());
+// Every page gets the language switch and the sign-in state of the header.
+document.addEventListener("DOMContentLoaded", () => {
+  Z.initLang();
+  Z.initSiteHeader();
+});

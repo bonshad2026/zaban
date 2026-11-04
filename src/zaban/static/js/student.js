@@ -18,6 +18,7 @@
     $("who").textContent = `سلام ${me.name}`;
     showView("app");
     showBackToParent();
+    showLevel();
     selectTab("lesson");
     const { session } = await Z.request("GET", `/v1/students/${me.id}/sessions/active`);
     if (session) {
@@ -150,9 +151,19 @@
     }
   }
 
-  async function logout() {
-    await Z.request("POST", "/v1/web/logout?role=student").catch(() => {});
-    location.reload();
+
+  // The learner sees their level before a lesson. Without one, they are told who sets it.
+  async function showLevel() {
+    try {
+      const student = await Z.request("GET", `/v1/students/${me.id}`);
+      const notice = $("levelNotice");
+      notice.textContent = student.cefr_level
+        ? `سطح شما: ${student.cefr_level} (${Z.LEVEL_FA[student.cefr_level]})`
+        : "سطح شما هنوز تعیین نشده است. از والدتان بخواهید سطح شما را انتخاب کنند. تا آن زمان Niko از سطح مقدماتی شروع می‌کند.";
+      Z.show(notice, true);
+    } catch (_) {
+      Z.show($("levelNotice"), false);
+    }
   }
 
   // A parent who started learning for themself can go back to the parent area without signing in again.
@@ -169,7 +180,6 @@
     Z.initLang();
     Lesson.init({ onEnded: () => { showLesson(false); } });
     $("loginForm").addEventListener("submit", login);
-    $("logoutBtn").addEventListener("click", logout);
     $("startBtn").addEventListener("click", startLesson);
     document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => selectTab(tab.dataset.tab)));
 

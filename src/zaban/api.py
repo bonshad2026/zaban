@@ -280,7 +280,7 @@ def set_placement(
     db: DBSession = Depends(get_db),
 ) -> dict:
     student = get_student_for_auth(db, auth, student_id)
-    student.cefr_level = cefr_from_score(body.score)
+    student.cefr_level = body.level if body.level else cefr_from_score(body.score)
     db.commit()
     return _student_out(student)
 

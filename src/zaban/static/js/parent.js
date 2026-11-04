@@ -220,7 +220,7 @@
     event.preventDefault();
     Z.showError($("placementError"), "");
     try {
-      await Z.request("POST", `/v1/students/${selectedId}/placement`, { score: Number($("placementScore").value) });
+      await Z.request("POST", `/v1/students/${selectedId}/placement`, { level: $("placementLevel").value });
       await showStudent(selectedId);
       flash("placementOk", "سطح ذخیره شد.");
     } catch (err) {
@@ -348,11 +348,6 @@
     }
   }
 
-  async function logout() {
-    await Z.request("POST", "/v1/web/logout?role=parent").catch(() => {});
-    location.reload();
-  }
-
   async function logoutEverywhere() {
     if (!confirm("از همه‌ی دستگاه‌ها خارج شوید؟ دوباره باید با کد پیامکی وارد شوید.")) return;
     await Z.request("POST", "/v1/web/user/logout-all").catch(() => {});
@@ -367,7 +362,6 @@
     $("resetSendBtn").addEventListener("click", sendResetCode);
     $("resetForm").addEventListener("submit", saveNewPassword);
     $("selfBtn").addEventListener("click", startOwnLearning);
-    $("logoutBtn").addEventListener("click", logout);
     $("logoutAllBtn").addEventListener("click", logoutEverywhere);
     $("addForm").addEventListener("submit", addStudent);
     $("infoForm").addEventListener("submit", saveInfo);

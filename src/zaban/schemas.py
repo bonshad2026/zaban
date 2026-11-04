@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 LessonMinutes = Literal[5, 10, 15, 20, 30, 45, 60]
 AgeBand = Literal["7-10", "11-14", "15-18", "adult"]
@@ -34,7 +34,15 @@ class ConsentCreate(BaseModel):
 
 
 class PlacementCreate(BaseModel):
-    score: int = Field(ge=0, le=100)
+    # Either a level picked by the parent (A1 to C1), or a 0 to 100 score from a test.
+    level: Literal["A1", "A2", "B1", "B2", "C1"] | None = None
+    score: int | None = Field(default=None, ge=0, le=100)
+
+    @model_validator(mode="after")
+    def one_of_level_or_score(self) -> "PlacementCreate":
+        if (self.level is None) == (self.score is None):
+            raise ValueError("Send either a level or a score")
+        return self
 
 
 class PlanCreate(BaseModel):
