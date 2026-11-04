@@ -12,6 +12,8 @@ from zaban.services.sms import dev_outbox
 
 # Values come from conftest.py, which generates them for each test run.
 PARENT_PHONE = os.environ["ZABAN_DEMO_PARENT_PHONE"]
+PARENT_PASSWORD = os.environ["ZABAN_DEMO_PARENT_PASSWORD"]
+ADULT_PASSWORD = "test-adult-pass-123"
 STUDENT_USERNAME = os.environ["ZABAN_DEMO_STUDENT_USERNAME"]
 STUDENT_PASSWORD = os.environ["ZABAN_DEMO_STUDENT_PASSWORD"]
 OTHER_PARENT_PHONE = "09121112233"
@@ -36,13 +38,29 @@ def _clear_codes(phone: str) -> None:
         db.commit()
 
 
-def _adult_login(client, phone: str = PARENT_PHONE, name: str = "Test Adult"):
+def _sign_up(client, phone: str, name: str = "Test Adult", password: str = ADULT_PASSWORD):
     # Clears old codes so the 60-second resend limit does not get in the way of each test.
     _clear_codes(phone)
-    assert client.post("/v1/web/user/otp/request", json={"phone": phone}).status_code == 200
+    assert client.post("/v1/web/user/otp/request", json={"phone": phone, "purpose": "signup"}).status_code == 200
     return client.post(
-        "/v1/web/user/otp/verify", json={"phone": phone, "code": _sms_code(phone), "full_name": name}
+        "/v1/web/user/signup",
+        json={
+            "phone": phone,
+            "code": _sms_code(phone),
+            "full_name": name,
+            "password": password,
+            "age_confirmed": True,
+        },
     )
+
+
+def _adult_login(client, phone: str = PARENT_PHONE, name: str = "Test Adult"):
+    # Signs in when the account exists, otherwise creates it through sign-up.
+    password = PARENT_PASSWORD if phone == PARENT_PHONE else ADULT_PASSWORD
+    response = client.post("/v1/web/user/login", json={"phone": phone, "password": password})
+    if response.status_code == 200:
+        return response
+    return _sign_up(client, phone, name, password)
 
 
 def _buy_plan(client) -> None:
@@ -90,25 +108,30 @@ def test_public_pages_are_served(client):
         assert "text/html" in response.headers["content-type"]
 
 
-def test_adult_signs_in_with_sms_code(client):
-    response = _adult_login(client)
-    assert response.status_code == 200, response.text
+def test_adult_signs_up_then_signs_in_with_password(client):
+    phone = "09121230001"
+    response = _sign_up(client, phone, "Sara")
+    assert response.status_code == 201, response.text
     assert response.json()["role"] == "parent"
-    me = client.get("/v1/web/me?role=parent").json()
-    assert me["role"] == "parent"
-    assert "has_own_learning" in me
+    assert client.get("/v1/web/me?role=parent").json()["role"] == "parent"
+
+    fresh = TestClient(app)
+    assert fresh.post("/v1/web/user/login", json={"phone": phone, "password": ADULT_PASSWORD}).status_code == 200
+    assert fresh.post("/v1/web/user/login", json={"phone": phone, "password": "wrong-pass-999"}).status_code == 401
 
 
-def test_first_visit_needs_a_name(client):
-    phone = "09123334455"
+def test_signup_needs_age_confirmation_and_a_free_number(client):
+    phone = "09121230002"
     _clear_codes(phone)
-    assert client.post("/v1/web/user/otp/request", json={"phone": phone}).status_code == 200
-    code = _sms_code(phone)
-    assert client.post("/v1/web/user/otp/verify", json={"phone": phone, "code": code}).status_code == 400
-    # The name was missing, so the code was not used up and can still be entered with a name.
-    assert client.post(
-        "/v1/web/user/otp/verify", json={"phone": phone, "code": code, "full_name": "Nima"}
-    ).status_code == 200
+    assert client.post("/v1/web/user/otp/request", json={"phone": phone, "purpose": "signup"}).status_code == 200
+    response = client.post(
+        "/v1/web/user/signup",
+        json={"phone": phone, "code": _sms_code(phone), "full_name": "Nima", "password": ADULT_PASSWORD, "age_confirmed": False},
+    )
+    assert response.status_code == 400
+    # The code was not used up, so the same code still works once the age is confirmed.
+    assert _sign_up(client, phone, "Nima").status_code == 201
+    assert client.post("/v1/web/user/otp/request", json={"phone": phone, "purpose": "signup"}).status_code == 409
 
 
 def test_resend_is_limited_to_once_a_minute(client):
@@ -121,17 +144,46 @@ def test_resend_is_limited_to_once_a_minute(client):
 def test_wrong_codes_are_rejected_and_run_out_after_five_tries(client):
     phone = "09125556677"
     _clear_codes(phone)
-    assert client.post("/v1/web/user/otp/request", json={"phone": phone}).status_code == 200
+    assert client.post("/v1/web/user/otp/request", json={"phone": phone, "purpose": "signup"}).status_code == 200
     real = _sms_code(phone)
     wrong = "999999" if real != "999999" else "000000"
+    body = {"phone": phone, "full_name": "Nima", "password": ADULT_PASSWORD, "age_confirmed": True}
     for _ in range(5):
-        assert client.post(
-            "/v1/web/user/otp/verify", json={"phone": phone, "code": wrong, "full_name": "Nima"}
-        ).status_code == 401
+        assert client.post("/v1/web/user/signup", json={**body, "code": wrong}).status_code == 401
     # Even the right code no longer works after five wrong tries. A new code is needed.
-    assert client.post(
-        "/v1/web/user/otp/verify", json={"phone": phone, "code": real, "full_name": "Nima"}
-    ).status_code == 401
+    assert client.post("/v1/web/user/signup", json={**body, "code": real}).status_code == 401
+
+
+def test_wrong_password_locks_the_adult_login_for_a_while(client):
+    phone = "09121230003"
+    _sign_up(client, phone, "Lock Test")
+    locked = TestClient(app)
+    for _ in range(5):
+        assert locked.post("/v1/web/user/login", json={"phone": phone, "password": "nope-nope-1"}).status_code == 401
+    assert locked.post("/v1/web/user/login", json={"phone": phone, "password": ADULT_PASSWORD}).status_code == 429
+
+
+def test_forgotten_password_is_reset_with_a_code_and_older_sign_ins_end(client):
+    phone = "09121230004"
+    _sign_up(client, phone, "Reset Me")
+    old = TestClient(app)
+    assert old.post("/v1/web/user/login", json={"phone": phone, "password": ADULT_PASSWORD}).status_code == 200
+
+    _clear_codes(phone)
+    assert client.post("/v1/web/user/otp/request", json={"phone": phone, "purpose": "reset"}).status_code == 200
+    code = _sms_code(phone)
+    new_password = "brand-new-pass-456"
+    reset = client.post("/v1/web/user/password/reset", json={"phone": phone, "code": code, "password": new_password})
+    assert reset.status_code == 200, reset.text
+    assert old.get("/v1/web/me?role=parent").status_code == 401
+    assert TestClient(app).post("/v1/web/user/login", json={"phone": phone, "password": new_password}).status_code == 200
+
+
+def test_reset_for_an_unknown_number_gives_the_same_answer(client):
+    # The form must not reveal which numbers have accounts.
+    response = client.post("/v1/web/user/otp/request", json={"phone": "09129998877", "purpose": "reset"})
+    assert response.status_code == 200
+    assert not [number for number, _ in dev_outbox() if number == "09129998877"]
 
 
 def test_bad_phone_number_is_refused(client):
@@ -247,7 +299,7 @@ def test_child_cannot_manage_students(client):
 
 def test_adult_cannot_see_another_familys_child(client):
     other = TestClient(app)
-    assert _adult_login(other, OTHER_PARENT_PHONE, "Other Parent").status_code == 200
+    assert _adult_login(other, OTHER_PARENT_PHONE, "Other Parent").status_code in (200, 201)
 
     student_id = _demo_student_id()
     assert other.get(f"/v1/students/{student_id}").status_code == 404
@@ -274,7 +326,7 @@ def test_adult_usage_and_report_are_structured_without_raw_codes(client):
 
 def test_adult_can_learn_for_themself_and_guardian_cannot_see_it(client):
     adult = TestClient(app)
-    assert _adult_login(adult, "09126667788", "Self Learner").status_code == 200
+    assert _adult_login(adult, "09126667788", "Self Learner").status_code in (200, 201)
     _buy_plan(adult)
     started = adult.post("/v1/web/user/self")
     assert started.status_code == 200, started.text

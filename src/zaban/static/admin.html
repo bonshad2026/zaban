@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>مدیریت | زبان</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+  <style>
+    .admin-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .admin-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .admin-table th, .admin-table td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .admin-table th { color: var(--muted); font-weight: 600; }
+    .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .actions button { padding: 6px 10px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <!-- Sign-in -->
+  <section id="adminLogin" class="hero" hidden>
+    <div class="auth-wrap">
+      <form id="adminLoginForm" class="auth-card">
+        <h1>مدیریت</h1>
+        <label for="adminPassword">رمز مدیریت</label>
+        <input id="adminPassword" type="password" class="ltr-field" autocomplete="current-password" required>
+        <p></p>
+        <button type="submit" class="wide">ورود</button>
+        <p class="error" id="adminLoginError" hidden></p>
+      </form>
+    </div>
+  </section>
+
+  <!-- Console -->
+  <div id="adminApp" hidden>
+    <header class="topbar app-top">
+      <div class="brand">مدیریت زبان</div>
+      <button id="adminLogout" class="ghost" type="button">خروج</button>
+    </header>
+    <main class="wrap">
+      <nav class="admin-tabs" aria-label="بخش‌های مدیریت">
+        <button type="button" class="tab" data-tab="consults">درخواست‌های مشاوره</button>
+        <button type="button" class="tab" data-tab="adults">ثبت‌نام‌ها</button>
+        <button type="button" class="tab" data-tab="payments">پرداخت‌ها</button>
+        <button type="button" class="tab" data-tab="plans">پلن‌ها</button>
+      </nav>
+
+      <section class="card" id="tab-consults">
+        <h2>درخواست‌های مشاوره</h2>
+        <div class="table-box"><table class="admin-table" id="consultTable"></table></div>
+      </section>
+
+      <section class="card" id="tab-adults" hidden>
+        <h2>ثبت‌نام‌ها</h2>
+        <div class="table-box"><table class="admin-table" id="adultTable"></table></div>
+      </section>
+
+      <section class="card" id="tab-payments" hidden>
+        <h2>پرداخت‌ها</h2>
+        <p class="muted">پرداخت‌هایی که درگاه تأیید نکرده، اینجا در انتظار می‌مانند. فقط در صورت اطمینان تأیید کنید.</p>
+        <div class="table-box"><table class="admin-table" id="paymentTable"></table></div>
+      </section>
+
+      <section class="card" id="tab-plans" hidden>
+        <h2>پلن‌ها</h2>
+        <div class="table-box"><table class="admin-table" id="planTable"></table></div>
+        <h2 style="margin-top:20px">افزودن پلن</h2>
+        <form id="planForm" class="row">
+          <div><label for="planName">نام پلن</label><input id="planName" required maxlength="80"></div>
+          <div><label for="planPrice">قیمت (تومان)</label><input id="planPrice" type="number" min="0" required></div>
+          <div><label for="planDays">مدت (روز)</label><input id="planDays" type="number" min="1" max="3650" required></div>
+          <button type="submit">افزودن</button>
+        </form>
+        <p class="error" id="planError" hidden></p>
+      </section>
+
+      <p class="error" id="adminError" hidden></p>
+    </main>
+  </div>
+
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/admin.js"></script>
+</body>
+</html>

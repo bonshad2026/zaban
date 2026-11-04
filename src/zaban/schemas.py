@@ -60,13 +60,27 @@ class StudentLogin(BaseModel):
 
 class OtpRequest(BaseModel):
     phone: str = Field(min_length=6, max_length=24)
+    purpose: Literal["signup", "reset"] = "signup"
 
 
-class OtpVerify(BaseModel):
+class SignUpCreate(BaseModel):
     phone: str = Field(min_length=6, max_length=24)
     code: str = Field(min_length=4, max_length=8, pattern=r"^\d{4,8}$")
-    # Only needed the first time, when the account is created.
-    full_name: str | None = Field(default=None, max_length=120)
+    full_name: str = Field(min_length=2, max_length=120)
+    password: str = Field(min_length=8, max_length=100)
+    age_confirmed: bool
+    goal: str | None = Field(default=None, max_length=60)
+
+
+class UserLogin(BaseModel):
+    phone: str = Field(min_length=6, max_length=24)
+    password: str = Field(min_length=1, max_length=100)
+
+
+class PasswordReset(BaseModel):
+    phone: str = Field(min_length=6, max_length=24)
+    code: str = Field(min_length=4, max_length=8, pattern=r"^\d{4,8}$")
+    password: str = Field(min_length=8, max_length=100)
 
 
 # A PIN is what a child types on a phone or tablet, so it is 4 to 6 digits.

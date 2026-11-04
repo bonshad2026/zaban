@@ -273,47 +273,63 @@
     setTimeout(() => Z.show(node, false), 3500);
   }
 
-  // ----- Sign-in with a mobile number and an SMS code -----
+  // ----- Sign-in with a mobile number and a password -----
 
-  // The number the code was sent to. Changing the number starts the steps again.
-  let phoneSent = null;
-
-  function resetCodeStep() {
-    phoneSent = null;
-    Z.show($("codeStep"), false);
-    $("parentCode").value = "";
-  }
-
-  async function sendCode() {
+  async function login(event) {
+    event.preventDefault();
+    const form = event.target;
     Z.showError($("loginError"), "");
-    const phone = $("parentPhone").value.trim();
     try {
-      await Z.request("POST", "/v1/web/user/otp/request", { phone });
-      phoneSent = phone;
-      Z.show($("codeStep"), true);
-      $("parentCode").focus();
+      await Z.request("POST", "/v1/web/user/login", {
+        phone: form.phone.value.trim(),
+        password: form.password.value,
+      });
+      me = await Z.request("GET", "/v1/web/me?role=parent");
+      form.password.value = "";
+      await enterApp();
     } catch (err) {
       Z.showError($("loginError"), err.message);
     }
   }
 
-  async function login(event) {
-    event.preventDefault();
-    // Enter on the phone field sends the code first. The code and name are entered on the next step.
-    if (!phoneSent) return sendCode();
-    const form = event.target;
-    Z.showError($("loginError"), "");
+  // ----- Forgotten password: a one-time SMS code, then a new password -----
+
+  function showReset(on) {
+    Z.show($("loginForm"), !on);
+    Z.show($("resetForm"), on);
+    if (on) $("resetPhone").value = $("parentPhone").value.trim();
+  }
+
+  async function sendResetCode() {
+    Z.showError($("resetError"), "");
     try {
-      await Z.request("POST", "/v1/web/user/otp/verify", {
-        phone: phoneSent,
-        code: form.code.value.trim(),
-        full_name: form.full_name.value.trim() || null,
-      });
-      me = await Z.request("GET", "/v1/web/me?role=parent");
-      form.code.value = "";
-      await enterApp();
+      await Z.request("POST", "/v1/web/user/otp/request", { phone: $("resetPhone").value.trim(), purpose: "reset" });
+      Z.show($("resetStep"), true);
+      $("resetCode").focus();
     } catch (err) {
-      Z.showError($("loginError"), err.message);
+      Z.showError($("resetError"), err.message);
+    }
+  }
+
+  async function saveNewPassword(event) {
+    event.preventDefault();
+    // Enter on the phone field sends the code first, before the new password is asked for.
+    if ($("resetStep").hidden) return sendResetCode();
+    const form = event.target;
+    Z.showError($("resetError"), "");
+    try {
+      await Z.request("POST", "/v1/web/user/password/reset", {
+        phone: form.phone.value.trim(),
+        code: form.code.value.trim(),
+        password: form.password.value,
+      });
+      form.code.value = "";
+      form.password.value = "";
+      Z.show($("resetStep"), false);
+      Z.show($("resetOk"), true);
+      $("resetOk").textContent = "رمز عبور تازه ذخیره شد. حالا با رمز جدید وارد شوید.";
+    } catch (err) {
+      Z.showError($("resetError"), err.message);
     }
   }
 
@@ -343,9 +359,10 @@
   async function boot() {
     Z.initLang();
     $("loginForm").addEventListener("submit", login);
-    $("sendCodeBtn").addEventListener("click", sendCode);
-    $("resendBtn").addEventListener("click", sendCode);
-    $("parentPhone").addEventListener("input", resetCodeStep);
+    $("forgotLink").addEventListener("click", (event) => { event.preventDefault(); showReset(true); });
+    $("backToLogin").addEventListener("click", (event) => { event.preventDefault(); showReset(false); });
+    $("resetSendBtn").addEventListener("click", sendResetCode);
+    $("resetForm").addEventListener("submit", saveNewPassword);
     $("selfBtn").addEventListener("click", startOwnLearning);
     $("logoutBtn").addEventListener("click", logout);
     $("logoutAllBtn").addEventListener("click", logoutEverywhere);

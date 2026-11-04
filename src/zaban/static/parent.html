@@ -7,28 +7,39 @@
   <link rel="stylesheet" href="/static/css/app.css">
 </head>
 <body>
-  <!-- Sign-in view: adults sign in with a mobile number and an SMS code -->
+  <!-- Sign-in view: adults sign in with a mobile number and a password -->
   <section id="loginView" class="hero" hidden>
     <div class="auth-wrap">
       <form id="loginForm" class="auth-card" autocomplete="on">
         <a class="back" href="/">بازگشت به صفحه‌ی اصلی</a>
         <h1>ورود والدین و بزرگسالان</h1>
-        <p class="muted">با شماره‌ی موبایل خودتان وارد شوید. کد ورود برایتان پیامک می‌شود.</p>
         <label for="parentPhone">شماره‌ی موبایل</label>
-        <input id="parentPhone" name="phone" type="tel" inputmode="tel" class="ltr-field" autocomplete="tel" placeholder="09121234567" required autofocus>
-        <button type="button" id="sendCodeBtn" class="secondary wide">ارسال کد</button>
-
-        <div id="codeStep" hidden>
-          <label for="parentCode">کد پیامک شده</label>
-          <input id="parentCode" name="code" inputmode="numeric" class="ltr-field" autocomplete="one-time-code" maxlength="8">
-          <label for="parentName">نام و نام خانوادگی (فقط در اولین ورود)</label>
-          <input id="parentName" name="full_name" maxlength="120">
-          <p></p>
-          <button type="submit" class="wide">ورود</button>
-          <p><button type="button" id="resendBtn" class="ghost wide">ارسال دوباره‌ی کد</button></p>
-        </div>
-
+        <input id="parentPhone" name="phone" type="tel" inputmode="tel" class="ltr-field" autocomplete="username" placeholder="09121234567" required autofocus>
+        <label for="parentPassword">رمز عبور</label>
+        <input id="parentPassword" name="password" type="password" class="ltr-field" autocomplete="current-password" required>
+        <p></p>
+        <button type="submit" class="wide">ورود</button>
         <p class="error" id="loginError" hidden></p>
+        <p class="links"><a href="#" id="forgotLink">رمز عبور را فراموش کرده‌ام</a> · <a href="/signup">ثبت‌نام</a></p>
+      </form>
+
+      <!-- Reset view: a one-time code is sent by SMS, then a new password is set -->
+      <form id="resetForm" class="auth-card" hidden novalidate>
+        <a class="back" href="#" id="backToLogin">بازگشت به ورود</a>
+        <h1>بازیابی رمز عبور</h1>
+        <label for="resetPhone">شماره‌ی موبایل</label>
+        <input id="resetPhone" name="phone" type="tel" inputmode="tel" class="ltr-field" placeholder="09121234567" required>
+        <button type="button" id="resetSendBtn" class="secondary wide">ارسال کد</button>
+        <div id="resetStep" hidden>
+          <label for="resetCode">کد پیامکی</label>
+          <input id="resetCode" name="code" inputmode="numeric" class="ltr-field" autocomplete="one-time-code" maxlength="8">
+          <label for="resetPassword">رمز عبور تازه (حداقل ۸ نویسه)</label>
+          <input id="resetPassword" name="password" type="password" class="ltr-field" minlength="8" required>
+          <p></p>
+          <button type="submit" class="wide">ذخیره‌ی رمز تازه</button>
+        </div>
+        <p class="error" id="resetError" hidden></p>
+        <p class="ok-msg" id="resetOk" hidden></p>
       </form>
     </div>
   </section>

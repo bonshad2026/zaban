@@ -8,11 +8,13 @@ from fastapi.staticfiles import StaticFiles
 
 from zaban import models  # noqa: F401  (registers tables before create_all)
 from zaban.api import router as api_router
+from zaban.admin import router as admin_router
 from zaban.billing import router as billing_router
 from zaban.config import settings
 from zaban.db import Base, SessionLocal, engine
 from zaban.reports import router as reports_router
 from zaban.seed import seed_demo_accounts, seed_demo_plans, seed_demo_tenant
+from zaban.public import router as public_router
 from zaban.services.sms import dev_outbox
 from zaban.web import router as web_router
 
@@ -37,6 +39,8 @@ app.include_router(api_router, prefix="/v1")
 app.include_router(reports_router, prefix="/v1")
 app.include_router(web_router, prefix="/v1")
 app.include_router(billing_router, prefix="/v1")
+app.include_router(public_router, prefix="/v1")
+app.include_router(admin_router, prefix="/v1")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
@@ -58,6 +62,26 @@ def student_page() -> FileResponse:
 @app.get("/parent", include_in_schema=False)
 def parent_page() -> FileResponse:
     return FileResponse(STATIC_DIR / "parent.html")
+
+
+@app.get("/signup", include_in_schema=False)
+def signup_page() -> FileResponse:
+    return FileResponse(STATIC_DIR / "signup.html")
+
+
+@app.get("/demo", include_in_schema=False)
+def demo_page() -> FileResponse:
+    return FileResponse(STATIC_DIR / "demo.html")
+
+
+@app.get("/consult", include_in_schema=False)
+def consult_page() -> FileResponse:
+    return FileResponse(STATIC_DIR / "consult.html")
+
+
+@app.get("/admin", include_in_schema=False)
+def admin_page() -> FileResponse:
+    return FileResponse(STATIC_DIR / "admin.html")
 
 
 # Development only: a stand-in bank page and a view of the SMS codes that would have been sent.

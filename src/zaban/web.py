@@ -7,18 +7,21 @@ from sqlalchemy.orm import Session as DBSession
 from zaban.config import settings
 from zaban.db import get_db
 from zaban.models import Consent, Guardian, Student, Tenant, utcnow
-from zaban.schemas import OtpRequest, OtpVerify, StudentLogin
+from zaban.schemas import OtpRequest, PasswordReset, SignUpCreate, StudentLogin, UserLogin
 from zaban.security import WEB_COOKIE_NAMES, issue_web_session, read_web_session, session_is_current
 from zaban.services.otp import check_code, normalize_phone, request_code
+from zaban.services.passwords import hash_password, verify_password
 from zaban.services.payments import has_active_plan, require_plan
-from zaban.services.passwords import verify_password
 
 # Sign-in endpoints for the website. They set an HttpOnly cookie, so the browser never holds an API key.
-# Adults sign in with a mobile number and an SMS code. Children sign in with a username and PIN.
+# Adults sign in with a mobile number and a password. Forgotten passwords are reset with an SMS code.
+# Children sign in with a username and PIN.
 router = APIRouter(prefix="/web")
 
 WRONG_PIN = "Wrong username or PIN"
+WRONG_LOGIN = "Wrong phone number or password"
 MAX_PIN_FAILURES = 3
+MAX_PASSWORD_FAILURES = 5
 PIN_LOCK_MINUTES = 15
 Role = Literal["student", "parent"]
 
@@ -47,41 +50,100 @@ def _self_profile(db: DBSession, guardian: Guardian) -> Student | None:
     return db.query(Student).filter(Student.self_owner_id == guardian.id).first()
 
 
+def _adult_out(guardian: Guardian) -> dict:
+    return {"role": "parent", "name": guardian.full_name}
+
+
+def _set_adult_cookie(response: Response, guardian: Guardian) -> None:
+    _set_session_cookie(
+        response, "parent", issue_web_session("guardian", guardian.id, guardian.tenant_id, guardian.session_version)
+    )
+
+
 @router.post("/user/otp/request")
 def request_otp(body: OtpRequest, request: Request, db: DBSession = Depends(get_db)) -> dict:
     phone = normalize_phone(body.phone)
     if phone is None:
         raise HTTPException(status_code=400, detail="Enter a valid mobile number")
+    exists = db.query(Guardian).filter(Guardian.phone == phone).first() is not None
+    if body.purpose == "signup" and exists:
+        raise HTTPException(status_code=409, detail="This number is already registered. Sign in instead")
+    if body.purpose == "reset" and not exists:
+        # Same answer as a real reset, so the form does not reveal which numbers have accounts.
+        return {"ok": True, "resend_in_seconds": 60}
     ip = request.client.host if request.client else None
     request_code(db, phone, ip)
     return {"ok": True, "resend_in_seconds": 60}
 
 
-@router.post("/user/otp/verify")
-def verify_otp(body: OtpVerify, response: Response, db: DBSession = Depends(get_db)) -> dict:
+@router.post("/user/signup", status_code=201)
+def sign_up(body: SignUpCreate, response: Response, db: DBSession = Depends(get_db)) -> dict:
+    # Open sign-up: anyone who can receive an SMS on this number can create the adult account. No approval step.
     phone = normalize_phone(body.phone)
     if phone is None:
         raise HTTPException(status_code=400, detail="Enter a valid mobile number")
-
-    guardian = db.query(Guardian).filter(Guardian.phone == phone).first()
-    name = (body.full_name or "").strip()
-    if guardian is None and not name:
-        # Checked before the code is used, so a first-time visitor who forgot the name can retry with the same code.
-        raise HTTPException(status_code=400, detail="Your name is needed to create an account")
+    if not body.age_confirmed:
+        raise HTTPException(status_code=400, detail="Only adults can create an account here")
+    if db.query(Guardian).filter(Guardian.phone == phone).first():
+        raise HTTPException(status_code=409, detail="This number is already registered. Sign in instead")
+    tenant = db.query(Tenant).filter(Tenant.status == "active").order_by(Tenant.created_at).first()
+    if tenant is None:
+        raise HTTPException(status_code=503, detail="The service is not ready yet")
 
     check_code(db, phone, body.code)
+    guardian = Guardian(
+        tenant_id=tenant.id,
+        phone=phone,
+        full_name=body.full_name.strip()[:120],
+        password_hash=hash_password(body.password),
+        goal=body.goal.strip()[:60] if body.goal else None,
+    )
+    db.add(guardian)
+    db.commit()
+    db.refresh(guardian)
+    _set_adult_cookie(response, guardian)
+    return _adult_out(guardian)
 
-    if guardian is None:
-        tenant = db.query(Tenant).filter(Tenant.status == "active").order_by(Tenant.created_at).first()
-        if tenant is None:
-            raise HTTPException(status_code=503, detail="The service is not ready yet")
-        guardian = Guardian(tenant_id=tenant.id, phone=phone, full_name=name[:120])
-        db.add(guardian)
+
+@router.post("/user/login")
+def adult_login(body: UserLogin, response: Response, db: DBSession = Depends(get_db)) -> dict:
+    phone = normalize_phone(body.phone)
+    guardian = db.query(Guardian).filter(Guardian.phone == phone).first() if phone else None
+    if guardian is None or guardian.password_hash is None:
+        raise HTTPException(status_code=401, detail=WRONG_LOGIN)
+
+    now = utcnow()
+    if guardian.locked_until and guardian.locked_until > now:
+        raise HTTPException(status_code=429, detail="Too many wrong passwords. Try again in 15 minutes")
+    if not verify_password(body.password, guardian.password_hash):
+        guardian.failed_logins += 1
+        if guardian.failed_logins >= MAX_PASSWORD_FAILURES:
+            guardian.failed_logins = 0
+            guardian.locked_until = now + timedelta(minutes=PIN_LOCK_MINUTES)
         db.commit()
-        db.refresh(guardian)
+        raise HTTPException(status_code=401, detail=WRONG_LOGIN)
 
-    _set_session_cookie(response, "parent", issue_web_session("guardian", guardian.id, guardian.tenant_id, guardian.session_version))
-    return {"role": "parent", "name": guardian.full_name}
+    guardian.failed_logins = 0
+    guardian.locked_until = None
+    db.commit()
+    _set_adult_cookie(response, guardian)
+    return _adult_out(guardian)
+
+
+@router.post("/user/password/reset")
+def reset_password(body: PasswordReset, db: DBSession = Depends(get_db)) -> dict:
+    phone = normalize_phone(body.phone)
+    guardian = db.query(Guardian).filter(Guardian.phone == phone).first() if phone else None
+    if guardian is None:
+        raise HTTPException(status_code=401, detail="Invalid or expired code. Request a new one")
+    check_code(db, phone, body.code)
+    guardian.password_hash = hash_password(body.password)
+    # A new password ends every older sign-in for this adult, and clears any lock.
+    guardian.session_version += 1
+    guardian.failed_logins = 0
+    guardian.locked_until = None
+    db.commit()
+    return {"ok": True}
 
 
 @router.post("/student/login")

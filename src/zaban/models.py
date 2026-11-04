@@ -45,11 +45,27 @@ class Guardian(Base):
     locked_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     # The account can use the service until this time. Empty means no plan has been activated yet.
     plan_expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # What the adult says they want to learn at sign-up (free text, short).
+    goal: Mapped[str | None] = mapped_column(String(60), nullable=True)
     # Bumped on logout-everywhere and password reset, so older sign-in cookies stop working.
     session_version: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
     students: Mapped[list["Student"]] = relationship(back_populates="guardian", foreign_keys="Student.guardian_id")
+
+
+class ConsultRequest(Base):
+    # A public request from the consultation form. Nobody needs to sign in to send it.
+    __tablename__ = "consult_requests"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(120))
+    phone: Mapped[str] = mapped_column(String(16))
+    message: Mapped[str] = mapped_column(Text, default="")
+    preferred_time: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="new")  # new, contacted, closed
+    request_ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
 
 
 class BillingPlan(Base):

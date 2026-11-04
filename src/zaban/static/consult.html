@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>درخواست مشاوره | زبان</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  <main class="hero">
+    <div class="auth-wrap">
+      <form id="consultForm" class="auth-card" novalidate>
+        <a class="back" href="/">بازگشت به صفحه‌ی اصلی</a>
+        <h1>درخواست مشاوره</h1>
+        <p class="muted">نام، شماره‌ی تماس و سؤال خود را بنویسید. یکی از مشاوران با شما تماس می‌گیرد. ورود لازم نیست.</p>
+
+        <label for="consultName">نام</label>
+        <input id="consultName" name="name" maxlength="120" required>
+
+        <label for="consultPhone">شماره‌ی تماس</label>
+        <input id="consultPhone" name="phone" type="tel" inputmode="tel" class="ltr-field" placeholder="09121234567" required>
+
+        <label for="consultTime">زمان مناسب برای تماس (اختیاری)</label>
+        <input id="consultTime" name="preferred_time" maxlength="60" placeholder="مثلاً عصرها">
+
+        <label for="consultMessage">سؤال یا توضیح شما</label>
+        <textarea id="consultMessage" name="message" rows="4" maxlength="1000"></textarea>
+
+        <p></p>
+        <button type="submit" class="wide">ارسال درخواست</button>
+        <p class="error" id="consultError" hidden></p>
+        <p class="ok-msg" id="consultOk" hidden></p>
+      </form>
+    </div>
+  </main>
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/consult.js"></script>
+</body>
+</html>

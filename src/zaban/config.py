@@ -24,6 +24,9 @@ class Settings:
     # Demo values are read from the environment only. Nothing is stored in the code.
     demo_api_key: str | None
     demo_parent_phone: str | None
+    demo_parent_password: str | None
+    # Password for the admin page (/admin). Without it the admin page refuses every sign-in.
+    admin_password: str | None
     demo_student_username: str | None
     demo_student_password: str | None
 
@@ -48,6 +51,8 @@ def load_settings() -> Settings:
         zarinpal_merchant_id=os.getenv("ZARINPAL_MERCHANT_ID") or None,
         demo_api_key=os.getenv("ZABAN_DEMO_API_KEY") or None,
         demo_parent_phone=os.getenv("ZABAN_DEMO_PARENT_PHONE") or None,
+        demo_parent_password=os.getenv("ZABAN_DEMO_PARENT_PASSWORD") or None,
+        admin_password=os.getenv("ADMIN_PASSWORD") or None,
         demo_student_username=os.getenv("ZABAN_DEMO_STUDENT_USERNAME") or None,
         demo_student_password=os.getenv("ZABAN_DEMO_STUDENT_PASSWORD") or None,
     )

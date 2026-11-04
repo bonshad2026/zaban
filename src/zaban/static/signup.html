@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ثبت‌نام | زبان</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  <main class="hero">
+    <div class="auth-wrap">
+      <form id="signupForm" class="auth-card" autocomplete="on" novalidate>
+        <a class="back" href="/">بازگشت به صفحه‌ی اصلی</a>
+        <h1>ساخت حساب</h1>
+        <p class="muted">ثبت‌نام رایگان است. پس از ورود، برای شروع یک پلن را انتخاب می‌کنید.</p>
+
+        <label for="signupPhone">شماره‌ی موبایل</label>
+        <input id="signupPhone" name="phone" type="tel" inputmode="tel" class="ltr-field" autocomplete="tel" placeholder="09121234567" required autofocus>
+        <button type="button" id="sendCodeBtn" class="secondary wide">ارسال کد پیامکی</button>
+
+        <div id="signupStep" hidden>
+          <label for="signupCode">کد پیامکی</label>
+          <input id="signupCode" name="code" inputmode="numeric" class="ltr-field" autocomplete="one-time-code" maxlength="8" required>
+
+          <label for="signupName">نام و نام خانوادگی</label>
+          <input id="signupName" name="full_name" maxlength="120" required>
+
+          <label for="signupPassword">رمز عبور (حداقل ۸ نویسه)</label>
+          <input id="signupPassword" name="password" type="password" class="ltr-field" minlength="8" autocomplete="new-password" required>
+
+          <label for="signupGoal">هدف شما از یادگیری</label>
+          <select id="signupGoal" name="goal">
+            <option value="">انتخاب کنید</option>
+            <option value="مکالمه‌ی روزمره">مکالمه‌ی روزمره</option>
+            <option value="سفر">سفر</option>
+            <option value="کار و شغل">کار و شغل</option>
+            <option value="آزمون">آزمون</option>
+            <option value="مدرسه">مدرسه</option>
+          </select>
+
+          <label class="inline"><input type="checkbox" name="age_confirmed" required> من بزرگسال هستم (۱۸ سال یا بیشتر).</label>
+          <label class="inline"><input type="checkbox" name="consent" required> قوانین استفاده و حریم خصوصی را می‌پذیرم.</label>
+
+          <p></p>
+          <button type="submit" class="wide">ساخت حساب</button>
+        </div>
+
+        <p class="error" id="signupError" hidden></p>
+        <p class="links">حساب دارید؟ <a href="/parent">وارد شوید</a></p>
+      </form>
+    </div>
+  </main>
+
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/signup.js"></script>
+</body>
+</html>

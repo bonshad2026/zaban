@@ -58,6 +58,7 @@ def seed_demo_accounts(db: Session, tenant: Tenant | None, settings: Settings) -
             tenant_id=tenant.id,
             phone=phone,
             full_name="Demo Parent",
+            password_hash=hash_password(settings.demo_parent_password) if settings.demo_parent_password else None,
             plan_expires_at=utcnow() + timedelta(days=365),
         )
         db.add(guardian)
