@@ -6,3 +6,7 @@ __pycache__/
 *.egg-info/
 build/
 dist/
+
+# Local development databases (never commit)
+*.db
+*.db.bak
