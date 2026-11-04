@@ -66,11 +66,12 @@
     payments: loadPayments,
     plans: loadPlans,
     students: loadStudents,
+    global: loadGlobalPrompt,
   };
 
   function openTab(name) {
     document.querySelectorAll(".admin-tabs .tab").forEach((t) => t.classList.toggle("is-active", t.dataset.tab === name));
-    ["consults", "adults", "payments", "plans", "students"].forEach((n) => show(`tab-${n}`, n === name));
+    ["consults", "adults", "payments", "plans", "students", "global"].forEach((n) => show(`tab-${n}`, n === name));
     return run(loaders[name]);
   }
 
@@ -213,10 +214,37 @@
     setError("profileError", "");
     Z.show($("profileOk"), false);
     $("profileTitle").textContent = `پرامپت: ${student.name || student.username || "دانش‌آموز"}`;
+    $("profileInterests").value = student.interests;
+    $("profileMotivation").value = student.motivation;
     $("profileText").value = student.instructions;
     updateProfileCount();
     show("profileForm", true);
-    $("profileText").focus();
+    $("profileInterests").focus();
+  }
+
+  // ----- General prompt -----
+
+  async function loadGlobalPrompt() {
+    const data = await Z.request("GET", `${API}/global-prompt`);
+    $("globalText").value = data.text;
+    updateGlobalCount();
+  }
+
+  function updateGlobalCount() {
+    $("globalCount").textContent = `${$("globalText").value.length} / 4000`;
+  }
+
+  async function saveGlobalPrompt(event) {
+    event.preventDefault();
+    setError("globalError", "");
+    Z.show($("globalOk"), false);
+    try {
+      await Z.request("POST", `${API}/global-prompt`, { text: $("globalText").value });
+      $("globalOk").textContent = "پرامپت کلی ذخیره شد. از جلسه‌ی بعدی همه استفاده می‌شود.";
+      Z.show($("globalOk"), true);
+    } catch (err) {
+      setError("globalError", err.message);
+    }
   }
 
   function updateProfileCount() {
@@ -229,6 +257,8 @@
     Z.show($("profileOk"), false);
     try {
       await Z.request("POST", `${API}/students/${editingStudent.id}/profile`, {
+        interests: $("profileInterests").value,
+        motivation: $("profileMotivation").value,
         instructions: $("profileText").value,
       });
       editingStudent = null;
@@ -272,6 +302,8 @@
     $("adminLogout").addEventListener("click", signOut);
     $("planForm").addEventListener("submit", addPlan);
     $("profileForm").addEventListener("submit", saveProfile);
+    $("globalForm").addEventListener("submit", saveGlobalPrompt);
+    $("globalText").addEventListener("input", updateGlobalCount);
     $("profileText").addEventListener("input", updateProfileCount);
     $("profileCancel").addEventListener("click", () => {
       editingStudent = null;

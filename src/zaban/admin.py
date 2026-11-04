@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session as DBSession
 from zaban.config import settings
 from zaban.db import get_db
 from zaban.models import BillingPlan, ConsultRequest, Guardian, Payment, Student, TutorProfile, utcnow
+from zaban.services.learner import get_global_prompt, set_global_prompt, set_learner_profile
 from zaban.services.payments import confirm_payment
 
 # Operator page. One shared password from the environment (ADMIN_PASSWORD). Sessions last 12 hours.
@@ -56,7 +57,13 @@ class PlanUpdate(BaseModel):
 
 
 class ProfileUpdate(BaseModel):
+    interests: str = Field(default="", max_length=300)
+    motivation: str = Field(default="", max_length=60)
     instructions: str = Field(default="", max_length=2000)
+
+
+class GlobalPromptUpdate(BaseModel):
+    text: str = Field(default="", max_length=4000)
 
 
 @router.post("/login")
@@ -204,30 +211,47 @@ def set_plan_active(plan_id: str, body: PlanUpdate, db: DBSession = Depends(get_
 @router.get("/students", dependencies=[Depends(require_admin)])
 def list_students(db: DBSession = Depends(get_db)) -> list[dict]:
     rows = db.query(Student).order_by(Student.created_at.desc()).limit(300).all()
-    notes = {p.student_id: p.instructions for p in db.query(TutorProfile).all()}
+    profiles = {p.student_id: p for p in db.query(TutorProfile).all()}
     return [
         {
             "id": s.id,
             "name": s.display_name,
             "kind": "self" if s.self_owner_id else "child",
             "username": s.username,
+            "age_band": s.age_band,
             "cefr_level": s.cefr_level,
-            "instructions": notes.get(s.id, ""),
+            "interests": profiles[s.id].interests if s.id in profiles else "",
+            "motivation": profiles[s.id].motivation if s.id in profiles else "",
+            "instructions": profiles[s.id].instructions if s.id in profiles else "",
         }
         for s in rows
     ]
 
 
-# The notes the lesson prompt is built from. Empty text clears them.
+# The facts and notes the lesson prompt is built from. Empty values clear them.
 @router.post("/students/{student_id}/profile", dependencies=[Depends(require_admin)])
 def save_profile(student_id: str, body: ProfileUpdate, db: DBSession = Depends(get_db)) -> dict:
     if db.get(Student, student_id) is None:
         raise HTTPException(status_code=404, detail="Not found")
-    text = body.instructions.strip()
-    profile = db.get(TutorProfile, student_id)
-    if profile is None:
-        db.add(TutorProfile(student_id=student_id, instructions=text))
-    else:
-        profile.instructions = text
+    set_learner_profile(
+        db,
+        student_id,
+        interests=body.interests,
+        motivation=body.motivation,
+        instructions=body.instructions,
+    )
+    db.commit()
+    return {"ok": True}
+
+
+# The general prompt that every lesson uses, before the learner's own details.
+@router.get("/global-prompt", dependencies=[Depends(require_admin)])
+def read_global_prompt(db: DBSession = Depends(get_db)) -> dict:
+    return {"text": get_global_prompt(db)}
+
+
+@router.post("/global-prompt", dependencies=[Depends(require_admin)])
+def write_global_prompt(body: GlobalPromptUpdate, db: DBSession = Depends(get_db)) -> dict:
+    set_global_prompt(db, body.text.strip())
     db.commit()
     return {"ok": True}

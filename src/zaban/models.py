@@ -139,12 +139,24 @@ class Student(Base):
 
 
 class TutorProfile(Base):
-    # Notes an administrator writes for one student: interests, tone and topics. They shape the lesson prompt
-    # but never override its safety rules. Kept in its own table, so an existing database gets it from create_all.
+    # What the lesson prompt knows about one learner: interests and motivation (from the parent or sign-up form),
+    # and notes an administrator writes. They shape topics and tone but never override the safety rules.
+    # Kept in its own table, so an existing database gets it from create_all.
     __tablename__ = "tutor_profiles"
 
     student_id: Mapped[str] = mapped_column(ForeignKey("students.id"), primary_key=True)
+    interests: Mapped[str] = mapped_column(Text, default="")
+    motivation: Mapped[str] = mapped_column(String(60), default="")
     instructions: Mapped[str] = mapped_column(Text, default="")
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class AppSetting(Base):
+    # One row per setting. Used for the general prompt that applies to every lesson.
+    __tablename__ = "app_settings"
+
+    key: Mapped[str] = mapped_column(String(60), primary_key=True)
+    value: Mapped[str] = mapped_column(Text, default="")
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
 

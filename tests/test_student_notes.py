@@ -1,68 +1,101 @@
 import os
 
 from zaban.db import SessionLocal
-from zaban.models import Student
+from zaban.models import Student, TutorProfile
+from zaban.services.learner import get_global_prompt
 from zaban.services.sessions import build_system_prompt
 
 ADMIN_PASSWORD = os.environ["ADMIN_PASSWORD"]
+DEMO = {"X-API-Key": os.environ["ZABAN_DEMO_API_KEY"]}
 
 
 def _admin(client) -> None:
     assert client.post("/v1/admin/api/login", json={"password": ADMIN_PASSWORD}).status_code == 200
 
 
-def _first_student(client) -> dict:
-    students = client.get("/v1/admin/api/students").json()
-    assert students, "the demo student should be seeded in development"
-    return students[0]
+def _student_row(client, student_id: str) -> dict:
+    return next(s for s in client.get("/v1/admin/api/students").json() if s["id"] == student_id)
+
+
+def _prompt_for(student_id: str, global_prompt: str = "") -> str:
+    with SessionLocal() as db:
+        student = db.get(Student, student_id)
+        profile = db.get(TutorProfile, student_id)
+        return build_system_prompt(student, None, "warm_up", 45, global_prompt, profile)
 
 
 def test_student_list_needs_admin_sign_in(client):
     assert client.get("/v1/admin/api/students").status_code == 401
 
 
-def test_admin_saves_notes_and_they_reach_the_lesson_prompt(client):
+def test_admin_profile_reaches_the_lesson_prompt(client):
     _admin(client)
-    student = _first_student(client)
-    note = "Likes football and drawing. Use short sentences and easy examples."
+    student_id = client.get("/v1/admin/api/students").json()[0]["id"]
 
-    saved = client.post(f"/v1/admin/api/students/{student['id']}/profile", json={"instructions": f"  {note}  "})
+    saved = client.post(
+        f"/v1/admin/api/students/{student_id}/profile",
+        json={"interests": " football ", "motivation": "school", "instructions": "Use short sentences."},
+    )
     assert saved.status_code == 200, saved.text
 
-    row = next(s for s in client.get("/v1/admin/api/students").json() if s["id"] == student["id"])
-    assert row["instructions"] == note
+    row = _student_row(client, student_id)
+    assert (row["interests"], row["motivation"], row["instructions"]) == ("football", "school", "Use short sentences.")
 
-    with SessionLocal() as db:
-        db_student = db.get(Student, student["id"])
-        prompt = build_system_prompt(db_student, None, "warm_up", 45, row["instructions"])
-    assert note in prompt
-    assert "<notes>" in prompt
-    assert "never change the rules below" in prompt
+    prompt = _prompt_for(student_id)
+    assert "<learner>" in prompt
+    assert "Interests: football" in prompt
+    assert "Why they learn English: school" in prompt
+    assert "Teacher notes: Use short sentences." in prompt
 
 
-def test_empty_notes_clear_the_prompt_section(client):
+def test_empty_profile_clears_the_learner_section(client):
     _admin(client)
-    student = _first_student(client)
-    client.post(f"/v1/admin/api/students/{student['id']}/profile", json={"instructions": "Likes trains."})
+    student_id = client.get("/v1/admin/api/students").json()[0]["id"]
+    client.post(f"/v1/admin/api/students/{student_id}/profile", json={"instructions": "Likes trains."})
 
-    assert client.post(f"/v1/admin/api/students/{student['id']}/profile", json={"instructions": "  "}).status_code == 200
+    assert client.post(f"/v1/admin/api/students/{student_id}/profile", json={}).status_code == 200
+
+    assert "<learner>" not in _prompt_for(student_id)
+
+
+def test_general_prompt_is_saved_and_used_in_every_lesson(client):
+    _admin(client)
+    assert client.post("/v1/admin/api/global-prompt", json={"text": "  Be warm and encouraging.  "}).status_code == 200
+    assert client.get("/v1/admin/api/global-prompt").json() == {"text": "Be warm and encouraging."}
 
     with SessionLocal() as db:
-        db_student = db.get(Student, student["id"])
-        prompt = build_system_prompt(db_student, None, "warm_up", 45, "")
-    assert "<notes>" not in prompt
+        student = db.query(Student).first()
+        global_prompt = get_global_prompt(db)
+        prompt = build_system_prompt(student, None, "warm_up", 45, global_prompt, None)
+    assert "Be warm and encouraging." in prompt
+    assert "<guidance>" in prompt
 
 
-def test_notes_for_unknown_student_are_not_found(client):
+def test_parent_or_api_key_can_set_interests_and_motivation_at_creation(client):
+    created = client.post(
+        "/v1/students",
+        headers=DEMO,
+        json={"age_band": "11-14", "display_name": "Sara", "interests": "drawing", "motivation": "travel"},
+    )
+    assert created.status_code == 201, created.text
+
+    _admin(client)
+    row = _student_row(client, created.json()["id"])
+    assert (row["interests"], row["motivation"]) == ("drawing", "travel")
+
+
+def test_unknown_student_profile_is_not_found(client):
     _admin(client)
     response = client.post("/v1/admin/api/students/missing/profile", json={"instructions": "Hi"})
     assert response.status_code == 404
 
 
-def test_notes_are_length_limited(client):
+def test_profile_and_general_prompt_lengths_are_limited(client):
     _admin(client)
-    student = _first_student(client)
-    response = client.post(
-        f"/v1/admin/api/students/{student['id']}/profile", json={"instructions": "x" * 2001}
+    student_id = client.get("/v1/admin/api/students").json()[0]["id"]
+    too_long_notes = client.post(
+        f"/v1/admin/api/students/{student_id}/profile", json={"instructions": "x" * 2001}
     )
-    assert response.status_code == 422
+    assert too_long_notes.status_code == 422
+    too_long_global = client.post("/v1/admin/api/global-prompt", json={"text": "x" * 4001})
+    assert too_long_global.status_code == 422

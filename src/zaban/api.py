@@ -22,6 +22,7 @@ from zaban.schemas import (
 )
 from zaban.security import Auth, get_auth, get_student_for_auth, issue_student_token, require_manager
 from zaban.services.ai import tutor_reply
+from zaban.services.learner import get_global_prompt, set_learner_profile
 from zaban.services.metering import ensure_quota, record_usage
 from zaban.services.payments import require_plan
 from zaban.services.passwords import hash_password
@@ -171,6 +172,9 @@ def create_student(
     db.add(student)
     db.commit()
     db.refresh(student)
+    if body.interests is not None or body.motivation is not None:
+        set_learner_profile(db, student.id, interests=body.interests, motivation=body.motivation)
+        db.commit()
     return _student_out(student)
 
 
@@ -418,9 +422,14 @@ def send_message(
 
     history = [{"role": m.role, "content": m.content} for m in session.messages]
     history.append({"role": "user", "content": text})
-    profile = db.get(TutorProfile, student.id)
-    notes = profile.instructions if profile else ""
-    system_prompt = build_system_prompt(student, _active_plan(db, student), block, session.duration_minutes, notes)
+    system_prompt = build_system_prompt(
+        student,
+        _active_plan(db, student),
+        block,
+        session.duration_minutes,
+        get_global_prompt(db),
+        db.get(TutorProfile, student.id),
+    )
     reply = tutor_reply(system_prompt, history)
 
     db.add(Message(session_id=session.id, role="user", content=text))

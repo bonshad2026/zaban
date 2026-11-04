@@ -9,6 +9,7 @@ from zaban.db import get_db
 from zaban.models import Consent, Guardian, Student, Tenant, utcnow
 from zaban.schemas import OtpRequest, PasswordReset, SignUpCreate, StudentLogin, UserLogin
 from zaban.security import WEB_COOKIE_NAMES, issue_web_session, read_web_session, session_is_current
+from zaban.services.learner import set_learner_profile
 from zaban.services.otp import check_code, development_code, normalize_phone, request_code
 from zaban.services.passwords import hash_password, verify_password
 from zaban.services.payments import has_active_plan, require_plan
@@ -196,6 +197,8 @@ def start_own_learning(
         db.refresh(student)
         # The adult agrees to their own lessons when the profile is created, so no parent consent is needed.
         db.add(Consent(student_id=student.id, text_version="self-v1"))
+        # The goal the adult chose at sign-up becomes the learner's motivation for lessons.
+        set_learner_profile(db, student.id, motivation=guardian.goal or "")
         db.commit()
 
     _set_session_cookie(

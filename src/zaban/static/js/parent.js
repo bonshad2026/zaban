@@ -106,6 +106,8 @@
         age_band: form.age_band.value,
         username: form.username.value.trim().toLowerCase(),
         password: form.password.value,
+        interests: form.interests.value.trim() || null,
+        motivation: form.motivation.value || null,
       });
       await Z.request("POST", `/v1/students/${created.id}/consent`, { accepted: true, text_version: "v1" });
       form.reset();

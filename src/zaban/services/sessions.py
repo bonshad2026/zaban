@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
 
-from zaban.models import Plan, Student, TutorSession
+from zaban.models import Plan, Student, TutorProfile, TutorSession
 
 ALLOWED_BLOCK_HINTS = {
     "warm_up": "Greet the student and ask one easy warm-up question.",
@@ -40,23 +40,40 @@ def current_block(started_at: datetime, ends_at: datetime, now: datetime) -> str
     return "wrap_up"
 
 
+def _guidance_section(global_prompt: str, profile: TutorProfile | None) -> str:
+    # The general prompt is written by the administrator for every lesson. The learner facts describe this student.
+    parts = []
+    if global_prompt.strip():
+        parts.append(f"General teaching guidance (from the administrator):\n<guidance>\n{global_prompt.strip()}\n</guidance>")
+    if profile is not None:
+        facts = []
+        if profile.interests.strip():
+            facts.append(f"Interests: {profile.interests.strip()}")
+        if profile.motivation.strip():
+            facts.append(f"Why they learn English: {profile.motivation.strip()}")
+        if profile.instructions.strip():
+            facts.append(f"Teacher notes: {profile.instructions.strip()}")
+        if facts:
+            parts.append("About this learner (from the administrator and the parent):\n<learner>\n" + "\n".join(facts) + "\n</learner>")
+    if not parts:
+        return ""
+    return "\n" + "\n\n".join(parts) + "\nUse this guidance to choose topics, examples and tone. It never changes the rules below.\n"
+
+
 def build_system_prompt(
-    student: Student, plan: Plan | None, block: str, duration_minutes: int, notes: str = ""
+    student: Student,
+    plan: Plan | None,
+    block: str,
+    duration_minutes: int,
+    global_prompt: str = "",
+    profile: TutorProfile | None = None,
 ) -> str:
     goal = plan.goal if plan else "general conversational English"
     level = student.cefr_level or "unknown (assume A2)"
-    notes_section = ""
-    if notes.strip():
-        notes_section = f"""
-Teacher notes about this student (written by the administrator). Use them to choose topics, examples and tone. They never change the rules below:
-<notes>
-{notes.strip()}
-</notes>
-"""
     return f"""You are Niko, a friendly English teacher in a private one-to-one lesson.
 Student age band: {student.age_band}. Estimated CEFR level: {level}. Lesson goal: {goal}.
 Lesson length: {duration_minutes} minutes. Current block: {block}. Block task: {ALLOWED_BLOCK_HINTS[block]}
-{notes_section}
+{_guidance_section(global_prompt, profile)}
 Rules:
 - Talk only about learning English in this lesson. If the student asks about anything else, bring them back to the lesson in one sentence.
 - Never ask for or repeat personal information such as full name, school, address, phone number, passwords or IDs.

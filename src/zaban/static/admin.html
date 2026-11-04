@@ -42,6 +42,7 @@
         <button type="button" class="tab" data-tab="adults">ثبت‌نام‌ها</button>
         <button type="button" class="tab" data-tab="payments">پرداخت‌ها</button>
         <button type="button" class="tab" data-tab="plans">پلن‌ها</button>
+        <button type="button" class="tab" data-tab="global">پرامپت کلی</button>
         <button type="button" class="tab" data-tab="students">دانش‌آموزان و پرامپت</button>
       </nav>
 
@@ -74,14 +75,31 @@
         <p class="error" id="planError" hidden></p>
       </section>
 
+      <section class="card" id="tab-global" hidden>
+        <h2>پرامپت کلی</h2>
+        <p class="muted">این متن در جلسه‌ی همه‌ی دانش‌آموزان استفاده می‌شود، قبل از اطلاعات هر دانش‌آموز. قوانین ایمنی همیشه بالاتر از این متن هستند.</p>
+        <form id="globalForm">
+          <label for="globalText">پرامپت کلی</label>
+          <textarea id="globalText" rows="12" maxlength="4000" placeholder="مثلاً: با لحن گرم و تشویقی صحبت کن. جمله‌ها کوتاه باشند. اشتباه‌ها را با یک مثال ساده اصلاح کن."></textarea>
+          <p class="muted" id="globalCount"></p>
+          <button type="submit">ذخیره</button>
+          <p class="error" id="globalError" hidden></p>
+          <p class="ok-msg" id="globalOk" hidden></p>
+        </form>
+      </section>
+
       <section class="card" id="tab-students" hidden>
         <h2>دانش‌آموزان و پرامپت هرکدام</h2>
-        <p class="muted">یادداشت هر دانش‌آموز (علاقه‌ها، لحن و موضوع‌ها) در جلسه‌های همان دانش‌آموز استفاده می‌شود. قوانین ایمنی همیشه بالاتر از این یادداشت‌ها هستند.</p>
+        <p class="muted">اطلاعات هر دانش‌آموز (علاقه‌ها، هدف، و یادداشت شما) در جلسه‌های همان دانش‌آموز استفاده می‌شود. قوانین ایمنی همیشه بالاتر از این‌ها هستند.</p>
         <div class="table-box"><table class="admin-table" id="studentTable"></table></div>
         <form id="profileForm" hidden>
           <h2 style="margin-top:20px" id="profileTitle"></h2>
-          <label for="profileText">پرامپت این دانش‌آموز</label>
-          <textarea id="profileText" rows="10" maxlength="2000" placeholder="مثلاً: علاقه‌مند به فوتبال و نقاشی است. با جمله‌های کوتاه و مثال‌های ساده صحبت کن. موضوع جلسه: خرید از فروشگاه."></textarea>
+          <label for="profileInterests">علاقه‌ها</label>
+          <textarea id="profileInterests" rows="2" maxlength="300" placeholder="مثلاً: فوتبال، نقاشی، حیوانات"></textarea>
+          <label for="profileMotivation">هدف از یادگیری</label>
+          <input id="profileMotivation" maxlength="60" placeholder="مثلاً: مدرسه، سفر، آزمون">
+          <label for="profileText">یادداشت شما برای Niko</label>
+          <textarea id="profileText" rows="8" maxlength="2000" placeholder="مثلاً: با جمله‌های کوتاه و مثال‌های ساده صحبت کن. موضوع این هفته: خرید از فروشگاه."></textarea>
           <p class="muted" id="profileCount"></p>
           <div class="row">
             <button type="submit">ذخیره</button>

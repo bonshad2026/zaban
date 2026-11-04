@@ -14,6 +14,9 @@ class StudentCreate(BaseModel):
     username: str | None = Field(default=None, pattern=USERNAME_PATTERN)
     # Guardians set a 4 to 6 digit PIN. Tenant API keys may send a longer password.
     password: str | None = Field(default=None, min_length=4, max_length=100)
+    # Optional facts the lessons use to choose topics. A parent fills these in when creating a child's account.
+    interests: str | None = Field(default=None, max_length=300)
+    motivation: str | None = Field(default=None, max_length=60)
 
 
 class StudentUpdate(BaseModel):
