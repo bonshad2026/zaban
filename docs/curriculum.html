@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>برنامه‌ی آموزشی zaban: ساختار، سطح‌ها و موضوع‌ها</title>
+<style>
+:root {
+  --bg: #fbfaf7; --fg: #1d1d1f; --muted: #6b6b70; --accent: #2a6f97;
+  --line: #e2e0da; --head: #eef4f8; --code: #f0efea;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17181c; --fg: #ececf0; --muted: #9a9aa3; --accent: #7fb8d9;
+    --line: #2e3038; --head: #22252d; --code: #24262d;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #17181c; --fg: #ececf0; --muted: #9a9aa3; --accent: #7fb8d9;
+  --line: #2e3038; --head: #22252d; --code: #24262d;
+}
+body {
+  background: var(--bg); color: var(--fg); margin: 0;
+  font-family: Tahoma, "Segoe UI", sans-serif; line-height: 1.9; font-size: 16px;
+}
+main { max-width: 1100px; margin: 0 auto; padding: 32px 16px 64px; }
+h1 { font-size: 1.8em; border-bottom: 2px solid var(--accent); padding-bottom: 8px; }
+h2 { margin-top: 2em; color: var(--accent); border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+h3 { margin-top: 1.5em; }
+p, li { color: var(--fg); }
+hr { border: none; border-top: 1px solid var(--line); margin: 2em 0; }
+code { background: var(--code); padding: 2px 6px; border-radius: 4px; direction: ltr; unicode-bidi: isolate; font-family: Consolas, monospace; font-size: 0.92em; }
+.table-wrap { overflow-x: auto; margin: 1em 0; }
+table { border-collapse: collapse; width: 100%; font-size: 0.95em; }
+th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: right; vertical-align: top; }
+th { background: var(--head); }
+tbody tr:nth-child(even) { background: color-mix(in srgb, var(--head) 40%, transparent); }
+@media (max-width: 600px) { main { padding: 20px 12px 48px; } th, td { padding: 6px; font-size: 0.88em; } }
+</style>
+</head>
+<body>
+<main>
+<h1>برنامه‌ی آموزشی zaban: ساختار، سطح‌ها و موضوع‌ها</h1>
+<p>نسخه‌ی ۰.۱ (پیش‌نویس برای بازبینی). این سند قبل از ساخت محتوا و تغییر کد نوشته شده است. هر تغییری در آن ثبت می‌شود و شماره‌ی نسخه بالا می‌رود.</p>
+<h2>۱. اصول</h2>
+<ul>
+<li><strong>گفتگومحور و با هوش مصنوعی:</strong> هدف، شنیدن و مکالمه‌ی روان است. گرامر فقط وقتی مطرح می‌شود که مانع گفتگو باشد.</li>
+<li><strong>سن و سطح جدا هستند:</strong> هر موضوع برای هر ترکیب «بازه‌ی سنی + سطح» یک نسخه (variant) دارد. همان هدف گفتگو، با واژگان، شروع جمله و لحن متناسب آن بازه و سطح بیان می‌شود.</li>
+<li><strong>فارسی فقط برای رفع ابهام است:</strong> اگر کاربر متوجه نشد، یا نمی‌داند درباره‌ی چه صحبت می‌شود، AI یک جمله‌ی کوتاه فارسی می‌گوید و بلافاصله به انگلیسی برمی‌گردد.</li>
+<li><strong>ثبت دقیق:</strong> هر درس با شناسه‌ی موضوع، نسخه و نسخه‌ی کاتالوگ ثبت می‌شود. تغییر برنامه روی جلسه‌های بعدی اثر می‌گذارد، ولی تاریخچه‌ی ثبت‌شده تغییر نمی‌کند.</li>
+</ul>
+<h2>۲. بازه‌های سنی</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>کد</th>
+<th>بازه</th>
+<th>نکته‌ی طراحی</th>
+</tr></thead><tbody>
+<tr><td>K</td><td>۴ تا ۶ سال</td><td>جلسه‌ی کوتاه، جمله‌ی ۱ تا ۴ کلمه‌ای، تصویر و بازی. نیاز به حضور یا نظارت والد.</td></tr>
+<tr><td>J</td><td>۷ تا ۱۰ سال</td><td>جمله‌ی کوتاه، داستان و بازی، توضیح فارسی بیشتر.</td></tr>
+<tr><td>T</td><td>۱۱ تا ۱۴ سال</td><td>جمله‌ی کامل با دلیل، علاقه‌ها و دوستان، بحث ساده.</td></tr>
+<tr><td>S</td><td>۱۵ تا ۱۸ سال</td><td>گفتگوی باز، نظر و استدلال، لحن نوجوانانه.</td></tr>
+<tr><td>A</td><td>بزرگسال</td><td>لحن حرفه‌ای یا دوستانه، موضوع‌های کار و زندگی، اصطلاح‌های رایج.</td></tr>
+</tbody></table></div>
+<h2>۳. سطح‌ها</h2>
+<p>سطح‌ها بر اساس CEFR هستند: A1، A2، B1، B2، C1 و C2.</p>
+<div class="table-wrap"><table><thead><tr>
+<th>سطح</th>
+<th>طول جمله</th>
+<th>نوع جمله‌ها</th>
+<th>نمونه‌ی معرفی خود</th>
+</tr></thead><tbody>
+<tr><td>A1</td><td>۳ تا ۵ کلمه</td><td>حال ساده، جمله‌ی کوتاه</td><td><code>My name is Sara. I am five.</code></td></tr>
+<tr><td>A2</td><td>جمله‌ی کامل با دلیل ساده</td><td>حال، گذشته‌ی ساده، <code>because</code></td><td><code>Hi! I'm Sara. I like dogs because they are fun.</code></td></tr>
+<tr><td>B1</td><td>دو جمله‌ی پیوسته</td><td>زمان‌های ساده و کامل، شرط ساده</td><td><code>Hi, I'm Sara. I've been learning English for two years.</code></td></tr>
+<tr><td>B2</td><td>استدلال و توضیح</td><td>اصطلاح‌ها، ساختارهای ربط</td><td><code>Let me introduce myself. I work in education, and I'm especially interested in…</code></td></tr>
+<tr><td>C1</td><td>گفتگوی ظریف و طبیعی</td><td>اصطلاح‌های رایج، لحن، تأکید</td><td><code>So, a bit about me: I'm in education, and what drives me is…</code></td></tr>
+<tr><td>C2</td><td>گفتگوی روان با ظرافت، کنایه و لحن دقیق</td><td>اصطلاح‌های کم‌بسامد، تفاوت‌های ظریف معنا، ساختارهای پیچیده</td><td><code>Allow me to introduce myself. I've spent most of my career in…, and what genuinely sets me apart is…</code></td></tr>
+</tbody></table></div>
+<h2>۴. ساختار هر درس</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>بازه</th>
+<th>مدت پیشنهادی</th>
+</tr></thead><tbody>
+<tr><td>K</td><td>۱۵ دقیقه</td></tr>
+<tr><td>J</td><td>۲۰ دقیقه</td></tr>
+<tr><td>T</td><td>۲۵ دقیقه</td></tr>
+<tr><td>S و A</td><td>۳۰ دقیقه</td></tr>
+</tbody></table></div>
+<p><strong>مراحل هر درس:</strong></p>
+<ol>
+<li><strong>گرم‌کردن:</strong> یک پرسش ساده درباره‌ی امروز یا تصویر.</li>
+<li><strong>مرور:</strong> سه عبارت از درس‌های قبلی (مرور فاصله‌دار).</li>
+<li><strong>ورودی:</strong> AI یک نمونه‌ی کوتاه (دو جمله یا تصویر) می‌دهد و درک را با یک پرسش می‌سنجد.</li>
+<li><strong>شدوئینگ:</strong> کاربر سه تا پنج جمله‌ی نمونه را بلند تکرار می‌کند.</li>
+<li><strong>گفتگوی هدف:</strong> موضوع درس، از طریق نقش‌بازی یا پرسش‌های باز.</li>
+<li><strong>جمع‌بندی:</strong> سه عبارت جدید، و ثبت نتیجه.</li>
+</ol>
+<p><strong>قاعده‌ی گفتگو:</strong> هر پیام AI حداکثر یک پرسش باز دارد و کاربر باید بیشتر از AI صحبت کند (هدف: حدود ۷۰٪ سهم کاربر).</p>
+<h2>۵. کاتالوگ موضوع‌ها</h2>
+<p>ستون «بازه‌ها» نشان می‌دهد برای کدام بازه‌ی سنی نسخه دارد.</p>
+<div class="table-wrap"><table><thead><tr>
+<th>شناسه</th>
+<th>موضوع</th>
+<th>هدف گفتگو (کاربر می‌تواند…)</th>
+<th>سطح‌ها</th>
+<th>بازه‌ها</th>
+</tr></thead><tbody>
+<tr><td><code>INTRO</code></td><td>معرفی خود</td><td>خودش را معرفی کند و چند جمله درباره‌ی خودش بگوید</td><td>A1–C2</td><td>K J T S A</td></tr>
+<tr><td><code>GREET</code></td><td>احوال‌پرسی و گفتگوی کوتاه</td><td>سلام کند و گفتگوی کوتاه روزانه را شروع و تمام کند</td><td>A1–B2</td><td>K J T S A</td></tr>
+<tr><td><code>FAMILY</code></td><td>خانواده</td><td>اعضای خانواده را معرفی و درباره‌شان توضیح دهد</td><td>A1–B2</td><td>K J T</td></tr>
+<tr><td><code>PETS</code></td><td>حیوان‌ها</td><td>حیوان خود یا موردعلاقه‌اش را توصیف کند</td><td>A1–B1</td><td>K J</td></tr>
+<tr><td><code>COLORS_OBJECTS</code></td><td>رنگ و اشیا</td><td>اشیا و رنگ‌ها را نام ببرد و توصیف کند</td><td>A1</td><td>K J</td></tr>
+<tr><td><code>FEELINGS</code></td><td>احساسات</td><td>احساس خود را بگوید و دلیلش را توضیح دهد</td><td>A1–B2</td><td>K J T S A</td></tr>
+<tr><td><code>FAVORITES</code></td><td>علاقه‌ها</td><td>غذا، رنگ، فعالیت و چیز موردعلاقه‌اش را بگوید</td><td>A1–C2</td><td>K J T S A</td></tr>
+<tr><td><code>LIKES_DISLIKES</code></td><td>دوست داشتن و نداشتن</td><td>نظر خود درباره‌ی چیزها را با دلیل بگوید</td><td>A1–B1</td><td>K J T</td></tr>
+<tr><td><code>DAILY_ROUTINE</code></td><td>روال روزانه</td><td>روز خود را از صبح تا شب تعریف کند</td><td>A1–B2</td><td>J T S A</td></tr>
+<tr><td><code>TIME_DATE</code></td><td>ساعت و تاریخ</td><td>ساعت، روز و تاریخ را بگوید و زمان قرار را هماهنگ کند</td><td>A1–B1</td><td>J T S A</td></tr>
+<tr><td><code>FOOD_DRINK</code></td><td>غذا و نوشیدنی</td><td>غذا و نوشیدنی موردعلاقه را بگوید و سفارش دهد</td><td>A1–B1</td><td>K J T S A</td></tr>
+<tr><td><code>SHOPPING</code></td><td>خرید</td><td>در فروشگاه بپرسد، انتخاب کند و قیمت را بفهمد</td><td>A1–B2</td><td>J T S A</td></tr>
+<tr><td><code>RESTAURANT</code></td><td>رستوران</td><td>سفارش دهد، غذا را توصیف کند و صورت‌حساب بپرسد</td><td>A1–C2</td><td>J T S A</td></tr>
+<tr><td><code>NUMBERS_MONEY</code></td><td>عدد و پول</td><td>عدد، قیمت و مقدار را بگوید و بفهمد</td><td>A1–A2</td><td>K J T</td></tr>
+<tr><td><code>HOBBIES_SPORTS</code></td><td>سرگرمی و ورزش</td><td>سرگرمی و ورزش خود را توصیف کند</td><td>A1–B2</td><td>J T S A</td></tr>
+<tr><td><code>ABILITIES</code></td><td>توانایی‌ها</td><td>بگوید چه کاری بلد است و چه کاری بلد نیست</td><td>A1–A2</td><td>K J T</td></tr>
+<tr><td><code>HOME_ROOMS</code></td><td>خانه و اتاق</td><td>اتاق‌ها و وسایل خانه را توصیف کند</td><td>A1</td><td>K J</td></tr>
+<tr><td><code>CITY_DIRECTIONS</code></td><td>شهر و مسیر</td><td>مسیر را بپرسد و توضیح دهد</td><td>A1–B1</td><td>J T S A</td></tr>
+<tr><td><code>WEATHER_SEASONS</code></td><td>آب‌وهوا و فصل‌ها</td><td>آب‌وهوا را توصیف کند و لباس مناسب را بگوید</td><td>A1–B1</td><td>K J T S A</td></tr>
+<tr><td><code>PAST_EVENTS</code></td><td>رویدادهای گذشته</td><td>دیروز و تجربه‌های گذشته را تعریف کند</td><td>A2–B2</td><td>J T S A</td></tr>
+<tr><td><code>DESCRIBE_PEOPLE_PLACES</code></td><td>توصیف آدم و مکان</td><td>آدم‌ها و مکان‌ها را با جزئیات توصیف کند</td><td>A1–B2</td><td>J T S A</td></tr>
+<tr><td><code>COMPARE</code></td><td>مقایسه</td><td>دو چیز را مقایسه کند و نظر بدهد</td><td>A2–B2</td><td>J T S A</td></tr>
+<tr><td><code>INVITATIONS_PLANS</code></td><td>دعوت و قرار</td><td>دعوت کند، بپذیرد یا رد کند و قرار بگذارد</td><td>A1–B2</td><td>K J T S A</td></tr>
+<tr><td><code>FUTURE_PLANS</code></td><td>برنامه‌های آینده</td><td>برنامه‌ها و تصمیم‌هایش را برای آینده بگوید</td><td>A2–B2</td><td>T S A</td></tr>
+<tr><td><code>STORYTELLING</code></td><td>داستان‌گویی</td><td>داستان کوتاه بسازد و تعریف کند</td><td>A1–C2</td><td>K J T S</td></tr>
+<tr><td><code>MEDIA_CARTOONS</code></td><td>کارتون و فیلم</td><td>درباره‌ی فیلم یا کارتون موردعلاقه‌اش حرف بزند</td><td>A2–C2</td><td>J T S A</td></tr>
+<tr><td><code>BOOKS</code></td><td>کتاب</td><td>کتاب را خلاصه و نقد کند</td><td>A2–C2</td><td>T S A</td></tr>
+<tr><td><code>FRIENDS</code></td><td>دوستان و رابطه</td><td>درباره‌ی دوستان و رابطه‌اش حرف بزند</td><td>A2–C2</td><td>T S A</td></tr>
+<tr><td><code>SCHOOL_STUDY</code></td><td>مدرسه و درس</td><td>درس‌ها، امتحان‌ها و برنامه‌ی مدرسه را بگوید</td><td>A1–B2</td><td>J T S</td></tr>
+<tr><td><code>TECH_INTERNET</code></td><td>فناوری</td><td>از ابزارها و اپ‌ها بگوید و مزایا و معایب را توضیح دهد</td><td>A2–C2</td><td>T S A</td></tr>
+<tr><td><code>NATURE_ANIMALS</code></td><td>طبیعت و حیوانات</td><td>درباره‌ی طبیعت و محیط زیست نظر بدهد</td><td>A2–C2</td><td>J T S A</td></tr>
+<tr><td><code>SCIENCE_SPACE</code></td><td>علم و فضا</td><td>درباره‌ی موضوع‌های علمی ساده توضیح دهد</td><td>A2–C2</td><td>J T S</td></tr>
+<tr><td><code>CULTURE_HOLIDAYS</code></td><td>فرهنگ و جشن‌ها</td><td>جشن‌های ایران و جهان را مقایسه کند</td><td>A2–C2</td><td>J T S A</td></tr>
+<tr><td><code>OPINION_DEBATE</code></td><td>نظر و بحث</td><td>نظر بدهد، دلیل بیاورد و با نظر مخالف برخورد کند</td><td>B1–C2</td><td>T S A</td></tr>
+<tr><td><code>PROBLEM_SOLVING</code></td><td>حل مسئله</td><td>مشکلی را توضیح دهد و راه‌حل پیشنهاد کند</td><td>A2–C2</td><td>T S A</td></tr>
+<tr><td><code>HEALTH_DOCTOR</code></td><td>سلامتی و پزشک</td><td>علائم را بگوید و با پزشک صحبت کند</td><td>A2–C2</td><td>T S A</td></tr>
+<tr><td><code>EMERGENCY_HELP</code></td><td>کمک فوری</td><td>در موقعیت اضطراری کمک بخواهد و موقعیت را توضیح دهد</td><td>A2–C2</td><td>T S A</td></tr>
+<tr><td><code>TRAVEL_AIRPORT</code></td><td>سفر و فرودگاه</td><td>بلیت، هتل و مسیر سفر را هماهنگ کند</td><td>A2–C2</td><td>T S A</td></tr>
+<tr><td><code>PHONE_MESSAGING</code></td><td>تلفن و پیام</td><td>تماس بگیرد، پیام بگذارد و پیام را تأیید کند</td><td>A1–C2</td><td>T S A</td></tr>
+<tr><td><code>NEWS_EVENTS</code></td><td>اخبار و رویداد</td><td>خبر ساده را خلاصه و درباره‌اش نظر بدهد</td><td>B1–C2</td><td>S A</td></tr>
+<tr><td><code>WORK_JOB</code></td><td>کار و شغل</td><td>شغل خود را معرفی و وظیفه‌هایش را توضیح دهد</td><td>A2–C2</td><td>S A</td></tr>
+<tr><td><code>MEETINGS_PRESENTATION</code></td><td>جلسه و ارائه</td><td>در جلسه‌ی کاری نظر بدهد و ارائه‌ی کوتاه بدهد</td><td>B1–C2</td><td>A</td></tr>
+<tr><td><code>CAREER_FUTURE</code></td><td>شغل آینده</td><td>درباره‌ی هدف شغلی و مسیر آینده صحبت کند</td><td>B1–C2</td><td>S A</td></tr>
+<tr><td><code>HOUSING_RENT</code></td><td>خانه و اجاره</td><td>درباره‌ی اجاره، آپارتمان و قرارداد ساده بپرسد</td><td>B1–C2</td><td>A</td></tr>
+<tr><td><code>SOCIAL_SMALL_TALK</code></td><td>گفتگوی اجتماعی</td><td>در مهمانی یا جمع گفتگو را شروع و ادامه دهد</td><td>B1–C2</td><td>S A</td></tr>
+</tbody></table></div>
+<h2>۶. نمونه‌ی کامل: <code>INTRO</code> در پروفایل‌های مختلف</h2>
+<p>این بخش نشان می‌دهد یک موضوع واحد چگونه برای پروفایل‌های مختلف متفاوت نوشته می‌شود.</p>
+<div class="table-wrap"><table><thead><tr>
+<th>شناسه‌ی نسخه</th>
+<th>بازه</th>
+<th>سطح</th>
+<th>شروع جمله (AI پیشنهاد می‌دهد)</th>
+<th>عبارت‌های هدف</th>
+<th>سبک</th>
+</tr></thead><tbody>
+<tr><td><code>INTRO.K.A1</code></td><td>K</td><td>A1</td><td><code>My name is…</code></td><td><code>My name is…</code> / <code>I am…</code> / <code>I like…</code></td><td>بازی و تصویر، جمله‌ی یک تا سه کلمه‌ای</td></tr>
+<tr><td><code>INTRO.J.A1</code></td><td>J</td><td>A1</td><td><code>Hi, my name is…</code></td><td><code>I'm…</code> / <code>I'm… years old.</code> / <code>I like…</code></td><td>دوستانه، جمله‌ی کوتاه</td></tr>
+<tr><td><code>INTRO.T.A2</code></td><td>T</td><td>A2</td><td><code>Hi! I'm… / Let me tell you about me.</code></td><td><code>I'm… / I'm from… / I like… because…</code></td><td>جمله‌ی کامل با دلیل</td></tr>
+<tr><td><code>INTRO.S.B1</code></td><td>S</td><td>B1</td><td><code>Hi, I'm… / A little about me:</code></td><td><code>I've been… / I'm interested in… / One thing I enjoy is…</code></td><td>گفتگوی باز، کمی رسمی</td></tr>
+<tr><td><code>INTRO.A.B2</code></td><td>A</td><td>B2</td><td><code>Let me introduce myself.</code></td><td><code>I work as… / I'm particularly interested in… / What I enjoy most is…</code></td><td>حرفه‌ای، ساختار شغلی</td></tr>
+<tr><td><code>INTRO.A.C1</code></td><td>A</td><td>C1</td><td><code>Hi, I'm… and I'd say I'm…</code></td><td><code>What I do is… / What drives me is… / I tend to…</code></td><td>ظریف، اصطلاح‌های رایج</td></tr>
+<tr><td><code>INTRO.A.C2</code></td><td>A</td><td>C2</td><td><code>Allow me to introduce myself.</code></td><td><code>I've spent most of my career in… / What genuinely sets me apart is… / I'd put it this way:</code></td><td>ظریف، دقت در لحن و کنایه‌ی ملایم</td></tr>
+</tbody></table></div>
+<p><strong>یادداشت:</strong> در همه‌ی پروفایل‌ها، اولین جمله‌ی AI نمونه‌ی پیشنهادی است و کاربر می‌تواند با جمله‌ی خودش شروع کند. AI اجازه ندارد جمله‌ی کامل را به جای کاربر بگوید، مگر کاربر درخواست کند.</p>
+<h2>۷. ثبت هر درس</h2>
+<p>هر درس این فیلدها را ثبت می‌کند:</p>
+<div class="table-wrap"><table><thead><tr>
+<th>فیلد</th>
+<th>توضیح</th>
+</tr></thead><tbody>
+<tr><td><code>lesson_id</code></td><td>شناسه‌ی یکتای درس</td></tr>
+<tr><td><code>student_id</code></td><td>شناسه‌ی کاربر</td></tr>
+<tr><td><code>catalog_version</code></td><td>نسخه‌ی این سند که درس بر اساس آن ساخته شده است</td></tr>
+<tr><td><code>topic_id</code></td><td>شناسه‌ی موضوع (مثلاً <code>INTRO</code>)</td></tr>
+<tr><td><code>variant_id</code></td><td>شناسه‌ی نسخه (مثلاً <code>INTRO.K.A1</code>)</td></tr>
+<tr><td><code>age_band</code></td><td>K، J، T، S یا A</td></tr>
+<tr><td><code>cefr_level</code></td><td>A1 تا C1</td></tr>
+<tr><td><code>started_at</code> / <code>duration_min</code></td><td>زمان شروع و مدت درس</td></tr>
+<tr><td><code>chunks_targeted</code></td><td>عبارت‌های هدف درس</td></tr>
+<tr><td><code>chunks_used</code></td><td>عبارت‌هایی که کاربر به‌درستی به‌کار برد</td></tr>
+<tr><td><code>mastery</code></td><td>نتیجه‌ی تسلط (بله/خیر، یا امتیاز)</td></tr>
+<tr><td><code>persian_assist_count</code></td><td>تعداد دفعاتی که توضیح فارسی لازم شد</td></tr>
+</tbody></table></div>
+<h2>۸. قواعد پیشرفت</h2>
+<ul>
+<li><strong>شروع:</strong> ارزیابی گفتگوی ۵ تا ۱۰ دقیقه‌ای، نه آزمون گرامری. (کد فعلی با ۶ سؤال گرامری کار می‌کند؛ این باید جایگزین شود.)</li>
+<li><strong>تسلط به یک موضوع:</strong> هر سه شرط زیر برقرار باشد:</li>
+</ul>
+<ol>
+<li>کاربر بدون کمک با یکی از شروع‌های پیشنهادی شروع کند.</li>
+<li>حداقل سه عبارت هدف را به‌درستی به‌کار ببرد.</li>
+<li>به سه پرسش پیگیری پاسخ دهد.</li>
+</ol>
+<ul>
+<li><strong>ارتقای سطح:</strong> وقتی حداقل ۸۰٪ موضوع‌های یک سطح تسلط داشته باشند.</li>
+<li><strong>پرش:</strong> اگر ارزیابی شروع نشان دهد سطح بالاتر است، کاربر از سطح مناسب شروع می‌کند.</li>
+<li><strong>ساده‌سازی:</strong> اگر کاربری یک موضوع را سه بار ناتمام رها کند، نسخه‌ی ساده‌تر همان موضوع ارائه می‌شود.</li>
+</ul>
+<h2>۹. فاصله با کد فعلی (برای مرحله‌ی بعد)</h2>
+<ul>
+<li><code>AgeBand</code> در <code>schemas.py</code> فعلاً <code>7-10</code>، <code>11-14</code>، <code>15-18</code> و <code>adult</code> است. بازه‌ی <code>4-6</code> (K) باید اضافه شود.</li>
+<li><code>CEFR_BANDS</code> در <code>services/progress.py</code> تا C1 است و باید C2 به آن اضافه شود. همچنین سطح C2 باید در ارزیابی ورودی (<code>services/placement.py</code>) و در نام فارسی سطح‌ها (<code>LEVEL_FA</code> در رابط کاربری) تعریف شود.</li>
+<li>ارزیابی ورودی (<code>services/placement.py</code>) فعلاً ۶ سؤال گرامری است و طبق بخش ۸ باید گفتگومحور شود.</li>
+<li>جدول جلسه‌ها (<code>TutorSession</code>) باید ستون‌های <code>topic_id</code>، <code>variant_id</code> و <code>catalog_version</code> را داشته باشد.</li>
+</ul>
+<h2>۱۰. موارد باز برای بازبینی</h2>
+<ol>
+<li>فهرست موضوع‌های بخش ۵ تأیید شود، یا موضوع‌هایی باید اضافه یا حذف شوند.</li>
+<li>بازه‌ی K (۴ تا ۶ سال) در سایت باشد؟ این بازه نیاز به حضور یا نظارت والد دارد.</li>
+<li>مدت درس‌ها (بخش ۴) تأیید شود.</li>
+<li>میزان فارسی برای سطح‌های A1 و کودکان کم‌سن (K و J) تعیین شود.</li>
+<li>تسلط موضوع (بخش ۸) با سه شرط فعلی درست باشد.</li>
+</ol>
+</main>
+</body>
+</html>

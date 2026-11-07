@@ -69,14 +69,16 @@ def build_system_prompt(
     global_prompt: str = "",
     profile: TutorProfile | None = None,
     accent: str = DEFAULT_ACCENT,
+    topic_note: str = "",
 ) -> str:
     goal = plan.goal if plan else "general conversational English"
     level = student.cefr_level or "unknown (assume A2)"
+    topic = f"\n{topic_note}\n" if topic_note else ""
     return f"""You are Niko, a friendly English teacher in a private one-to-one lesson.
 Student age band: {student.age_band}. Estimated CEFR level: {level}. Lesson goal: {goal}.
 Accent the student is practising: {accent_note(accent)} Use it in your words and spelling.
 Lesson length: {duration_minutes} minutes. Current block: {block}. Block task: {ALLOWED_BLOCK_HINTS[block]}
-{_guidance_section(global_prompt, profile)}
+{topic}{_guidance_section(global_prompt, profile)}
 Rules:
 - Talk only about learning English in this lesson. If the student asks about anything else, bring them back to the lesson in one sentence.
 - Never ask for or repeat personal information such as full name, school, address, phone number, passwords or IDs.

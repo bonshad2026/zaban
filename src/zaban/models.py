@@ -251,3 +251,41 @@ class VoiceSample(Base):
     mime: Mapped[str] = mapped_column(String(30))
     data: Mapped[bytes] = mapped_column(LargeBinary)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class CurriculumTopic(Base):
+    # One conversation topic. Levels run from first_level to last_level, and bands lists the age band codes it fits (K, J, T, S, A).
+    __tablename__ = "curriculum_topics"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    title: Mapped[str] = mapped_column(String(120))
+    goal: Mapped[str] = mapped_column(Text)
+    first_level: Mapped[str] = mapped_column(String(2))
+    last_level: Mapped[str] = mapped_column(String(2))
+    bands: Mapped[str] = mapped_column(String(10))
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class CurriculumVariant(Base):
+    # The version of one topic for one age band and one level, such as INTRO.K.A1.
+    __tablename__ = "curriculum_variants"
+
+    id: Mapped[str] = mapped_column(String(60), primary_key=True)
+    topic_id: Mapped[str] = mapped_column(ForeignKey("curriculum_topics.id"), index=True)
+    band: Mapped[str] = mapped_column(String(1))
+    level: Mapped[str] = mapped_column(String(2))
+    opener: Mapped[str] = mapped_column(Text, default="")
+    phrases: Mapped[list] = mapped_column(JSON, default=list)
+    style: Mapped[str] = mapped_column(Text, default="")
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class LessonTopic(Base):
+    # Which topic and variant a lesson used, and the catalog version at that time. Old lessons keep their own record.
+    __tablename__ = "lesson_topics"
+
+    session_id: Mapped[str] = mapped_column(ForeignKey("sessions.id"), primary_key=True)
+    topic_id: Mapped[str] = mapped_column(ForeignKey("curriculum_topics.id"), index=True)
+    variant_id: Mapped[str] = mapped_column(ForeignKey("curriculum_variants.id"))
+    catalog_version: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)

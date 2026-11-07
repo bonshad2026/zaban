@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/static/css/app.css">
   <style>
     .admin-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .row > .full { flex: 0 0 100%; min-width: 0; }
     .admin-table { width: 100%; border-collapse: collapse; font-size: 14px; }
     .admin-table th, .admin-table td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
     .admin-table th { color: var(--muted); font-weight: 600; }
@@ -39,6 +40,7 @@
         <button type="button" class="tab" data-tab="adults">ثبت‌نام‌ها</button>
         <button type="button" class="tab" data-tab="payments">پرداخت‌ها</button>
         <button type="button" class="tab" data-tab="plans">پلن‌ها</button>
+        <button type="button" class="tab" data-tab="curriculum">برنامه‌ی آموزشی</button>
         <button type="button" class="tab" data-tab="global">پرامپت کلی</button>
         <button type="button" class="tab" data-tab="voices">نمونه صدا</button>
         <button type="button" class="tab" data-tab="students">دانش‌آموزان و پرامپت</button>
@@ -71,6 +73,28 @@
           <button type="submit">افزودن</button>
         </form>
         <p class="error" id="planError" hidden></p>
+      </section>
+
+      <section class="card" id="tab-curriculum" hidden>
+        <h2>برنامه‌ی آموزشی</h2>
+        <p class="muted" id="curriculumVersion"></p>
+        <h2 style="margin-top:12px">همه‌ی موضوع‌ها</h2>
+        <div class="table-box"><table class="admin-table" id="topicTable"></table></div>
+        <h2 style="margin-top:20px">نسخه‌ها</h2>
+        <div class="table-box"><table class="admin-table" id="variantTable"></table></div>
+        <h2 style="margin-top:20px">ویرایش یک نسخه</h2>
+        <form id="variantForm" class="row">
+          <div><label for="curTopic">موضوع</label><select id="curTopic"></select></div>
+          <div><label for="curBand">بازه‌ی سنی</label><select id="curBand"></select></div>
+          <div><label for="curLevel">سطح</label><select id="curLevel"></select></div>
+          <div class="full"><p class="muted" id="variantTitle"></p></div>
+          <div class="full"><label for="variantOpener">شروع جمله (AI از این الگو شروع می‌کند)</label><input id="variantOpener" maxlength="300" class="ltr-field"></div>
+          <div class="full"><label for="variantPhrases">عبارت‌های هدف (هر خط یک عبارت)</label><textarea id="variantPhrases" rows="5" maxlength="1000" class="ltr-field"></textarea></div>
+          <div class="full"><label for="variantStyle">سبک و لحن</label><input id="variantStyle" maxlength="200"></div>
+          <div class="full"><button type="submit">ذخیره‌ی نسخه</button></div>
+        </form>
+        <p class="error" id="variantError" hidden></p>
+        <p class="ok-msg" id="variantOk" hidden></p>
       </section>
 
       <section class="card" id="tab-global" hidden>

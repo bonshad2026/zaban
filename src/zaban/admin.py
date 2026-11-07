@@ -1,4 +1,6 @@
+import base64
 import hmac
+from typing import Literal
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
@@ -7,12 +9,26 @@ from sqlalchemy.orm import Session as DBSession
 
 from zaban.config import settings
 from zaban.db import get_db
-import base64
-
-from zaban.models import BillingPlan, ConsultRequest, Guardian, Payment, Student, TutorProfile, VoiceSample
+from zaban.models import (
+    BillingPlan,
+    ConsultRequest,
+    CurriculumVariant,
+    Guardian,
+    Payment,
+    Student,
+    TutorProfile,
+    VoiceSample,
+)
 from zaban.services.learner import get_global_prompt, set_global_prompt, set_learner_profile
 from zaban.schemas import VoiceSampleCreate
 from zaban.services.payments import confirm_payment
+from zaban.services.curriculum import (
+    bump_catalog_version,
+    catalog_version,
+    catalog_view,
+    create_variant,
+    save_variant_text,
+)
 
 # Operator page. One shared password from the environment (ADMIN_PASSWORD). Sessions last 12 hours.
 router = APIRouter(prefix="/admin/api")
@@ -298,3 +314,47 @@ def delete_voice_sample(sample_id: str, db: DBSession = Depends(get_db)) -> dict
     db.delete(sample)
     db.commit()
     return {"ok": True}
+
+
+# ----- Curriculum: the topics, the written versions, and the slots still empty -----
+
+class VariantSave(BaseModel):
+    opener: str = Field(default="", max_length=300)
+    phrases: list[str] = Field(default_factory=list, max_length=8)
+    style: str = Field(default="", max_length=200)
+
+
+class VariantCreate(VariantSave):
+    topic_id: str = Field(min_length=1, max_length=40)
+    band: Literal["K", "J", "T", "S", "A"]
+    level: Literal["A1", "A2", "B1", "B2", "C1", "C2"]
+
+
+@router.get("/curriculum", dependencies=[Depends(require_admin)])
+def read_curriculum(db: DBSession = Depends(get_db)) -> dict:
+    return catalog_view(db)
+
+
+@router.put("/curriculum/variants/{variant_id}", dependencies=[Depends(require_admin)])
+def save_variant(variant_id: str, body: VariantSave, db: DBSession = Depends(get_db)) -> dict:
+    variant = db.get(CurriculumVariant, variant_id)
+    if variant is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    save_variant_text(variant, body.opener, body.phrases, body.style)
+    bump_catalog_version(db)
+    db.commit()
+    return {"ok": True, "version": catalog_version(db)}
+
+
+@router.post("/curriculum/variants", status_code=201, dependencies=[Depends(require_admin)])
+def add_variant(body: VariantCreate, db: DBSession = Depends(get_db)) -> dict:
+    variant_id = f"{body.topic_id}.{body.band}.{body.level}"
+    if db.get(CurriculumVariant, variant_id) is not None:
+        raise HTTPException(status_code=409, detail="This version already exists")
+    variant = create_variant(db, body.topic_id, body.band, body.level)
+    if variant is None:
+        raise HTTPException(status_code=400, detail="This topic does not cover that age band or level")
+    save_variant_text(variant, body.opener, body.phrases, body.style)
+    bump_catalog_version(db)
+    db.commit()
+    return {"id": variant.id, "version": catalog_version(db)}

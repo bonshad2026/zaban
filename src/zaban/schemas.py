@@ -3,7 +3,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, model_validator
 
 LessonMinutes = Literal[5, 10, 15, 20, 30, 45, 60]
-AgeBand = Literal["7-10", "11-14", "15-18", "adult"]
+AgeBand = Literal["4-6", "7-10", "11-14", "15-18", "adult"]
 USERNAME_PATTERN = r"^[a-z0-9_.-]{3,30}$"
 
 
@@ -34,8 +34,8 @@ class ConsentCreate(BaseModel):
 
 
 class PlacementCreate(BaseModel):
-    # Either a level picked by the parent (A1 to C1), or a 0 to 100 score from a test.
-    level: Literal["A1", "A2", "B1", "B2", "C1"] | None = None
+    # Either a level picked by the parent (A1 to C2), or a 0 to 100 score from a test.
+    level: Literal["A1", "A2", "B1", "B2", "C1", "C2"] | None = None
     score: int | None = Field(default=None, ge=0, le=100)
 
     @model_validator(mode="after")
@@ -54,6 +54,8 @@ class PlanCreate(BaseModel):
 
 class SessionCreate(BaseModel):
     duration_minutes: LessonMinutes
+    # Optional. When empty, the next suitable topic from the curriculum is chosen.
+    topic_id: str | None = Field(default=None, max_length=40)
 
 
 class MessageCreate(BaseModel):

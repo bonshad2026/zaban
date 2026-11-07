@@ -22,6 +22,7 @@ from zaban.schemas import (
 )
 from zaban.security import Auth, get_auth, get_student_for_auth, issue_student_token, require_manager
 from zaban.services.ai import tutor_reply
+from zaban.services.curriculum import choose_topic, record_lesson_topic, session_topic, topic_note
 from zaban.services.learner import get_accent, get_global_prompt, set_learner_profile
 from zaban.services.metering import ensure_quota, record_usage
 from zaban.services.payments import require_plan
@@ -372,6 +373,9 @@ def start_session(
             raise HTTPException(status_code=409, detail="A lesson is already running")
 
     plan = _active_plan(db, student)
+    chosen = choose_topic(db, student, body.topic_id)
+    if body.topic_id and chosen is None:
+        raise HTTPException(status_code=400, detail="No written version of this topic fits this learner's age and level")
     session = TutorSession(
         student_id=student.id,
         plan_id=plan.id if plan else None,
@@ -382,7 +386,14 @@ def start_session(
     db.add(session)
     db.commit()
     db.refresh(session)
-    return _session_out(session, now)
+    out = _session_out(session, now)
+    out["topic"] = None
+    if chosen:
+        topic, variant = chosen
+        record_lesson_topic(db, session.id, topic, variant)
+        db.commit()
+        out["topic"] = {"id": topic.id, "title": topic.title, "variant": variant.id}
+    return out
 
 
 @router.get("/sessions/{session_id}")
@@ -422,6 +433,7 @@ def send_message(
 
     history = [{"role": m.role, "content": m.content} for m in session.messages]
     history.append({"role": "user", "content": text})
+    chosen = session_topic(db, session.id)
     system_prompt = build_system_prompt(
         student,
         _active_plan(db, student),
@@ -430,6 +442,7 @@ def send_message(
         get_global_prompt(db),
         db.get(TutorProfile, student.id),
         get_accent(db, student.id),
+        topic_note(*chosen) if chosen else "",
     )
     reply = tutor_reply(system_prompt, history)
 

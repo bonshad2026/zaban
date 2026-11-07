@@ -68,11 +68,12 @@
     students: loadStudents,
     global: loadGlobalPrompt,
     voices: loadVoices,
+    curriculum: loadCurriculum,
   };
 
   function openTab(name) {
     document.querySelectorAll(".admin-tabs .tab").forEach((t) => t.classList.toggle("is-active", t.dataset.tab === name));
-    ["consults", "adults", "payments", "plans", "students", "global", "voices"].forEach((n) => show(`tab-${n}`, n === name));
+    ["consults", "adults", "payments", "plans", "students", "curriculum", "global", "voices"].forEach((n) => show(`tab-${n}`, n === name));
     return run(loaders[name]);
   }
 
@@ -337,6 +338,105 @@
     }
   }
 
+  // ----- Curriculum -----
+
+  let curriculum = null;
+
+  function fillSelect(select, pairs) {
+    const current = select.value;
+    select.innerHTML = "";
+    pairs.forEach(([value, label]) => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      select.appendChild(option);
+    });
+    if (pairs.some(([value]) => value === current)) select.value = current;
+  }
+
+  function selectedVariantId() {
+    return `${$("curTopic").value}.${$("curBand").value}.${$("curLevel").value}`;
+  }
+
+  function editVariant(id) {
+    const [topic, band, level] = id.split(".");
+    $("curTopic").value = topic;
+    $("curBand").value = band;
+    $("curLevel").value = level;
+    showSelectedVariant();
+  }
+
+  function renderTopics() {
+    fill($("topicTable"), ["شناسه", "موضوع", "هدف گفتگو", "سطح‌ها", "بازه‌ها", "نسخه‌های نوشته‌شده"],
+      curriculum.topics.map((t) => {
+        const written = t.slots.filter((s) => s.written).length;
+        const levels = t.levels.length > 1 ? `${t.levels[0]} تا ${t.levels[t.levels.length - 1]}` : t.levels[0];
+        return [t.id, t.title, t.goal, levels, t.bands.join(" "), `${written} از ${t.slots.length}`];
+      }));
+  }
+
+  function renderVariants() {
+    fill($("variantTable"), ["شناسه", "شروع جمله", "عبارت‌ها", "سبک", "عملیات"],
+      curriculum.variants.map((v) => [
+        v.id,
+        v.opener,
+        v.phrases.join(" · "),
+        v.style,
+        actions(button("ویرایش", () => editVariant(v.id))),
+      ]));
+  }
+
+  function showSelectedVariant() {
+    const id = selectedVariantId();
+    const variant = curriculum.variants.find((v) => v.id === id);
+    $("variantTitle").textContent = variant
+      ? `نسخه‌ی ${id} — نوشته شده`
+      : `نسخه‌ی ${id} — هنوز نوشته نشده؛ با ذخیره، ساخته می‌شود.`;
+    $("variantOpener").value = variant ? variant.opener : "";
+    $("variantPhrases").value = variant ? variant.phrases.join("\n") : "";
+    $("variantStyle").value = variant ? variant.style : "";
+    setError("variantError", "");
+    Z.show($("variantOk"), false);
+  }
+
+  async function loadCurriculum() {
+    curriculum = await Z.request("GET", `${API}/curriculum`);
+    $("curriculumVersion").textContent = `نسخه‌ی کاتالوگ: ${curriculum.version}`;
+    // fillSelect keeps the current choice when it still exists, so a reload stays on the same version.
+    fillSelect($("curTopic"), curriculum.topics.map((t) => [t.id, `${t.title} (${t.id})`]));
+    fillSelect($("curBand"), curriculum.bands.map((b) => [b.code, `${b.code} — ${b.label}`]));
+    fillSelect($("curLevel"), curriculum.levels.map((l) => [l, l]));
+    showSelectedVariant();
+    renderTopics();
+    renderVariants();
+  }
+
+  async function saveVariant(event) {
+    event.preventDefault();
+    setError("variantError", "");
+    const id = selectedVariantId();
+    const body = {
+      opener: $("variantOpener").value,
+      phrases: $("variantPhrases").value.split("\n").map((p) => p.trim()).filter(Boolean),
+      style: $("variantStyle").value,
+    };
+    try {
+      const exists = curriculum.variants.some((v) => v.id === id);
+      if (exists) {
+        await Z.request("PUT", `${API}/curriculum/variants/${id}`, body);
+      } else {
+        const [topic_id, band, level] = id.split(".");
+        await Z.request("POST", `${API}/curriculum/variants`, { topic_id, band, level, ...body });
+      }
+      await loadCurriculum();
+      editVariant(id);
+      $("variantOk").textContent = "نسخه ذخیره شد. نسخه‌ی کاتالوگ بالا رفت و از جلسه‌ی بعدی استفاده می‌شود.";
+      Z.show($("variantOk"), true);
+    } catch (err) {
+      setError("variantError", err.message);
+    }
+  }
+
   // ----- Sign-in and boot -----
 
   async function signIn(event) {
@@ -370,6 +470,8 @@
     $("profileForm").addEventListener("submit", saveProfile);
     $("globalForm").addEventListener("submit", saveGlobalPrompt);
     $("voiceForm").addEventListener("submit", addVoice);
+    $("variantForm").addEventListener("submit", saveVariant);
+    ["curTopic", "curBand", "curLevel"].forEach((id) => $(id).addEventListener("change", showSelectedVariant));
     $("globalText").addEventListener("input", updateGlobalCount);
     $("profileText").addEventListener("input", updateProfileCount);
     $("profileCancel").addEventListener("click", () => {

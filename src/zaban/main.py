@@ -15,6 +15,7 @@ from zaban.db import Base, SessionLocal, engine
 from zaban.reports import router as reports_router
 from zaban.seed import seed_demo_accounts, seed_demo_plans, seed_demo_tenant
 from zaban.public import router as public_router
+from zaban.services.curriculum import seed_curriculum
 from zaban.services.sms import dev_outbox
 from zaban.web import router as web_router
 
@@ -27,6 +28,8 @@ async def lifespan(_: FastAPI):
     if settings.environment == "production" and not os.getenv("SECRET_KEY"):
         raise RuntimeError("SECRET_KEY must be set in production")
     Base.metadata.create_all(engine)
+    with SessionLocal() as db:
+        seed_curriculum(db)
     if settings.environment == "development":
         with SessionLocal() as db:
             tenant = seed_demo_tenant(db, settings.demo_api_key)
