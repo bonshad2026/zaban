@@ -79,7 +79,8 @@ def test_a_program_is_chosen_by_age_level_and_goal():
     with SessionLocal() as db:
         student = db.get(Student, student_id)
         assert program_for(db, student).id == PROGRAM_ID
-        assert program_for(db, _as_student(db, "4-6", "A1")) is None  # no program for ages 4 to 6 yet
+        assert program_for(db, _as_student(db, "4-6", "A1")).id == "K-A1-daily-p1"
+        assert program_for(db, _as_student(db, "4-6", "B1")) is None  # no program for ages 4 to 6 above A1 yet
         assert program_for(db, _as_student(db, "11-14", "B2")) is None
 
 

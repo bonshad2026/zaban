@@ -126,3 +126,43 @@ PROGRAM_ITEMS = {
         ("ارزیابی پایان فاز ۱", "گفتگوی ۱۰ دقیقه‌ای و جشن پایان", []),
     ],
 }
+
+
+# The first program for ages 4 to 6 at level A1: 24 short, picture-based lessons. One block, so it ends after the 24th.
+PROGRAMS.append(
+    {
+        "id": "K-A1-daily-p1",
+        "name": "مکالمه‌ی روزمره، سطح A1، ۴ تا ۶ سال (فاز ۱)",
+        "band": "K",
+        "level": "A1",
+        "goal": "daily_conversation",
+        "block_size": 24,
+    },
+)
+
+PROGRAM_ITEMS["K-A1-daily-p1"] = [
+    ("سلام و اسم من", "عروسک خرس سلام می‌کند", ["Hi!", "My name is…"]),
+    ("حالم چطور است؟", "نشان دادن چهره‌ی خوشحال و غمگین", ["How are you?", "I'm happy.", "I'm sad."]),
+    ("رنگ‌ها", "نشان دادن رنگ‌ها با اشیا", ["It's red.", "It's blue."]),
+    ("بزرگ و کوچک", "مقایسه‌ی اسباب‌بازی‌ها", ["It's big.", "It's small."]),
+    ("خانواده‌ی من", "عکس خانواده", ["This is my mom.", "This is my dad."]),
+    ("من یک … دارم", "نشان دادن اسباب‌بازی", ["I have a ball."]),
+    ("حیوان‌ها", "تصویر گربه و سگ", ["It's a cat.", "I like cats."]),
+    ("دوست داری؟", "بازی بله و نه", ["Do you like…?", "Yes, I do.", "No, I don't."]),
+    ("عدد ۱ تا ۵", "شمردن اسباب‌بازی‌ها", ["One, two, three…", "How many?"]),
+    ("مرور ۱", "سلام، اسم و خانواده", []),
+    ("میوه و شیر", "بازی سبد خوراکی", ["I like apples.", "I don't like milk."]),
+    ("می‌شود … بدهید؟", "بازی فروشگاه", ["Can I have juice, please?"]),
+    ("اعضای بدن", "نشان دادن سر و دست", ["This is my head.", "I have two hands."]),
+    ("بازی کنیم!", "بازی با توپ", ["I have a ball.", "Let's play!"]),
+    ("هوا", "تصویر آفتاب و باران", ["It's sunny.", "It's raining."]),
+    ("لباس", "لباس دادن به عروسک", ["I wear a hat.", "It's cold."]),
+    ("احساسم", "چهره‌ها و دلیل ساده", ["I feel happy because…"]),
+    ("صبح", "کارهای صبح", ["I wake up.", "I eat breakfast."]),
+    ("خواب", "تصویر خواب", ["I go to bed.", "Good night!"]),
+    ("پارک", "رفتن به پارک", ["Let's go to the park!", "I can run."]),
+    ("صدای حیوان‌ها", "تقلید صدای حیوان‌ها", ["The dog says woof."]),
+    ("این چیست؟", "نشان دادن اشیا", ["What's this?", "It's a…"]),
+    ("مرور ۲", "گفتگوی آزاد با تصویر", []),
+    ("جشن پایان", "مرور و تشویق", ["Thank you!", "I can say hello and my name."]),
+]
