@@ -41,6 +41,7 @@
         <button type="button" class="tab" data-tab="payments">پرداخت‌ها</button>
         <button type="button" class="tab" data-tab="plans">پلن‌ها</button>
         <button type="button" class="tab" data-tab="curriculum">برنامه‌ی آموزشی</button>
+        <button type="button" class="tab" data-tab="programs">برنامه‌های یادگیری</button>
         <button type="button" class="tab" data-tab="global">پرامپت کلی</button>
         <button type="button" class="tab" data-tab="voices">نمونه صدا</button>
         <button type="button" class="tab" data-tab="students">دانش‌آموزان و پرامپت</button>
@@ -73,6 +74,27 @@
           <button type="submit">افزودن</button>
         </form>
         <p class="error" id="planError" hidden></p>
+      </section>
+
+      <section class="card" id="tab-programs" hidden>
+        <h2>برنامه‌های یادگیری</h2>
+        <p class="muted" id="programVersion"></p>
+        <div class="row">
+          <div><label for="progSelect">برنامه</label><select id="progSelect"></select></div>
+        </div>
+        <div class="table-box"><table class="admin-table" id="progItemsTable"></table></div>
+        <h2 style="margin-top:20px">ویرایش یک جلسه</h2>
+        <form id="progItemForm" class="row">
+          <div><label for="progNumber">شماره‌ی جلسه</label><input id="progNumber" type="number" min="1" readonly></div>
+          <div class="full"><label for="progTitle">عنوان</label><input id="progTitle" maxlength="160"></div>
+          <div class="full"><label for="progActivity">فعالیت</label><textarea id="progActivity" rows="2" maxlength="600"></textarea></div>
+          <div class="full"><label for="progPhrases">عبارت‌های هدف (هر خط یک عبارت)</label><textarea id="progPhrases" rows="4" maxlength="1200" class="ltr-field"></textarea></div>
+          <div class="full"><button type="submit">ذخیره‌ی جلسه</button></div>
+        </form>
+        <p class="error" id="progError" hidden></p>
+        <p class="ok-msg" id="progOk" hidden></p>
+        <h2 style="margin-top:20px">منتظر تأیید ادامه</h2>
+        <div class="table-box"><table class="admin-table" id="approvalTable"></table></div>
       </section>
 
       <section class="card" id="tab-curriculum" hidden>

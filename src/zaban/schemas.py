@@ -17,6 +17,8 @@ class StudentCreate(BaseModel):
     # Optional facts the lessons use to choose topics. A parent fills these in when creating a child's account.
     interests: str | None = Field(default=None, max_length=300)
     motivation: str | None = Field(default=None, max_length=60)
+    # The learning goal from the fixed list (see program_data.GOALS). Empty means the everyday conversation program.
+    goal: Literal["daily_conversation", "school", "travel", "work", "hobbies"] | None = None
 
 
 class StudentUpdate(BaseModel):

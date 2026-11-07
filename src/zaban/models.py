@@ -289,3 +289,63 @@ class LessonTopic(Base):
     variant_id: Mapped[str] = mapped_column(ForeignKey("curriculum_variants.id"))
     catalog_version: Mapped[int] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class LearningProgram(Base):
+    # A program the administrator writes once: an ordered list of lessons for one age band, level and goal.
+    __tablename__ = "learning_programs"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    name: Mapped[str] = mapped_column(String(160))
+    band: Mapped[str] = mapped_column(String(1))
+    level: Mapped[str] = mapped_column(String(2))
+    goal: Mapped[str] = mapped_column(String(40))
+    # The learner pauses after this many lessons, until the program is approved to continue.
+    block_size: Mapped[int] = mapped_column(Integer, default=24)
+    # Goes up on every change, so the lessons that were already played keep their own version.
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class ProgramItem(Base):
+    __tablename__ = "program_items"
+    __table_args__ = (UniqueConstraint("program_id", "position"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    program_id: Mapped[str] = mapped_column(ForeignKey("learning_programs.id"), index=True)
+    position: Mapped[int] = mapped_column(Integer)
+    title: Mapped[str] = mapped_column(String(160))
+    activity: Mapped[str] = mapped_column(Text, default="")
+    phrases: Mapped[list] = mapped_column(JSON, default=list)
+
+
+class StudentGoal(Base):
+    # The goal a parent chose for a child, from the fixed list. Used to pick the learning program.
+    __tablename__ = "student_goals"
+
+    student_id: Mapped[str] = mapped_column(ForeignKey("students.id"), primary_key=True)
+    goal: Mapped[str] = mapped_column(String(40))
+
+
+class StudentProgress(Base):
+    # Where a learner is in their program. position is the next lesson to play (0 is the first).
+    __tablename__ = "student_progress"
+
+    student_id: Mapped[str] = mapped_column(ForeignKey("students.id"), primary_key=True)
+    program_id: Mapped[str] = mapped_column(ForeignKey("learning_programs.id"))
+    position: Mapped[int] = mapped_column(Integer, default=0)
+    # active: lessons can start. waiting_approval: the block is finished and needs approval. finished: no items left.
+    status: Mapped[str] = mapped_column(String(20), default="active")
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class LessonItem(Base):
+    # The program item a lesson played, and whether that lesson's completion has moved the learner forward yet.
+    __tablename__ = "lesson_items"
+
+    session_id: Mapped[str] = mapped_column(ForeignKey("sessions.id"), primary_key=True)
+    program_id: Mapped[str] = mapped_column(ForeignKey("learning_programs.id"))
+    position: Mapped[int] = mapped_column(Integer)
+    program_version: Mapped[int] = mapped_column(Integer)
+    counted: Mapped[bool] = mapped_column(default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)

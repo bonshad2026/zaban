@@ -17,11 +17,16 @@ from zaban.models import (
     Payment,
     Student,
     TutorProfile,
+    LearningProgram,
+    ProgramItem,
+    StudentProgress,
     VoiceSample,
 )
 from zaban.services.learner import get_global_prompt, set_global_prompt, set_learner_profile
 from zaban.schemas import VoiceSampleCreate
 from zaban.services.payments import confirm_payment
+from zaban.program_data import GOALS
+from zaban.services.programs import approve_block
 from zaban.services.curriculum import (
     bump_catalog_version,
     catalog_version,
@@ -358,3 +363,88 @@ def add_variant(body: VariantCreate, db: DBSession = Depends(get_db)) -> dict:
     bump_catalog_version(db)
     db.commit()
     return {"id": variant.id, "version": catalog_version(db)}
+
+
+# ----- Learning programs: the lessons in order, with their text. Edits are saved in the database. -----
+
+class ProgramItemSave(BaseModel):
+    title: str = Field(min_length=1, max_length=160)
+    activity: str = Field(default="", max_length=600)
+    phrases: list[str] = Field(default_factory=list, max_length=12)
+
+
+@router.get("/programs", dependencies=[Depends(require_admin)])
+def list_programs(db: DBSession = Depends(get_db)) -> dict:
+    programs = []
+    for program in db.query(LearningProgram).order_by(LearningProgram.id).all():
+        items = (
+            db.query(ProgramItem)
+            .filter(ProgramItem.program_id == program.id)
+            .order_by(ProgramItem.position)
+            .all()
+        )
+        programs.append(
+            {
+                "id": program.id,
+                "name": program.name,
+                "band": program.band,
+                "level": program.level,
+                "goal": program.goal,
+                "block_size": program.block_size,
+                "version": program.version,
+                "items": [
+                    {"position": i.position + 1, "title": i.title, "activity": i.activity, "phrases": i.phrases}
+                    for i in items
+                ],
+            }
+        )
+    return {"goals": [{"key": k, "label": label} for k, label in GOALS], "programs": programs}
+
+
+@router.put("/programs/{program_id}/items/{number}", dependencies=[Depends(require_admin)])
+def save_program_item(program_id: str, number: int, body: ProgramItemSave, db: DBSession = Depends(get_db)) -> dict:
+    # number is the lesson number as the administrator sees it (1 is the first lesson).
+    item = (
+        db.query(ProgramItem)
+        .filter(ProgramItem.program_id == program_id, ProgramItem.position == number - 1)
+        .first()
+    )
+    if item is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    item.title = body.title.strip()
+    item.activity = body.activity.strip()
+    item.phrases = [p.strip() for p in body.phrases if p.strip()]
+    program = db.get(LearningProgram, program_id)
+    program.version += 1
+    db.commit()
+    return {"ok": True, "version": program.version}
+
+
+@router.post("/students/{student_id}/resume-program", dependencies=[Depends(require_admin)])
+def resume_program(student_id: str, db: DBSession = Depends(get_db)) -> dict:
+    # Approves the next block of lessons after a block has finished.
+    progress = db.get(StudentProgress, student_id)
+    if progress is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    approve_block(progress)
+    db.commit()
+    return {"status": progress.status}
+
+
+@router.get("/program-approvals", dependencies=[Depends(require_admin)])
+def list_program_approvals(db: DBSession = Depends(get_db)) -> list[dict]:
+    # Learners whose block of lessons is finished and waits for approval to continue.
+    rows = db.query(StudentProgress).filter(StudentProgress.status == "waiting_approval").all()
+    out = []
+    for progress in rows:
+        student = db.get(Student, progress.student_id)
+        program = db.get(LearningProgram, progress.program_id)
+        out.append(
+            {
+                "student_id": progress.student_id,
+                "name": student.display_name if student else "",
+                "program": program.name if program else "",
+                "done": progress.position,
+            }
+        )
+    return out

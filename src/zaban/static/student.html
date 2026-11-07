@@ -36,6 +36,20 @@
 
     <main class="wrap">
       <section id="tab-lesson">
+        <div class="card" id="programBox" hidden>
+          <h2>برنامه‌ی من</h2>
+          <p class="muted" id="programName"></p>
+          <p class="notice" id="programNotice" hidden></p>
+          <div id="programCurrent" hidden>
+            <p>جلسه‌ی بعدی شما: <strong id="programTitle"></strong></p>
+            <p class="muted" id="programActivity"></p>
+            <p class="ltr-field" id="programPhrases"></p>
+          </div>
+          <details>
+            <summary>همه‌ی جلسه‌های برنامه</summary>
+            <ol class="program-list" id="programList"></ol>
+          </details>
+        </div>
         <div class="card" id="setupBox" hidden>
           <h2>شروع یک جلسه</h2>
           <p class="muted">Niko، معلم انگلیسی‌ات، منتظر توست. مدت جلسه را انتخاب کن و شروع کن.</p>

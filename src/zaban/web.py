@@ -6,11 +6,12 @@ from sqlalchemy.orm import Session as DBSession
 
 from zaban.config import settings
 from zaban.db import get_db
-from zaban.models import Consent, Guardian, Student, Tenant, VoiceSample, utcnow
+from zaban.models import Consent, Guardian, LearningProgram, ProgramItem, Student, Tenant, VoiceSample, utcnow
 from zaban.schemas import AccentChoice, LevelTestAnswers, OtpRequest, PasswordReset, SignUpCreate, StudentLogin, UserLogin
 from zaban.security import WEB_COOKIE_NAMES, issue_web_session, read_web_session, session_is_current
 from zaban.services.learner import get_accent, set_accent, set_learner_profile
 from zaban.services.placement import level_for_score, public_questions, score_answers
+from zaban.services.programs import advance_if_done, ensure_progress
 from zaban.services.otp import check_code, development_code, normalize_phone, request_code
 from zaban.services.passwords import hash_password, verify_password
 from zaban.services.payments import has_active_plan, require_plan
@@ -340,3 +341,41 @@ def me(
                 "has_active_plan": has_active_plan(guardian),
             }
     raise HTTPException(status_code=401, detail="Please sign in")
+
+
+@router.get("/student/program")
+def student_program(zaban_student: str | None = Cookie(default=None), db: DBSession = Depends(get_db)) -> dict:
+    # The learner's place in their program: where they are, the lesson they are on, and the whole list with its state.
+    student = _student_from_cookie(db, zaban_student)
+    progress = ensure_progress(db, student)
+    if progress is None:
+        db.commit()
+        return {"program": None}
+    advance_if_done(db, student.id)
+    db.commit()
+    program = db.get(LearningProgram, progress.program_id)
+    items = db.query(ProgramItem).filter(ProgramItem.program_id == program.id).order_by(ProgramItem.position).all()
+    current = next((i for i in items if i.position == progress.position), None)
+    return {
+        "program": {
+            "name": program.name,
+            "goal": program.goal,
+            "total": len(items),
+            "done": min(progress.position, len(items)),
+            "status": progress.status,
+            "block_size": program.block_size,
+        },
+        "current": (
+            {"number": current.position + 1, "title": current.title, "activity": current.activity, "phrases": current.phrases}
+            if current is not None and progress.status == "active"
+            else None
+        ),
+        "items": [
+            {
+                "number": i.position + 1,
+                "title": i.title,
+                "state": "done" if i.position < progress.position else ("current" if i.position == progress.position else "next"),
+            }
+            for i in items
+        ],
+    }

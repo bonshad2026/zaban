@@ -108,6 +108,7 @@
     }
     selectTab("lesson");
     const { session } = await Z.request("GET", `/v1/students/${me.id}/sessions/active`);
+    loadProgram();
     if (session) {
       showLesson(true);
       Lesson.resume(session);
@@ -119,6 +120,40 @@
   function showLesson(on) {
     Z.show($("setupBox"), !on);
     Z.show($("lessonBox"), on);
+    Z.show($("programBox"), !on);
+    if (!on) loadProgram();
+  }
+
+  // The learner's place in their program: the lesson they are on, and the whole list with what is done.
+  async function loadProgram() {
+    const data = await Z.request("GET", "/v1/web/student/program").catch(() => null);
+    if (!data || !data.program) {
+      Z.show($("programBox"), false);
+      return;
+    }
+    const program = data.program;
+    Z.show($("programBox"), true);
+    $("programName").textContent = `${program.name}: ${program.done} از ${program.total} جلسه انجام شده`;
+    const notice = $("programNotice");
+    if (program.status === "waiting_approval") {
+      notice.textContent = "این بخش از برنامه تمام شد. برنامه‌ی بعدی بعد از تأیید والدین یا معلم ادامه پیدا می‌کند.";
+    } else if (program.status === "finished") {
+      notice.textContent = "برنامه‌ی شما تمام شد. آفرین!";
+    }
+    Z.show(notice, Boolean(notice.textContent));
+    Z.show($("programCurrent"), Boolean(data.current));
+    if (data.current) {
+      $("programTitle").textContent = `جلسه ${data.current.number}: ${data.current.title}`;
+      $("programActivity").textContent = data.current.activity;
+      $("programPhrases").textContent = data.current.phrases.join("  ·  ");
+    }
+    const list = $("programList");
+    list.innerHTML = "";
+    data.items.forEach((item) => {
+      const mark = item.state === "done" ? "✓ " : item.state === "current" ? "➜ " : "";
+      const li = Z.el("li", item.state === "next" ? "muted" : null, `${mark}${item.title}`);
+      list.appendChild(li);
+    });
   }
 
   async function startLesson() {

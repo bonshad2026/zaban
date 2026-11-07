@@ -16,6 +16,7 @@ from zaban.reports import router as reports_router
 from zaban.seed import seed_demo_accounts, seed_demo_plans, seed_demo_tenant
 from zaban.public import router as public_router
 from zaban.services.curriculum import seed_curriculum
+from zaban.services.programs import seed_programs
 from zaban.services.sms import dev_outbox
 from zaban.web import router as web_router
 
@@ -30,6 +31,7 @@ async def lifespan(_: FastAPI):
     Base.metadata.create_all(engine)
     with SessionLocal() as db:
         seed_curriculum(db)
+        seed_programs(db)
     if settings.environment == "development":
         with SessionLocal() as db:
             tenant = seed_demo_tenant(db, settings.demo_api_key)

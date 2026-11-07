@@ -69,11 +69,12 @@
     global: loadGlobalPrompt,
     voices: loadVoices,
     curriculum: loadCurriculum,
+    programs: loadPrograms,
   };
 
   function openTab(name) {
     document.querySelectorAll(".admin-tabs .tab").forEach((t) => t.classList.toggle("is-active", t.dataset.tab === name));
-    ["consults", "adults", "payments", "plans", "students", "curriculum", "global", "voices"].forEach((n) => show(`tab-${n}`, n === name));
+    ["consults", "adults", "payments", "plans", "students", "curriculum", "programs", "global", "voices"].forEach((n) => show(`tab-${n}`, n === name));
     return run(loaders[name]);
   }
 
@@ -437,6 +438,84 @@
     }
   }
 
+  // ----- Learning programs -----
+
+  let programs = null;
+
+  function selectedProgram() {
+    return programs ? programs.programs.find((p) => p.id === $("progSelect").value) : null;
+  }
+
+  function showProgramItem(number) {
+    const program = selectedProgram();
+    const item = program && program.items.find((i) => i.position === number);
+    if (!item) return;
+    $("progNumber").value = item.position;
+    $("progTitle").value = item.title;
+    $("progActivity").value = item.activity;
+    $("progPhrases").value = item.phrases.join("\n");
+    setError("progError", "");
+    Z.show($("progOk"), false);
+  }
+
+  function renderProgramItems() {
+    const program = selectedProgram();
+    $("programVersion").textContent = program ? `نسخه‌ی برنامه: ${program.version} — هر ذخیره نسخه را بالا می‌برد.` : "";
+    fill($("progItemsTable"), ["جلسه", "عنوان", "فعالیت", "عبارت‌ها", "عملیات"],
+      program ? program.items.map((i) => [
+        i.position,
+        i.title,
+        i.activity,
+        i.phrases.join(" · "),
+        actions(button("ویرایش", () => showProgramItem(i.position))),
+      ]) : []);
+  }
+
+  async function loadPrograms() {
+    programs = await Z.request("GET", `${API}/programs`);
+    const current = $("progSelect").value;
+    fillSelect($("progSelect"), programs.programs.map((p) => [p.id, p.name]));
+    if (current) $("progSelect").value = current;
+    renderProgramItems();
+    if (programs.programs.length) showProgramItem(1);
+    const approvals = await Z.request("GET", `${API}/program-approvals`);
+    fill($("approvalTable"), ["دانش‌آموز", "برنامه", "جلسه‌های انجام‌شده", "عملیات"],
+      approvals.map((a) => [
+        a.name || "—",
+        a.program,
+        a.done,
+        actions(button("تأیید ادامه", () => approveProgram(a.student_id))),
+      ]));
+  }
+
+  async function approveProgram(studentId) {
+    await run(async () => {
+      await Z.request("POST", `${API}/students/${studentId}/resume-program`);
+      await loadPrograms();
+    });
+  }
+
+  async function saveProgramItem(event) {
+    event.preventDefault();
+    setError("progError", "");
+    const program = selectedProgram();
+    if (!program) return;
+    try {
+      const number = Number($("progNumber").value);
+      const result = await Z.request("PUT", `${API}/programs/${program.id}/items/${number}`, {
+        title: $("progTitle").value,
+        activity: $("progActivity").value,
+        phrases: $("progPhrases").value.split("\n").map((p) => p.trim()).filter(Boolean),
+      });
+      await loadPrograms();
+      showProgramItem(number);
+      $("progOk").textContent = `جلسه ذخیره شد. نسخه‌ی برنامه: ${result.version}`;
+      Z.show($("progOk"), true);
+    } catch (err) {
+      setError("progError", err.message);
+    }
+  }
+
   // ----- Sign-in and boot -----
 
   async function signIn(event) {
@@ -471,6 +550,8 @@
     $("globalForm").addEventListener("submit", saveGlobalPrompt);
     $("voiceForm").addEventListener("submit", addVoice);
     $("variantForm").addEventListener("submit", saveVariant);
+    $("progItemForm").addEventListener("submit", saveProgramItem);
+    $("progSelect").addEventListener("change", () => { renderProgramItems(); showProgramItem(1); });
     ["curTopic", "curBand", "curLevel"].forEach((id) => $(id).addEventListener("change", showSelectedVariant));
     $("globalText").addEventListener("input", updateGlobalCount);
     $("profileText").addEventListener("input", updateProfileCount);

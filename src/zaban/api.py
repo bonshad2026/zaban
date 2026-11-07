@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session as DBSession
 
 from zaban.config import settings
 from zaban.db import get_db
-from zaban.models import Consent, Guardian, Message, Plan, Student, TutorProfile, TutorSession, new_id, utcnow
+from zaban.models import Consent, Guardian, Message, Plan, Student, StudentGoal, TutorProfile, TutorSession, new_id, utcnow
 from zaban.schemas import (
     ConsentCreate,
     MessageCreate,
@@ -23,6 +23,15 @@ from zaban.schemas import (
 from zaban.security import Auth, get_auth, get_student_for_auth, issue_student_token, require_manager
 from zaban.services.ai import tutor_reply
 from zaban.services.curriculum import choose_topic, record_lesson_topic, session_topic, topic_note
+from zaban.services.programs import (
+    advance_if_done,
+    current_item,
+    ensure_progress,
+    lesson_item_for,
+    program_note,
+    record_lesson,
+    total_items,
+)
 from zaban.services.learner import get_accent, get_global_prompt, set_learner_profile
 from zaban.services.metering import ensure_quota, record_usage
 from zaban.services.payments import require_plan
@@ -93,6 +102,16 @@ def _session_out(session: TutorSession, now) -> dict:
         "score": session.score,
         "messages": [{"role": m.role, "content": m.content} for m in session.messages],
     }
+
+
+def _lesson_note(db: DBSession, session_id: str) -> str:
+    # The lesson's program item comes first. A curriculum topic is used only when no program fits.
+    program_item = lesson_item_for(db, session_id)
+    if program_item is not None:
+        program, item = program_item
+        return program_note(program, item, total_items(db, program.id))
+    chosen = session_topic(db, session_id)
+    return topic_note(*chosen) if chosen else ""
 
 
 def _active_plan(db: DBSession, student: Student) -> Plan | None:
@@ -175,6 +194,9 @@ def create_student(
     db.refresh(student)
     if body.interests is not None or body.motivation is not None:
         set_learner_profile(db, student.id, interests=body.interests, motivation=body.motivation)
+        db.commit()
+    if body.goal:
+        db.add(StudentGoal(student_id=student.id, goal=body.goal))
         db.commit()
     return _student_out(student)
 
@@ -372,9 +394,19 @@ def start_session(
         if old.status == "active":
             raise HTTPException(status_code=409, detail="A lesson is already running")
 
+    progress = ensure_progress(db, student)
+    if progress is not None:
+        advance_if_done(db, student.id)
+        db.commit()
+        if progress.status == "waiting_approval":
+            raise HTTPException(status_code=409, detail="This block of lessons is finished and waits for approval")
+        if progress.status == "finished":
+            raise HTTPException(status_code=409, detail="This program is finished")
+
     plan = _active_plan(db, student)
-    chosen = choose_topic(db, student, body.topic_id)
-    if body.topic_id and chosen is None:
+    # A learning program decides the lesson when one fits. Otherwise the curriculum topic is used.
+    chosen = None if progress is not None else choose_topic(db, student, body.topic_id)
+    if body.topic_id and progress is None and chosen is None:
         raise HTTPException(status_code=400, detail="No written version of this topic fits this learner's age and level")
     session = TutorSession(
         student_id=student.id,
@@ -388,6 +420,13 @@ def start_session(
     db.refresh(session)
     out = _session_out(session, now)
     out["topic"] = None
+    out["program"] = None
+    if progress is not None:
+        item = current_item(db, progress)
+        if item is not None:
+            record_lesson(db, session.id, progress, item)
+            db.commit()
+            out["program"] = {"title": item.title, "position": item.position + 1, "total": total_items(db, progress.program_id)}
     if chosen:
         topic, variant = chosen
         record_lesson_topic(db, session.id, topic, variant)
@@ -433,7 +472,6 @@ def send_message(
 
     history = [{"role": m.role, "content": m.content} for m in session.messages]
     history.append({"role": "user", "content": text})
-    chosen = session_topic(db, session.id)
     system_prompt = build_system_prompt(
         student,
         _active_plan(db, student),
@@ -442,7 +480,7 @@ def send_message(
         get_global_prompt(db),
         db.get(TutorProfile, student.id),
         get_accent(db, student.id),
-        topic_note(*chosen) if chosen else "",
+        _lesson_note(db, session.id),
     )
     reply = tutor_reply(system_prompt, history)
 
