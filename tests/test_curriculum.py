@@ -88,10 +88,10 @@ def test_a_new_version_must_fit_the_topic(client):
 
     created = client.post(
         "/v1/admin/api/curriculum/variants",
-        json={"topic_id": "FAMILY", "band": "K", "level": "A1", "opener": "This is my…", "phrases": ["This is my…"], "style": "picture game"},
+        json={"topic_id": "PETS", "band": "K", "level": "A1", "opener": "I have a pet.", "phrases": ["I have a…"], "style": "picture game"},
     )
     assert created.status_code == 201, created.text
-    assert created.json()["id"] == "FAMILY.K.A1"
+    assert created.json()["id"] == "PETS.K.A1"
 
 
 def test_topic_choice_respects_age_band_and_level(client):
