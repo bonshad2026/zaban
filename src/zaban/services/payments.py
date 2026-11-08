@@ -1,6 +1,7 @@
 from datetime import timedelta
 from typing import Protocol
 
+import httpx
 from fastapi import HTTPException
 from sqlalchemy.orm import Session as DBSession
 
@@ -24,18 +25,55 @@ class FakeGateway:
         return f"/dev/pay/{payment.id}"
 
 
+ZARINPAL_REQUEST_URL = "https://payment.zarinpal.com/pg/v4/payment/request.json"
+ZARINPAL_VERIFY_URL = "https://payment.zarinpal.com/pg/v4/payment/verify.json"
+ZARINPAL_PAY_URL = "https://payment.zarinpal.com/pg/StartPay/{authority}"
+
+
 class ZarinPalGateway:
-    # Placeholder. The real request and verify calls are added once the merchant ID is available.
+    # ZarinPal v4 REST API. The merchant ID comes from the environment; the server asks ZarinPal to verify every payment.
     name = "zarinpal"
 
+    def __init__(self, merchant_id: str | None, callback_url: str) -> None:
+        self.merchant_id = merchant_id
+        self.callback_url = callback_url
+
     def start(self, payment: Payment) -> str:
-        raise HTTPException(status_code=503, detail="The payment gateway is not ready yet")
+        if not self.merchant_id:
+            raise HTTPException(status_code=503, detail="The payment gateway is not ready yet")
+        response = httpx.post(
+            ZARINPAL_REQUEST_URL,
+            json={
+                "merchant_id": self.merchant_id,
+                "amount": payment.amount_toman * 10,  # ZarinPal takes rials; prices are stored in toman
+                "callback_url": f"{self.callback_url}?payment_id={payment.id}",
+                "description": "zaban subscription",
+            },
+            timeout=15,
+        )
+        data = (response.json() or {}).get("data") or {}
+        if response.status_code != 200 or data.get("code") != 100:
+            raise HTTPException(status_code=502, detail="The payment gateway did not accept the request")
+        payment.gateway_ref = data["authority"]
+        return ZARINPAL_PAY_URL.format(authority=data["authority"])
+
+    def verify(self, payment: Payment, authority: str) -> bool:
+        # Only ZarinPal can say a payment succeeded. The return address alone is never trusted.
+        if not self.merchant_id:
+            return False
+        response = httpx.post(
+            ZARINPAL_VERIFY_URL,
+            json={"merchant_id": self.merchant_id, "amount": payment.amount_toman * 10, "authority": authority},
+            timeout=15,
+        )
+        data = (response.json() or {}).get("data") or {}
+        return response.status_code == 200 and data.get("code") in (100, 101)
 
 
 def get_gateway(provider: str) -> PaymentGateway:
     # The provider is chosen in the admin panel. Its secret keys are read from the environment, never from the panel.
     if provider == "zarinpal":
-        return ZarinPalGateway()
+        return ZarinPalGateway(settings.zarinpal_merchant_id, f"{settings.public_base_url}/v1/web/billing/zarinpal/callback")
     if settings.environment == "production":
         raise HTTPException(status_code=503, detail="The payment gateway is not ready yet")
     return FakeGateway()

@@ -29,6 +29,8 @@ class Settings:
     admin_password: str | None
     demo_student_username: str | None
     demo_student_password: str | None
+    # The public address of this site, used for the payment gateway's return address.
+    public_base_url: str
 
 
 def load_settings() -> Settings:
@@ -55,6 +57,7 @@ def load_settings() -> Settings:
         admin_password=os.getenv("ADMIN_PASSWORD") or None,
         demo_student_username=os.getenv("ZABAN_DEMO_STUDENT_USERNAME") or None,
         demo_student_password=os.getenv("ZABAN_DEMO_STUDENT_PASSWORD") or None,
+        public_base_url=os.getenv("PUBLIC_BASE_URL", "http://127.0.0.1:8000").rstrip("/"),
     )
 
 

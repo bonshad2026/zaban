@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Cookie, Depends, HTTPException
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Response
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session as DBSession
 
@@ -88,7 +89,33 @@ def checkout(
     db.add(payment)
     db.commit()
     db.refresh(payment)
-    return {"payment_id": payment.id, "redirect": gateway.start(payment)}
+    try:
+        redirect = gateway.start(payment)
+    except HTTPException:
+        payment.status = "failed"
+        db.commit()
+        raise
+    db.commit()
+    return {"payment_id": payment.id, "redirect": redirect}
+
+
+@router.get("/zarinpal/callback")
+def zarinpal_callback(
+    payment_id: str,
+    Authority: str = "",
+    Status: str = "",
+    db: DBSession = Depends(get_db),
+) -> Response:
+    # The buyer comes back here from ZarinPal. The payment is marked paid only after ZarinPal verifies it.
+    payment = db.get(Payment, payment_id)
+    if payment is None or payment.gateway != "zarinpal" or payment.gateway_ref != Authority or Status != "OK":
+        return RedirectResponse(url="/parent?payment=failed", status_code=303)
+    if get_gateway("zarinpal").verify(payment, Authority):
+        mark_paid(db, payment)
+        return RedirectResponse(url="/parent?payment=paid", status_code=303)
+    payment.status = "failed"
+    db.commit()
+    return RedirectResponse(url="/parent?payment=failed", status_code=303)
 
 
 @router.post("/fake/confirm")

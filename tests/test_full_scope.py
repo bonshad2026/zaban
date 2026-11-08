@@ -283,3 +283,99 @@ def test_progress_shows_the_expected_week_from_the_plan_pace(client):
     _student(client)
     data = client.get("/v1/web/student/progress").json()
     assert "pace" in data
+
+
+# ----- ZarinPal: the server asks for the payment and verifies it; the return address is never trusted -----
+
+class _FakeResponse:
+    def __init__(self, status_code: int, body: dict) -> None:
+        self.status_code = status_code
+        self._body = body
+
+    def json(self) -> dict:
+        return self._body
+
+
+def _parent_payment(client, monkeypatch, sent: list):
+    from zaban.services import payments as payments_module
+
+    import dataclasses
+
+    test_settings = dataclasses.replace(payments_module.settings, zarinpal_merchant_id="merchant-test-id",
+                                        public_base_url="http://site.test")
+    monkeypatch.setattr(payments_module, "settings", test_settings)
+
+    def fake_post(url, json, timeout):
+        sent.append((url, json))
+        if url.endswith("/request.json"):
+            return _FakeResponse(200, {"data": {"code": 100, "authority": "A0000000001"}})
+        return _FakeResponse(200, {"data": {"code": 100}})
+
+    monkeypatch.setattr(payments_module.httpx, "post", fake_post)
+    _parent(client)
+    plan_id = client.get("/v1/web/billing/plans").json()[0]["id"]
+    return client.post("/v1/web/billing/checkout", json={"plan_id": plan_id})
+
+
+def test_zarinpal_checkout_sends_the_amount_in_rials_and_a_callback(client, monkeypatch):
+    from zaban.services import payments as payments_module
+
+    sent: list = []
+    _admin(client)
+    client.post("/v1/admin/api/settings", json={"payment_provider": "zarinpal"})
+    try:
+        response = _parent_payment(client, monkeypatch, sent)
+        assert response.status_code == 201, response.text
+        assert response.json()["redirect"] == "https://payment.zarinpal.com/pg/StartPay/A0000000001"
+        url, body = sent[0]
+        assert url.endswith("/pg/v4/payment/request.json")
+        assert body["merchant_id"] == "merchant-test-id" and body["amount"] % 10 == 0
+        assert body["callback_url"].startswith("http://site.test/v1/web/billing/zarinpal/callback?payment_id=")
+    finally:
+        _admin(client)
+        client.post("/v1/admin/api/settings", json={"payment_provider": "fake"})
+
+
+def test_zarinpal_callback_marks_paid_only_after_verification(client, monkeypatch):
+    from zaban.services import payments as payments_module
+    from zaban.db import SessionLocal
+    from zaban.models import Payment
+
+    sent: list = []
+    _admin(client)
+    client.post("/v1/admin/api/settings", json={"payment_provider": "zarinpal"})
+    try:
+        payment_id = _parent_payment(client, monkeypatch, sent).json()["payment_id"]
+        ok = client.get(f"/v1/web/billing/zarinpal/callback?payment_id={payment_id}&Authority=A0000000001&Status=OK",
+                        follow_redirects=False)
+        assert ok.status_code == 303 and "payment=paid" in ok.headers["location"]
+        with SessionLocal() as db:
+            assert db.get(Payment, payment_id).status == "paid"
+        # A wrong authority, or a cancelled payment, never reaches ZarinPal and is never marked paid.
+        bad = client.get(f"/v1/web/billing/zarinpal/callback?payment_id={payment_id}&Authority=WRONG&Status=OK",
+                         follow_redirects=False)
+        assert "payment=failed" in bad.headers["location"]
+    finally:
+        _admin(client)
+        client.post("/v1/admin/api/settings", json={"payment_provider": "fake"})
+
+
+def test_zarinpal_refuses_when_the_verification_fails(client, monkeypatch):
+    from zaban.services import payments as payments_module
+    from zaban.db import SessionLocal
+    from zaban.models import Payment
+
+    sent: list = []
+    _admin(client)
+    client.post("/v1/admin/api/settings", json={"payment_provider": "zarinpal"})
+    try:
+        payment_id = _parent_payment(client, monkeypatch, sent).json()["payment_id"]
+        monkeypatch.setattr(payments_module.httpx, "post", lambda url, json, timeout: _FakeResponse(200, {"data": {"code": -54}}))
+        response = client.get(f"/v1/web/billing/zarinpal/callback?payment_id={payment_id}&Authority=A0000000001&Status=OK",
+                              follow_redirects=False)
+        assert "payment=failed" in response.headers["location"]
+        with SessionLocal() as db:
+            assert db.get(Payment, payment_id).status == "failed"
+    finally:
+        _admin(client)
+        client.post("/v1/admin/api/settings", json={"payment_provider": "fake"})
