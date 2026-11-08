@@ -26,9 +26,15 @@
     Object.entries(SECTIONS).forEach(([key, id]) => Z.show($(id), key === name));
     if (name === "profile") loadProfile();
     if (name === "progress") loadProgress();
-    if (name === "help") loadHelp();
+    if (name === "help") {
+      renderHelpTabs();
+      loadHelp();
+    }
     if (name === "payments") loadPayments();
-    if (name === "test") loadTests();
+    if (name === "test") {
+      showTestRun(false);
+      loadTests();
+    }
   }
 
   function nullIfEmpty(value) {
@@ -176,9 +182,31 @@
     return card;
   }
 
+  // The category tabs. "" means every category. The tabs use their own class, so the main tab handlers do not catch them.
+  const HELP_TABS = [["", "همه"], ...Object.entries(CATEGORY_LABELS)];
+  let helpCategory = "";
+
+  function renderHelpTabs() {
+    const box = $("helpTabs");
+    box.replaceChildren(
+      ...HELP_TABS.map(([value, label]) => {
+        const tab = el("button", "filter-tab" + (value === helpCategory ? " is-active" : ""), label);
+        tab.type = "button";
+        tab.setAttribute("role", "tab");
+        tab.setAttribute("aria-selected", String(value === helpCategory));
+        tab.addEventListener("click", () => {
+          helpCategory = value;
+          renderHelpTabs();
+          loadHelp();
+        });
+        return tab;
+      }),
+    );
+  }
+
   async function loadHelp() {
     const params = new URLSearchParams();
-    if ($("helpCategory").value) params.set("category", $("helpCategory").value);
+    if (helpCategory) params.set("category", helpCategory);
     if ($("helpSearch").value.trim()) params.set("q", $("helpSearch").value.trim());
     try {
       const rows = await Z.request("GET", `/v1/web/student/help-content?${params.toString()}`);
@@ -201,15 +229,19 @@
     return node;
   }
 
+  // The test run card shows one test at a time: a running test, or a finished one read back from the list.
+  function showTestRun(on) {
+    Z.show($("testSetup"), !on);
+    Z.show($("testRun"), on);
+  }
+
   function renderTest(test) {
     testId = test.id;
-    Z.show($("testSetup"), false);
-    Z.show($("testRun"), true);
-    $("testStatus").textContent = test.status === "finished" ? "آزمون تمام شد" : `سطح ${test.level || "؟"} — ${test.minutes || ""}`;
+    showTestRun(true);
+    $("testStatus").textContent = test.status === "finished" ? "آزمون تمام شد" : `سطح ${test.level || "؟"} — ${test.minutes} دقیقه`;
     $("testChat").replaceChildren(...test.messages.map(bubble));
     const finished = test.status === "finished";
-    $("testInput").disabled = finished;
-    $("testSend").disabled = finished;
+    Z.show(document.querySelector("#testRun .composer"), !finished);
     $("testFinish").hidden = finished;
     Z.show($("testResult"), finished);
     if (finished) $("testResult").textContent = test.result || "";
@@ -229,13 +261,28 @@
       rows.forEach((t) => {
         const card = el("article", "help-item");
         const status = t.status === "finished" ? "تمام شده" : "در حال انجام";
+        const view = el("button", "ghost", t.status === "finished" ? "مشاهده‌ی آزمون" : "ادامه‌ی آزمون");
+        view.type = "button";
+        view.addEventListener("click", () => openTest(t.id));
         card.append(
           el("h3", "", `${KIND_LABELS[t.kind] || t.kind} — ${SKILL_LABELS[t.skill] || t.skill}`),
           el("p", "muted", `${Z.fmtDateTime(t.created_at)} — ${t.minutes} دقیقه — سطح ${t.level || "؟"} — ${status}`),
           el("p", "", t.result || "ارزیابی هنوز نوشته نشده است."),
+          view,
         );
         list.appendChild(card);
       });
+    } catch (err) {
+      Z.showError($("testListNotice"), err.message);
+    }
+  }
+
+  // Opens an earlier test with its whole conversation and its evaluation. A running test can be continued.
+  async function openTest(id) {
+    Z.showError($("testError"), "");
+    try {
+      const test = await Z.request("GET", `/v1/web/student/self-tests/${id}`);
+      renderTest(test);
     } catch (err) {
       Z.showError($("testListNotice"), err.message);
     }
@@ -286,12 +333,16 @@
       const table = $("paymentTable");
       table.replaceChildren();
       const head = el("tr");
-      ["تاریخ", "مبلغ (تومان)", "وضعیت"].forEach((h) => head.appendChild(el("th", "", h)));
+      ["تاریخ", "پلن", "مبلغ (تومان)", "وضعیت"].forEach((h) => head.appendChild(el("th", "", h)));
       table.appendChild(head);
       rows.forEach((p) => {
         const tr = el("tr");
-        [Z.fmtDate(p.created_at), p.amount_toman.toLocaleString("fa-IR"), STATUS_LABELS[p.status] || p.status].forEach((v) =>
-          tr.appendChild(el("td", "", v)));
+        [
+          Z.fmtDate(p.created_at),
+          p.plan_name || "—",
+          p.amount_toman.toLocaleString("fa-IR"),
+          STATUS_LABELS[p.status] || p.status,
+        ].forEach((v) => tr.appendChild(el("td", "", v)));
         table.appendChild(tr);
       });
     } catch (err) {
@@ -304,8 +355,15 @@
     $("profileForm").addEventListener("submit", saveProfile);
     $("pfLevelSave").addEventListener("click", saveLevel);
     $("helpGo").addEventListener("click", loadHelp);
+    $("helpSearch").addEventListener("keydown", (event) => {
+      if (event.key === "Enter") loadHelp();
+    });
     $("testStart").addEventListener("click", startTest);
     $("testSend").addEventListener("click", sendAnswer);
     $("testFinish").addEventListener("click", finishTest);
+    $("testBack").addEventListener("click", () => {
+      showTestRun(false);
+      loadTests();
+    });
   });
 })();

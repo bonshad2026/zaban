@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session as DBSession
 from zaban.db import get_db
 from zaban.models import Plan, Student, Tenant, TutorSession, Usage, utcnow
 from zaban.security import Auth, get_auth, get_student_for_auth, require_manager, require_tenant
+from zaban.services.programs import lesson_item_for
 from zaban.services.progress import actual_percent, planned_percent, progress_status
 from zaban.services.sessions import finish_if_due
 
@@ -61,16 +62,22 @@ def _session_rows(db: DBSession, student: Student) -> list[dict]:
         .limit(20)
         .all()
     )
-    return [
-        {
-            "id": s.id,
-            "started_at": s.started_at.isoformat(),
-            "duration_minutes": s.duration_minutes,
-            "status": s.status,
-            "score": s.score,
-        }
-        for s in sessions
-    ]
+    rows = []
+    for s in sessions:
+        # A lesson of the learning program is titled with its program item. A free talk has no program item.
+        found = lesson_item_for(db, s.id)
+        title = f"جلسه {found[1].position + 1}: {found[1].title}" if found else "گفتگوی آزاد با Niko"
+        rows.append(
+            {
+                "id": s.id,
+                "title": title,
+                "started_at": s.started_at.isoformat(),
+                "duration_minutes": s.duration_minutes,
+                "status": s.status,
+                "score": s.score,
+            }
+        )
+    return rows
 
 
 @router.get("/students/{student_id}/reports/progress")

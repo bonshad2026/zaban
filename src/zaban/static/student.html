@@ -51,10 +51,19 @@
             <p class="muted" id="programActivity"></p>
             <p class="ltr-field" id="programPhrases"></p>
           </div>
-          <details>
-            <summary>همه‌ی جلسه‌های برنامه</summary>
+          <h3>مسیر من</h3>
+          <p class="legend muted">
+            <span class="legend-dot is-done"></span> انجام شده
+            <span class="legend-dot is-current"></span> جلسه‌ی فعلی
+            <span class="legend-dot is-next"></span> جلسه‌های بعدی
+          </p>
+          <ol class="program-list" id="programWindow"></ol>
+          <p><button type="button" id="programShowAll" class="ghost">نمایش کامل برنامه</button></p>
+          <div id="programFullBox" hidden>
+            <h3>همه‌ی جلسه‌های برنامه</h3>
             <ol class="program-list" id="programList"></ol>
-          </details>
+            <p><button type="button" id="programHideAll" class="ghost">بازگشت به مسیر من</button></p>
+          </div>
         </div>
         <div class="card" id="setupBox" hidden>
           <h2>شروع یک جلسه</h2>
@@ -195,16 +204,8 @@
         <div class="card">
           <h2>محتوای کمک‌آموزشی</h2>
           <p class="muted">پادکست، داستان، انیمیشن و نمونه‌ها برای سطح و سن شما.</p>
+          <div class="filter-tabs" id="helpTabs" role="tablist" aria-label="دسته‌ها"></div>
           <div class="row">
-            <select id="helpCategory">
-              <option value="">همه‌ی دسته‌ها</option>
-              <option value="podcast">پادکست</option>
-              <option value="story">داستان</option>
-              <option value="animation">انیمیشن</option>
-              <option value="video">ویدئو</option>
-              <option value="sample">نمونه</option>
-              <option value="other">دیگر</option>
-            </select>
             <input id="helpSearch" type="search" placeholder="جست‌وجو">
             <button type="button" id="helpGo" class="ghost">نمایش</button>
           </div>
@@ -251,6 +252,7 @@
           <div class="lesson-top">
             <span class="chip" id="testStatus"></span>
             <button type="button" id="testFinish" class="ghost">پایان آزمون</button>
+            <button type="button" id="testBack" class="ghost">بازگشت به فهرست</button>
           </div>
           <div class="chat" id="testChat" aria-live="polite"></div>
           <div class="composer">

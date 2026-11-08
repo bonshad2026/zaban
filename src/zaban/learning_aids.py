@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session as DBSession
 
 from zaban.db import get_db
 from zaban.models import (
+    BillingPlan,
     HelpContent,
     LearnerDetails,
     LearningProgram,
@@ -270,16 +271,20 @@ def my_payments(zaban_student: str | None = Cookie(default=None), db: DBSession 
     if owner is None:
         return []
     rows = db.query(Payment).filter(Payment.guardian_id == owner).order_by(Payment.created_at.desc()).all()
-    return [
-        {
-            "id": p.id,
-            "amount_toman": p.amount_toman,
-            "status": p.status,
-            "created_at": p.created_at.isoformat(),
-            "confirmed_at": p.confirmed_at.isoformat() if p.confirmed_at else None,
-        }
-        for p in rows
-    ]
+    out = []
+    for p in rows:
+        plan = db.get(BillingPlan, p.plan_id)
+        out.append(
+            {
+                "id": p.id,
+                "plan_name": plan.name if plan else "",
+                "amount_toman": p.amount_toman,
+                "status": p.status,
+                "created_at": p.created_at.isoformat(),
+                "confirmed_at": p.confirmed_at.isoformat() if p.confirmed_at else None,
+            }
+        )
+    return out
 
 
 # ----- A parent's view of a child: the same details, progress and evaluations -----

@@ -304,3 +304,21 @@ ul.plain { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
 @media (max-width: 480px) {
   .tool-section .row > * { flex: 1 1 100%; }
 }
+
+/* Learning path: done, current and next lessons */
+.program-list { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 6px; }
+.plan-item { padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg); }
+.plan-item.is-done { color: var(--ok); background: var(--ok-soft); border-color: transparent; }
+.plan-item.is-current { color: var(--accent-dark); background: var(--accent-soft); border: 1px solid var(--accent); font-weight: 700; }
+.plan-item.is-next { color: var(--muted); opacity: 0.6; }
+.legend { font-size: 14px; display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+.legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-inline-start: 6px; background: var(--muted); }
+.legend-dot.is-done { background: var(--ok); }
+.legend-dot.is-current { background: var(--accent); }
+.legend-dot.is-next { background: var(--muted); opacity: 0.6; }
+
+/* Category tabs for the help content (separate from the main tabs) */
+.filter-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 12px; }
+.filter-tab { background: transparent; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 6px 14px; }
+.filter-tab.is-active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.filter-tab:hover:not(.is-active) { background: var(--accent-soft); color: var(--accent); }

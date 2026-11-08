@@ -147,13 +147,44 @@
       $("programActivity").textContent = data.current.activity;
       $("programPhrases").textContent = data.current.phrases.join("  ·  ");
     }
+    programItems = data.items;
+    showFullProgram(false);
+    renderProgramWindow();
+    renderProgramList();
+  }
+
+  // The learner's path: a few lessons before the current one, the current one, and the next few.
+  // Done lessons are green, the current lesson is gold, and the rest are grey.
+  const PROGRAM_BEFORE = 2;
+  const PROGRAM_AFTER = 3;
+  let programItems = [];
+
+  function programRow(item) {
+    const mark = item.state === "done" ? "✓ " : item.state === "current" ? "➜ " : "";
+    return Z.el("li", `plan-item is-${item.state}`, `${mark}جلسه ${item.number}: ${item.title}`);
+  }
+
+  function renderProgramWindow() {
+    const list = $("programWindow");
+    list.replaceChildren();
+    if (programItems.length === 0) return;
+    const current = programItems.findIndex((item) => item.state === "current");
+    // A finished program has no current lesson, so the window ends at the last lesson.
+    const index = current === -1 ? programItems.length - 1 : current;
+    const start = Math.max(0, index - PROGRAM_BEFORE);
+    const end = Math.min(programItems.length, index + PROGRAM_AFTER + 1);
+    programItems.slice(start, end).forEach((item) => list.appendChild(programRow(item)));
+  }
+
+  function renderProgramList() {
     const list = $("programList");
-    list.innerHTML = "";
-    data.items.forEach((item) => {
-      const mark = item.state === "done" ? "✓ " : item.state === "current" ? "➜ " : "";
-      const li = Z.el("li", item.state === "next" ? "muted" : null, `${mark}${item.title}`);
-      list.appendChild(li);
-    });
+    list.replaceChildren(...programItems.map(programRow));
+  }
+
+  function showFullProgram(on) {
+    Z.show($("programWindow"), !on);
+    Z.show($("programShowAll"), !on);
+    Z.show($("programFullBox"), on);
   }
 
   async function startLesson() {
@@ -237,11 +268,12 @@
       box.appendChild(Z.el("h2", null, "جلسه‌های من"));
       const table = document.createElement("table");
       const head = Z.el("tr");
-      ["تاریخ", "مدت", "امتیاز", "وضعیت"].forEach((title) => head.appendChild(Z.el("th", null, title)));
+      ["تاریخ", "عنوان جلسه", "مدت", "امتیاز", "وضعیت"].forEach((title) => head.appendChild(Z.el("th", null, title)));
       table.appendChild(head);
       for (const s of report.sessions) {
         const row = Z.el("tr");
         row.appendChild(Z.el("td", null, Z.fmtDateTime(s.started_at)));
+        row.appendChild(Z.el("td", null, s.title));
         row.appendChild(Z.el("td", null, `${s.duration_minutes} دقیقه`));
         row.appendChild(Z.el("td", null, s.score === null ? "—" : String(Math.round(s.score))));
         row.appendChild(Z.el("td", null, Z.SESSION_FA[s.status] || s.status));
@@ -345,6 +377,8 @@
     Lesson.init({ onEnded: () => { showLesson(false); } });
     $("loginForm").addEventListener("submit", login);
     $("startBtn").addEventListener("click", startLesson);
+    $("programShowAll").addEventListener("click", () => showFullProgram(true));
+    $("programHideAll").addEventListener("click", () => showFullProgram(false));
     $("levelTestStart").addEventListener("click", startLevelTest);
     $("levelTestForm").addEventListener("submit", submitLevelTest);
     document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => selectTab(tab.dataset.tab)));
