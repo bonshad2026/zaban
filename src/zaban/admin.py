@@ -76,6 +76,7 @@ class PaymentDecision(BaseModel):
 
 class PlanCreate(BaseModel):
     name: str = Field(min_length=2, max_length=80)
+    name_en: str = Field(default="", max_length=80)
     description: str = Field(default="", max_length=300)
     price_toman: int = Field(ge=0)
     days: int = Field(ge=1, le=3650)
@@ -224,7 +225,13 @@ def list_plans(db: DBSession = Depends(get_db)) -> list[dict]:
 
 @router.post("/plans", status_code=201, dependencies=[Depends(require_admin)])
 def create_plan(body: PlanCreate, db: DBSession = Depends(get_db)) -> dict:
-    plan = BillingPlan(name=body.name.strip(), description=body.description.strip(), price_toman=body.price_toman, days=body.days)
+    plan = BillingPlan(
+        name=body.name.strip(),
+        name_en=body.name_en.strip() or None,
+        description=body.description.strip(),
+        price_toman=body.price_toman,
+        days=body.days,
+    )
     db.add(plan)
     db.commit()
     return {"id": plan.id}
@@ -418,6 +425,7 @@ def add_variant(body: VariantCreate, db: DBSession = Depends(get_db)) -> dict:
 
 class ProgramItemSave(BaseModel):
     title: str = Field(min_length=1, max_length=160)
+    title_en: str = Field(default="", max_length=160)
     # The course stage this lesson belongs to. Empty means no stage.
     stage: str = Field(default="", max_length=80)
     concepts: list[str] = Field(default_factory=list, max_length=12)
@@ -446,7 +454,7 @@ def list_programs(db: DBSession = Depends(get_db)) -> dict:
                 "duration_months": program.duration_months,
                 "version": program.version,
                 "items": [
-                    {"position": i.position + 1, "title": i.title, "stage": i.stage, "concepts": i.concepts or [], "activity": i.activity, "phrases": i.phrases}
+                    {"position": i.position + 1, "title": i.title, "title_en": i.title_en or "", "stage": i.stage, "concepts": i.concepts or [], "activity": i.activity, "phrases": i.phrases}
                     for i in items
                 ],
             }
@@ -465,6 +473,7 @@ def save_program_item(program_id: str, number: int, body: ProgramItemSave, db: D
     if item is None:
         raise HTTPException(status_code=404, detail="Not found")
     item.title = body.title.strip()
+    item.title_en = body.title_en.strip() or None
     item.stage = body.stage.strip()
     item.concepts = [c.strip() for c in body.concepts if c.strip()]
     item.activity = body.activity.strip()

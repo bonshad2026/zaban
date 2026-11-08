@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session as DBSession
 
 from zaban.models import LearningProgram, LessonItem, ProgramItem, Student, StudentGoal, StudentProgress, TutorSession
-from zaban.program_data import PROGRAM_ITEMS, PROGRAMS
+from zaban.program_data import PROGRAM_ITEMS, PROGRAM_TITLES_EN, PROGRAMS
 from zaban.services.curriculum import band_code
 
 # A learner who has not chosen a goal gets the everyday conversation program.
@@ -18,6 +18,11 @@ def seed_programs(db: DBSession) -> None:
         if not has_items:
             for position, (title, activity, phrases) in enumerate(PROGRAM_ITEMS.get(data["id"], [])):
                 db.add(ProgramItem(program_id=data["id"], position=position, title=title, activity=activity, phrases=phrases))
+    # Lessons without an English title get the one from the program data. Titles the administrator wrote are kept.
+    for program_id, titles in PROGRAM_TITLES_EN.items():
+        for item in db.query(ProgramItem).filter(ProgramItem.program_id == program_id, ProgramItem.title_en.is_(None)).all():
+            if item.position < len(titles):
+                item.title_en = titles[item.position]
     db.commit()
 
 

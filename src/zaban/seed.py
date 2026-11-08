@@ -9,6 +9,7 @@ from zaban.services.otp import normalize_phone
 from zaban.services.passwords import hash_password
 
 # Development prices. The real prices are set by the company, not in code.
+DEMO_PLAN_NAMES_EN = {"مقدماتی (نمونه)": "Basic (sample)", "پیشرفته (نمونه)": "Advanced (sample)"}
 DEMO_PLANS = [
     ("مقدماتی (نمونه)", "نمونه برای آزمایش", 1_000_000, 30),
     ("پیشرفته (نمونه)", "نمونه برای آزمایش", 2_000_000, 90),
@@ -20,7 +21,7 @@ def seed_demo_plans(db: Session) -> None:
     if db.query(BillingPlan).first() is not None:
         return
     for name, description, price, days in DEMO_PLANS:
-        db.add(BillingPlan(name=name, description=description, price_toman=price, days=days))
+        db.add(BillingPlan(name=name, name_en=DEMO_PLAN_NAMES_EN.get(name), description=description, price_toman=price, days=days))
     db.commit()
 
 

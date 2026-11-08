@@ -196,7 +196,8 @@
  "تمام شد": "Finished",
  "منوی اصلی": "Main menu",
  "پیوندهای پایین صفحه": "Footer links",
- "زبان": "Zaban"
+ "زبان": "Zaban",
+ "گفتگوی آزاد با Niko": "Free talk with Niko"
 };
 
   const isEnglish = () => Z.currentLang() === "en";

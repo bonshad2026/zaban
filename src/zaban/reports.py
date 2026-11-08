@@ -72,6 +72,7 @@ def _session_rows(db: DBSession, student: Student) -> list[dict]:
                 "id": s.id,
                 "lesson_number": found[1].position + 1 if found else None,
                 "lesson_title": found[1].title if found else None,
+                "lesson_title_en": found[1].title_en if found else None,
                 "started_at": s.started_at.isoformat(),
                 "duration_minutes": s.duration_minutes,
                 "status": s.status,

@@ -14,6 +14,8 @@ ADDED_COLUMNS = [
     ("self_tests", "score", "FLOAT"),
     ("sessions", "evaluation", "TEXT"),
     ("sessions", "start_prompt", "TEXT"),
+    ("program_items", "title_en", "VARCHAR(160)"),
+    ("billing_plans", "name_en", "VARCHAR(80)"),
     ("consult_requests", "last_name", "VARCHAR(120) NOT NULL DEFAULT ''"),
     ("consult_requests", "subject", "VARCHAR(160) NOT NULL DEFAULT ''"),
     ("consult_requests", "contact_permission", "BOOLEAN NOT NULL DEFAULT FALSE"),

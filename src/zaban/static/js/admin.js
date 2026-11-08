@@ -367,6 +367,7 @@
     try {
       await Z.request("POST", `${API}/plans`, {
         name: $("planName").value.trim(),
+        name_en: $("planNameEn").value.trim(),
         price_toman: Number($("planPrice").value),
         days: Number($("planDays").value),
         description: "",
@@ -683,6 +684,7 @@
     if (!item) return;
     $("progNumber").value = item.position;
     $("progTitle").value = item.title;
+    $("progTitleEn").value = item.title_en || "";
     $("progStage").value = item.stage || "";
     $("progConcepts").value = (item.concepts || []).join("\n");
     $("progDuration").value = program.duration_months;
@@ -748,6 +750,7 @@
       const number = Number($("progNumber").value);
       const result = await Z.request("PUT", `${API}/programs/${program.id}/items/${number}`, {
         title: $("progTitle").value,
+        title_en: $("progTitleEn").value.trim(),
         stage: $("progStage").value.trim(),
         concepts: $("progConcepts").value.split("\n").map((c) => c.trim()).filter(Boolean),
         activity: $("progActivity").value,

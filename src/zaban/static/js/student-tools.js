@@ -347,7 +347,7 @@
         const tr = el("tr");
         [
           Z.fmtDate(p.created_at),
-          p.plan_name || "—",
+          p.plan_name ? Z.pick(p.plan_name, p.plan_name_en || p.plan_name) : "—",
           p.amount_toman.toLocaleString(Z.locale()),
           STATUS_LABELS[p.status] || p.status,
         ].forEach((v) => tr.appendChild(el("td", "", v)));

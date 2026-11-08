@@ -166,3 +166,30 @@ PROGRAM_ITEMS["K-A1-daily-p1"] = [
     ("مرور ۲", "گفتگوی آزاد با تصویر", []),
     ("جشن پایان", "مرور و تشویق", ["Thank you!", "I can say hello and my name."]),
 ]
+
+# English titles for the lessons above, by lesson number (the same order as PROGRAM_ITEMS).
+# They are copied into the database for lessons that have no English title yet. The administrator can change them.
+PROGRAM_TITLES_EN = {
+    "T-A1-daily-p1": [
+        "Hello and introductions", "How are you?", "Colours and looks", "Getting to know each other",
+        "Yes or no questions", "Home", "Things in the room", "Numbers 1 to 10", "Unit 1 review", "Short check 1",
+        "I like / I don't like", "Food and favourite things", "Feelings", "Simple reasons", "Questions about likes",
+        "Today and tomorrow", "Birthdays", "Invitations", "Role play: invitations", "Unit 2 review",
+        "This is my ___", "Having (have and has)", "Family members", "Describing an animal", "Pets",
+        "Questions about animals", "Family photo", "Milo's family day", "Unit 3 review", "Short check 2",
+        "Morning routine", "Always and usually", "The time", "Days of the week", "The weekend",
+        "A day with Milo", "Let's make a plan", "Time prepositions", "Unit 4 review", "One-minute presentation",
+        "Food", "Ordering", "Prices and big numbers", "Drinks and the café", "School supplies",
+        "Milo's market", "The shop", "Money and simple prices", "Unit 5 review", "Short check 3",
+        "Abilities", "Sport", "Hobbies", "Being good at something", "Liking to do things",
+        "Milo's game", "Interview", "My friend", "Unit 6 review", "Playing day",
+        "Places in town", "Where is it?", "Directions", "Weather and climate", "Today's weather",
+        "Milo gets lost", "Asking the way", "Seasons and clothes", "Unit 7 review", "Short check 4",
+        "Yesterday and last week", "Regular past", "Irregular past", "Negative past", "Past questions",
+        "Milo's trip", "Your yesterday", "Past story", "Unit 8 review", "Short check 5",
+        "Adjectives", "Describing a person", "There is and there are", "Comparison", "Sea and lake",
+        "The new neighbour", "Guess", "Describing a place", "Unit 9 review", "Two-minute presentation",
+        "Going to (plans)", "Promises and decisions", "Weekend plans", "Making arrangements", "Suggestions",
+        "Milo's plan", "Travel planning", "Three-minute presentation", "Phase 1 review", "Phase 1 final assessment",
+    ],
+}

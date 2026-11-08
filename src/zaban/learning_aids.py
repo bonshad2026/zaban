@@ -280,6 +280,7 @@ def my_payments(zaban_student: str | None = Cookie(default=None), db: DBSession 
             {
                 "id": p.id,
                 "plan_name": plan.name if plan else "",
+                "plan_name_en": plan.name_en if plan else None,
                 "amount_toman": p.amount_toman,
                 "status": p.status,
                 "created_at": p.created_at.isoformat(),

@@ -366,7 +366,7 @@ def student_program(zaban_student: str | None = Cookie(default=None), db: DBSess
             "block_size": program.block_size,
         },
         "current": (
-            {"number": current.position + 1, "title": current.title, "activity": current.activity, "phrases": current.phrases}
+            {"number": current.position + 1, "title": current.title, "title_en": current.title_en, "activity": current.activity, "phrases": current.phrases}
             if current is not None and progress.status == "active"
             else None
         ),
@@ -374,6 +374,7 @@ def student_program(zaban_student: str | None = Cookie(default=None), db: DBSess
             {
                 "number": i.position + 1,
                 "title": i.title,
+                "title_en": i.title_en,
                 "state": "done" if i.position < progress.position else ("current" if i.position == progress.position else "next"),
             }
             for i in items

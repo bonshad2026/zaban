@@ -78,6 +78,8 @@ class BillingPlan(Base):
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
     name: Mapped[str] = mapped_column(String(80))
+    # The name shown when the page is in English. Empty means the Persian name is used.
+    name_en: Mapped[str | None] = mapped_column(String(80), nullable=True)
     description: Mapped[str] = mapped_column(Text, default="")
     price_toman: Mapped[int] = mapped_column(Integer)
     days: Mapped[int] = mapped_column(Integer)
@@ -325,6 +327,8 @@ class ProgramItem(Base):
     program_id: Mapped[str] = mapped_column(ForeignKey("learning_programs.id"), index=True)
     position: Mapped[int] = mapped_column(Integer)
     title: Mapped[str] = mapped_column(String(160))
+    # The English title. Empty means the Persian title is shown.
+    title_en: Mapped[str | None] = mapped_column(String(160), nullable=True)
     activity: Mapped[str] = mapped_column(Text, default="")
     # The course stage this lesson belongs to, such as "Stage 1: greetings". Empty means no stage.
     stage: Mapped[str] = mapped_column(String(80), default="")

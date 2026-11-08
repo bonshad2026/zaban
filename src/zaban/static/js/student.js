@@ -143,7 +143,8 @@
     Z.show(notice, Boolean(notice.textContent));
     Z.show($("programCurrent"), Boolean(data.current));
     if (data.current) {
-      $("programTitle").textContent = Z.pick(`جلسه ${data.current.number}: ${data.current.title}`, `Lesson ${data.current.number}: ${data.current.title}`);
+      const currentTitle = Z.pick(data.current.title, data.current.title_en || data.current.title);
+      $("programTitle").textContent = Z.pick(`جلسه ${data.current.number}: ${data.current.title}`, `Lesson ${data.current.number}: ${currentTitle}`);
       $("programActivity").textContent = data.current.activity;
       $("programPhrases").textContent = data.current.phrases.join("  ·  ");
     }
@@ -161,7 +162,8 @@
 
   function programRow(item) {
     const mark = item.state === "done" ? "✓ " : item.state === "current" ? "➜ " : "";
-    return Z.el("li", `plan-item is-${item.state}`, `${mark}${Z.pick("جلسه", "Lesson")} ${item.number}: ${item.title}`);
+    const title = Z.pick(item.title, item.title_en || item.title);
+    return Z.el("li", `plan-item is-${item.state}`, `${mark}${Z.pick("جلسه", "Lesson")} ${item.number}: ${title}`);
   }
 
   function renderProgramWindow() {
@@ -274,7 +276,7 @@
         const row = Z.el("tr");
         row.appendChild(Z.el("td", null, Z.fmtDateTime(s.started_at)));
         const title = s.lesson_number
-          ? `${Z.pick("جلسه", "Lesson")} ${s.lesson_number}: ${s.lesson_title}`
+          ? `${Z.pick("جلسه", "Lesson")} ${s.lesson_number}: ${Z.pick(s.lesson_title, s.lesson_title_en || s.lesson_title)}`
           : Z.tr("گفتگوی آزاد با Niko");
         row.appendChild(Z.el("td", null, title));
         row.appendChild(Z.el("td", null, Z.pick(`${s.duration_minutes} دقیقه`, `${s.duration_minutes} min`)));

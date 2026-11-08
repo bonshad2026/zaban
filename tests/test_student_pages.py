@@ -77,3 +77,14 @@ def test_missing_or_large_score_is_handled():
 
     assert split_score("A short evaluation without a score.") == ("A short evaluation without a score.", None)
     assert split_score("Good.\nSCORE: 150")[1] == 100.0
+
+
+def test_program_lessons_have_english_titles(client):
+    from zaban.services.programs import seed_programs
+
+    with SessionLocal() as db:
+        seed_programs(db)
+        first = db.query(ProgramItem).filter(ProgramItem.program_id == "T-A1-daily-p1", ProgramItem.position == 0).one()
+        assert first.title == "سلام و معرفی"
+        assert first.title_en == "Hello and introductions"
+
