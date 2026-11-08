@@ -23,13 +23,20 @@ DEMO_PIN = "1234"
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--db", default="zaban-demo.db")
+    parser.add_argument("--database-url", default=None,
+                        help="Use this database instead of a new file, for example the PostgreSQL in Docker.")
     parser.add_argument("--media", required=True, type=Path)
     args = parser.parse_args()
 
-    db_path = (ROOT / args.db).resolve()
-    if db_path.exists():
-        db_path.unlink()
-    os.environ["DATABASE_URL"] = f"sqlite:///{db_path.as_posix()}"
+    if args.database_url:
+        # The data goes into the given database. Nothing is deleted first; run it on a database that has no sample data yet.
+        db_path = args.database_url
+        os.environ["DATABASE_URL"] = args.database_url
+    else:
+        db_path = (ROOT / args.db).resolve()
+        if db_path.exists():
+            db_path.unlink()
+        os.environ["DATABASE_URL"] = f"sqlite:///{db_path.as_posix()}"
     os.environ.setdefault("ENVIRONMENT", "development")
     os.environ.setdefault("SECRET_KEY", "demo-only-secret-key-change-me-0123456789")
     os.environ.setdefault("ZABAN_DEMO_API_KEY", "demo-tenant-key-0123456789")
@@ -155,10 +162,10 @@ def main() -> None:
         ))
         db.flush()
 
-        # Sara's program: she has finished two lessons, so she is on lesson 3.
+        # Sara's program: she has finished six lessons, so she is on lesson 7.
         progress = ensure_progress(db, sara)
         if progress is not None:
-            progress.position = 2
+            progress.position = 6  # six program lessons are done
             progress.status = "active"
 
         # Stage and concepts for the first lessons of the first program (one lesson = one item).
@@ -188,29 +195,43 @@ def main() -> None:
                 db.add(Message(session_id=session.id, role=role, content=text, created_at=started))
             return session
 
-        # The first two lessons are program lessons 1 and 2, so the report shows their titles.
-        lesson_one = lesson(9, 10, 72.0,
-                            "Sara answered every question in full sentences. Next time, practise the word order in questions.",
-                            [("assistant", "Hi Sara! What is your favourite animal?"),
-                             ("user", "My favourite animal is horse."),
-                             ("assistant", "Nice! Can you say: I like horses because they are fast?"),
-                             ("user", "I like horses because they are fast.")])
-        lesson_two = lesson(4, 10, 81.0,
-                            "Good sentences about family. Try to add one detail to each answer.",
-                            [("assistant", "Tell me about your family."),
-                             ("user", "I have a brother. He is tall."),
-                             ("assistant", "Great! What does your brother like to do?"),
-                             ("user", "He likes play football.")])
-        # A free talk with no program lesson, so the report shows it as a free conversation.
+        # Sara's history: six program lessons over the last four weeks, plus two free talks.
+        # Each program lesson uses the title and target phrase of its program item, so the path and the report agree.
+        history_evaluations = [
+            "Good start. Say full sentences when you introduce yourself.",
+            "Nice greetings. Try to answer 'How are you?' with one more detail.",
+            "Great colour words! Practise 'He has ... eyes' with other body parts.",
+            "You used 'Nice to meet you' well. Next time, ask one question back.",
+            "Your yes or no questions were clear. Watch the word order.",
+            "Very good answers about your home. Try to add 'because' to one answer.",
+        ]
+        history_days = [28, 24, 20, 16, 12, 8]
+        history_scores = [68.0, 72.0, 75.0, 77.0, 80.0, 83.0]
+        program_items = []
+        sara_program = None
+        if progress is not None:
+            sara_program = db.get(LearningProgram, progress.program_id)
+            program_items = (
+                db.query(ProgramItem).filter(ProgramItem.program_id == sara_program.id).order_by(ProgramItem.position).all()
+            )
+        for position, days in enumerate(history_days):
+            item = program_items[position] if position < len(program_items) else None
+            title = item.title if item else "practice"
+            target = item.phrases[0] if item and item.phrases else "I like it."
+            session = lesson(days, 10, history_scores[position], history_evaluations[position],
+                             [("assistant", f"Hi Sara! Today's lesson is {title}. Say: {target}"),
+                              ("user", target),
+                              ("assistant", "Well done! Can you tell me one more thing about it?"),
+                              ("user", "I like it because it is easy.")])
+            if item is not None:
+                db.add(LessonItem(session_id=session.id, program_id=sara_program.id, position=position,
+                                  program_version=sara_program.version, counted=True, created_at=session.started_at))
+        # Free talks with no program lesson, so the report shows them as free conversations.
+        lesson(10, 5, 74.0, "Good answers about your pet. Try longer sentences.",
+               [("assistant", "What is your pet's name?"), ("user", "My dog is Brownie.")])
         lesson(2, 5, 76.0, "Good answers about your weekend. Try longer sentences.",
                [("assistant", "What did you do last weekend?"),
                 ("user", "I go to park with my mother.")])
-        # The lessons belong to the program Sara is actually in, not to the first program in the table.
-        if progress is not None:
-            sara_program = db.get(LearningProgram, progress.program_id)
-            for position, session in enumerate([lesson_one, lesson_two]):
-                db.add(LessonItem(session_id=session.id, program_id=sara_program.id, position=position,
-                                  program_version=sara_program.version, counted=True, created_at=session.started_at))
 
         # ----- Self-tests: one finished, one running -----
         finished = SelfTest(student_id=sara.id, kind="qa", skill="writing", minutes=10, level_used="A1",
@@ -223,6 +244,20 @@ def main() -> None:
                            ("user", "I wake up at seven. I eat bread."),
                            ("assistant", "Good! Now write one sentence about school.")]:
             db.add(SelfTestMessage(test_id=finished.id, role=role, content=text))
+
+        for days, kind, skill, minutes, score, result, turns in [
+            (20, "qa", "writing", 10, 70.0, "Strengths: short clear sentences. Next steps: use 'because' in one sentence a day.",
+             [("assistant", "Write a sentence about your favourite food."), ("user", "I like pizza because it is hot.")]),
+            (6, "conversation", "speaking", 15, 81.0, "Strengths: you answered in full sentences. Next steps: ask one question back.",
+             [("assistant", "Tell me about your weekend."), ("user", "I went to park with my family and we played ball.")]),
+        ]:
+            past = SelfTest(student_id=sara.id, kind=kind, skill=skill, minutes=minutes, level_used="A1",
+                            status="finished", ends_at=now - timedelta(days=days), created_at=now - timedelta(days=days),
+                            score=score, result=result)
+            db.add(past)
+            db.flush()
+            for role, text in turns:
+                db.add(SelfTestMessage(test_id=past.id, role=role, content=text))
 
         running = SelfTest(student_id=nima.id, kind="suggested", skill="speaking", minutes=15, level_used="B2",
                            status="active", ends_at=now + timedelta(minutes=15), created_at=now)
@@ -262,6 +297,13 @@ def main() -> None:
         for title, category, band, level, interests, filename, mime in samples:
             db.add(HelpContent(title=title, category=category, age_band=band, level=level, interests=interests,
                                mime=mime, data=(media / filename).read_bytes(), stage="Stage 1"))
+        # Links for the other categories, for ages 11 to 14 at A1.
+        db.add(HelpContent(title="Podcast: my day in English", category="podcast", age_band="T", level="A1",
+                           interests="daily routine", url="https://example.com/podcast-my-day"))
+        db.add(HelpContent(title="Story: Milo at school", category="story", age_band="T", level="A1",
+                           interests="school, animals", url="https://example.com/story-milo"))
+        db.add(HelpContent(title="Animation: colours", category="animation", age_band="T", level="A1",
+                           interests="colours", url="https://example.com/animation-colours"))
         # Two links so the category tabs have something to show: a video for ages 11 to 14 at A1, and one for teens at B2.
         db.add(HelpContent(title="Sample video: my family", category="video", age_band="T", level="A1",
                            interests="family", url="https://example.com/sample-video"))
@@ -287,7 +329,7 @@ def main() -> None:
             "lessons": db.query(TutorSession).count(),
             "self_tests": db.query(SelfTest).count(),
         }
-    print(f"demo database ready: {db_path}")
+    print(f"demo database ready: {'the database from --database-url' if args.database_url else db_path}")
     for key, value in counts.items():
         print(f"  {key}: {value}")
 
