@@ -100,6 +100,35 @@ def _test_out(test: SelfTest, db: DBSession) -> dict:
     }
 
 
+@router.get("/self-tests")
+def list_self_tests(
+    zaban_student: str | None = Cookie(default=None),
+    db: DBSession = Depends(get_db),
+) -> list[dict]:
+    # The learner's earlier tests, newest first, with the evaluation written at the end of each.
+    student = _student_from_cookie(db, zaban_student)
+    rows = (
+        db.query(SelfTest)
+        .filter(SelfTest.student_id == student.id)
+        .order_by(SelfTest.created_at.desc())
+        .limit(30)
+        .all()
+    )
+    return [
+        {
+            "id": t.id,
+            "kind": t.kind,
+            "skill": t.skill,
+            "minutes": t.minutes,
+            "level": t.level_used,
+            "status": t.status,
+            "created_at": t.created_at.isoformat(),
+            "result": t.result,
+        }
+        for t in rows
+    ]
+
+
 @router.post("/self-tests", status_code=201)
 def create_self_test(
     body: SelfTestCreate,

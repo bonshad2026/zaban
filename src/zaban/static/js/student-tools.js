@@ -28,6 +28,7 @@
     if (name === "progress") loadProgress();
     if (name === "help") loadHelp();
     if (name === "payments") loadPayments();
+    if (name === "test") loadTests();
   }
 
   function nullIfEmpty(value) {
@@ -215,6 +216,31 @@
     $("testChat").scrollTop = $("testChat").scrollHeight;
   }
 
+  const KIND_LABELS = { qa: "سؤال و جواب", conversation: "مکالمه", mixed: "ترکیبی", suggested: "پیشنهاد سیستم" };
+  const SKILL_LABELS = { writing: "نوشتن", listening: "شنیداری", speaking: "گفتاری", mixed: "چند مهارت" };
+
+  async function loadTests() {
+    try {
+      const rows = await Z.request("GET", "/v1/web/student/self-tests");
+      const list = $("testList");
+      list.replaceChildren();
+      Z.show($("testListNotice"), rows.length === 0);
+      $("testListNotice").textContent = rows.length === 0 ? "هنوز آزمونی نداده‌اید. از پایین شروع کنید." : "";
+      rows.forEach((t) => {
+        const card = el("article", "help-item");
+        const status = t.status === "finished" ? "تمام شده" : "در حال انجام";
+        card.append(
+          el("h3", "", `${KIND_LABELS[t.kind] || t.kind} — ${SKILL_LABELS[t.skill] || t.skill}`),
+          el("p", "muted", `${Z.fmtDateTime(t.created_at)} — ${t.minutes} دقیقه — سطح ${t.level || "؟"} — ${status}`),
+          el("p", "", t.result || "ارزیابی هنوز نوشته نشده است."),
+        );
+        list.appendChild(card);
+      });
+    } catch (err) {
+      Z.showError($("testListNotice"), err.message);
+    }
+  }
+
   async function startTest() {
     Z.showError($("testError"), "");
     try {
@@ -246,6 +272,7 @@
     try {
       const test = await Z.request("POST", `/v1/web/student/self-tests/${testId}/finish`);
       renderTest(test);
+      loadTests();
     } catch (err) {
       Z.showError($("testError"), err.message);
     }
