@@ -6,6 +6,7 @@ from zaban.config import settings
 from zaban.db import get_db
 from zaban.models import BillingPlan, Payment, utcnow
 from zaban.services.payments import confirm_payment, get_gateway, has_active_plan, mark_paid
+from zaban.services.settings_store import PAYMENT_PROVIDER_KEY, get_setting
 from zaban.web import _guardian_from_cookie
 
 # Plans, checkout and payment status for adult accounts. The browser never decides that a payment succeeded.
@@ -76,7 +77,7 @@ def checkout(
     if plan is None or not plan.active:
         raise HTTPException(status_code=404, detail="This plan is not available")
 
-    gateway = get_gateway()
+    gateway = get_gateway(get_setting(db, PAYMENT_PROVIDER_KEY, settings.payment_gateway))
     payment = Payment(
         guardian_id=guardian.id,
         plan_id=plan.id,

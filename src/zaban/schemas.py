@@ -117,3 +117,68 @@ class VoiceSampleCreate(BaseModel):
     mime: Literal["audio/mpeg", "audio/wav", "audio/ogg", "audio/mp4"]
     # The file as base64, so no separate upload parser is needed. The server limits the decoded size.
     data_base64: str = Field(min_length=4, max_length=7_000_000)
+
+
+class CooperationCreate(BaseModel):
+    subject: str = Field(min_length=2, max_length=160)
+    phone: str = Field(min_length=6, max_length=24)
+    email: str | None = Field(default=None, max_length=190, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    message: str = Field(default="", max_length=2000)
+
+
+HelpCategory = Literal["podcast", "story", "animation", "video", "sample", "other"]
+CefrLevel = Literal["A1", "A2", "B1", "B2", "C1", "C2"]
+
+
+class HelpContentCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=160)
+    category: HelpCategory
+    age_band: Literal["K", "J", "T", "S", "A"]
+    level: CefrLevel
+    gender: Literal["female", "male"] | None = None
+    interests: str = Field(default="", max_length=200)
+    topic_id: str | None = Field(default=None, max_length=40)
+    stage: str | None = Field(default=None, max_length=40)
+    # Either a link (url) or a file (data_base64 with its mime type). Exactly one of them is required.
+    url: str | None = Field(default=None, max_length=500, pattern=r"^https?://\S+$")
+    mime: Literal["audio/mpeg", "audio/wav", "audio/mp4", "video/mp4", "application/pdf", "image/png"] | None = None
+    data_base64: str | None = Field(default=None, max_length=7_000_000)
+
+    @model_validator(mode="after")
+    def one_source(self) -> "HelpContentCreate":
+        has_file = self.data_base64 is not None
+        if has_file == (self.url is not None):
+            raise ValueError("Give either a link or a file, not both")
+        if has_file and self.mime is None:
+            raise ValueError("A file needs its type")
+        return self
+
+
+SelfTestKind = Literal["qa", "conversation", "mixed", "suggested"]
+SelfTestSkill = Literal["writing", "listening", "speaking", "mixed"]
+
+
+class SelfTestCreate(BaseModel):
+    kind: SelfTestKind
+    skill: SelfTestSkill
+    minutes: Literal[5, 10, 15, 20, 30]
+
+
+class SelfTestAnswer(BaseModel):
+    content: str = Field(min_length=1, max_length=500)
+
+
+class DetailsUpdate(BaseModel):
+    # Every field is optional, so a partial save keeps what is not sent.
+    age: int | None = Field(default=None, ge=3, le=99)
+    gender: Literal["female", "male", "other"] | None = None
+    grade: str | None = Field(default=None, max_length=40)
+    attributes: str | None = Field(default=None, max_length=1000)
+    conversation_style: Literal["chat", "story", "role_play", "quiz", "mixed"] | None = None
+    response_style: Literal["gentle", "direct", "playful", "strict"] | None = None
+    level_sample: str | None = Field(default=None, max_length=1000)
+    free_text: str | None = Field(default=None, max_length=1000)
+
+
+class LevelUpdate(BaseModel):
+    cefr_level: CefrLevel

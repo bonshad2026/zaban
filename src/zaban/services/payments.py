@@ -32,8 +32,9 @@ class ZarinPalGateway:
         raise HTTPException(status_code=503, detail="The payment gateway is not ready yet")
 
 
-def get_gateway() -> PaymentGateway:
-    if settings.payment_gateway == "zarinpal":
+def get_gateway(provider: str) -> PaymentGateway:
+    # The provider is chosen in the admin panel. Its secret keys are read from the environment, never from the panel.
+    if provider == "zarinpal":
         return ZarinPalGateway()
     if settings.environment == "production":
         raise HTTPException(status_code=503, detail="The payment gateway is not ready yet")

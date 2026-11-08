@@ -214,6 +214,55 @@
           </div>
         </div>
 
+        <h2 style="margin-top:24px">اطلاعات و پیشرفت فرزند</h2>
+        <p class="notice" id="cdNotice" hidden></p>
+        <form id="cdForm" class="detail-grid">
+          <div>
+            <label for="cdAge">سن</label>
+            <input id="cdAge" type="number" min="3" max="99" class="ltr-field">
+            <label for="cdGender">جنسیت</label>
+            <select id="cdGender">
+              <option value="">انتخاب نشده</option>
+              <option value="female">دختر</option>
+              <option value="male">پسر</option>
+              <option value="other">دیگر</option>
+            </select>
+            <label for="cdGrade">مقطع تحصیلی</label>
+            <input id="cdGrade" maxlength="40">
+            <label for="cdAttributes">ویژگی‌ها و علایق کودک</label>
+            <textarea id="cdAttributes" rows="2" maxlength="1000"></textarea>
+          </div>
+          <div>
+            <label for="cdConversation">سبک مکالمه</label>
+            <select id="cdConversation">
+              <option value="">انتخاب نشده</option>
+              <option value="chat">گفتگوی آزاد</option>
+              <option value="story">داستان ساختن با هم</option>
+              <option value="role_play">نقش‌بازی</option>
+              <option value="quiz">سؤال و جواب</option>
+              <option value="mixed">ترکیبی</option>
+            </select>
+            <label for="cdResponse">سبک پاسخ Niko</label>
+            <select id="cdResponse">
+              <option value="">انتخاب نشده</option>
+              <option value="gentle">ملایم</option>
+              <option value="direct">مستقیم</option>
+              <option value="playful">بازیگوش</option>
+              <option value="strict">سخت‌گیر</option>
+            </select>
+            <label for="cdSample">نمونه‌ی انگلیسی یا کد سطح</label>
+            <textarea id="cdSample" rows="2" maxlength="1000" class="ltr-field"></textarea>
+            <label for="cdFree">توضیح تکمیلی</label>
+            <textarea id="cdFree" rows="2" maxlength="1000"></textarea>
+          </div>
+          <p><button type="submit">ذخیره‌ی اطلاعات کودک</button></p>
+        </form>
+        <h3>پیشرفت دوره</h3>
+        <p id="cdProgress" class="muted"></p>
+        <div id="cdStages"></div>
+        <h3>ارزیابی جلسه‌ها</h3>
+        <div id="cdSessions"></div>
+
         <h2 style="margin-top:24px">گزارش‌ها و مصرف</h2>
         <div id="reportBox"></div>
 
@@ -229,5 +278,6 @@
   <!--site-footer-->
   <script src="/static/js/common.js"></script>
   <script src="/static/js/parent.js"></script>
+  <script src="/static/js/parent-tools.js"></script>
 </body>
 </html>

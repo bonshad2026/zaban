@@ -18,6 +18,10 @@ from zaban.public import router as public_router
 from zaban.services.curriculum import seed_curriculum
 from zaban.services.programs import seed_programs
 from zaban.services.sms import dev_outbox
+from zaban.admin_ops import router as admin_ops_router
+from zaban.ai_api import router as ai_router
+from zaban.learning_aids import parent_router as learning_parent_router
+from zaban.learning_aids import router as learning_aids_router
 from zaban.web import router as web_router
 
 STATIC_DIR = Path(__file__).parent / "static"
@@ -44,9 +48,13 @@ app = FastAPI(title="zaban", version="0.1.0", lifespan=lifespan)
 app.include_router(api_router, prefix="/v1")
 app.include_router(reports_router, prefix="/v1")
 app.include_router(web_router, prefix="/v1")
+app.include_router(learning_aids_router, prefix="/v1")
+app.include_router(learning_parent_router, prefix="/v1")
+app.include_router(ai_router, prefix="/v1")
 app.include_router(billing_router, prefix="/v1")
 app.include_router(public_router, prefix="/v1")
 app.include_router(admin_router, prefix="/v1")
+app.include_router(admin_ops_router, prefix="/v1")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
@@ -94,6 +102,11 @@ def demo_page() -> HTMLResponse:
 @app.get("/consult", include_in_schema=False)
 def consult_page() -> HTMLResponse:
     return _page("consult.html", "/consult")
+
+
+@app.get("/cooperation", include_in_schema=False)
+def cooperation_page() -> HTMLResponse:
+    return _page("cooperation.html", "/cooperation")
 
 
 @app.get("/admin", include_in_schema=False)

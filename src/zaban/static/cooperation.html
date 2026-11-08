@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>درخواست همکاری | زبان</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  <!--site-header-->
+  <main class="hero">
+    <div class="auth-wrap">
+      <form id="cooperationForm" class="auth-card" novalidate>
+        <a class="back" href="/">بازگشت به صفحه‌ی اصلی</a>
+        <h1>درخواست همکاری</h1>
+        <p class="muted">اگر می‌خواهید با زبان همکاری کنید، فرم را پر کنید. ورود لازم نیست.</p>
+
+        <label for="coopSubject">موضوع همکاری</label>
+        <input id="coopSubject" name="subject" maxlength="160" required>
+
+        <label for="coopPhone">شماره‌ی تماس</label>
+        <input id="coopPhone" name="phone" type="tel" inputmode="tel" class="ltr-field" placeholder="09121234567" required>
+
+        <label for="coopEmail">ایمیل (اختیاری)</label>
+        <input id="coopEmail" name="email" type="email" maxlength="190" class="ltr-field">
+
+        <label for="coopMessage">توضیحات و شرح درخواست</label>
+        <textarea id="coopMessage" name="message" rows="5" maxlength="2000"></textarea>
+
+        <p></p>
+        <button type="submit" class="wide">ارسال درخواست</button>
+        <p class="error" id="coopError" hidden></p>
+      </form>
+
+      <section class="auth-card" id="coopDone" hidden>
+        <h1>درخواست شما ثبت شد</h1>
+        <p class="muted">به‌زودی با شما تماس می‌گیریم.</p>
+        <div class="row">
+          <a class="btn-link" href="/">صفحه‌ی اول</a>
+        </div>
+      </section>
+    </div>
+  </main>
+  <!--site-footer-->
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/cooperation.js"></script>
+</body>
+</html>

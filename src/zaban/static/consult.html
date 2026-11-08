@@ -18,14 +18,29 @@
         <label for="consultName">نام</label>
         <input id="consultName" name="name" maxlength="120" required>
 
+        <label for="consultLast">نام خانوادگی</label>
+        <input id="consultLast" name="last_name" maxlength="120" required>
+
         <label for="consultPhone">شماره‌ی تماس</label>
         <input id="consultPhone" name="phone" type="tel" inputmode="tel" class="ltr-field" placeholder="09121234567" required>
+
+        <label for="consultSubject">موضوع درخواست</label>
+        <select id="consultSubject" name="subject" required>
+          <option value="">یک موضوع را انتخاب کنید</option>
+          <option value="کلاس برای کودک">کلاس برای کودک</option>
+          <option value="کلاس برای نوجوان">کلاس برای نوجوان</option>
+          <option value="کلاس برای بزرگسال">کلاس برای بزرگسال</option>
+          <option value="قیمت و پلن‌ها">قیمت و پلن‌ها</option>
+          <option value="سؤال فنی یا دیگر">سؤال فنی یا دیگر</option>
+        </select>
 
         <label for="consultTime">زمان مناسب برای تماس (اختیاری)</label>
         <input id="consultTime" name="preferred_time" maxlength="60" placeholder="مثلاً عصرها">
 
         <label for="consultMessage">سؤال یا توضیح شما</label>
         <textarea id="consultMessage" name="message" rows="4" maxlength="1000"></textarea>
+
+        <label class="inline"><input id="consultPermission" name="contact_permission" type="checkbox" required> اجازه می‌دهم با این شماره تماس گرفته شود.</label>
 
         <p></p>
         <button type="submit" class="wide">ارسال درخواست</button>

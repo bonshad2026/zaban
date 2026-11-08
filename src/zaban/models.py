@@ -63,7 +63,11 @@ class ConsultRequest(Base):
     phone: Mapped[str] = mapped_column(String(16))
     message: Mapped[str] = mapped_column(Text, default="")
     preferred_time: Mapped[str | None] = mapped_column(String(60), nullable=True)
-    status: Mapped[str] = mapped_column(String(20), default="new")  # new, contacted, closed
+    last_name: Mapped[str] = mapped_column(String(120), default="")
+    subject: Mapped[str] = mapped_column(String(160), default="")
+    # The caller agrees to be phoned. The form does not send without it.
+    contact_permission: Mapped[bool] = mapped_column(default=False)
+    status: Mapped[str] = mapped_column(String(20), default="new")  # new, reviewed, called, recall, awaiting_reply, closed (old: contacted)
     request_ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
 
@@ -209,6 +213,8 @@ class TutorSession(Base):
     ends_at: Mapped[datetime] = mapped_column(DateTime)
     ended_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # The short evaluation written after the lesson, shown in the learner progress and the parent report.
+    evaluation: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     student: Mapped[Student] = relationship(back_populates="sessions")
     messages: Mapped[list["Message"]] = relationship(
@@ -302,6 +308,8 @@ class LearningProgram(Base):
     goal: Mapped[str] = mapped_column(String(40))
     # The learner pauses after this many lessons, until the program is approved to continue.
     block_size: Mapped[int] = mapped_column(Integer, default=24)
+    # The length of the whole course, in months (for example 24 for two years).
+    duration_months: Mapped[int] = mapped_column(Integer, default=24)
     # Goes up on every change, so the lessons that were already played keep their own version.
     version: Mapped[int] = mapped_column(Integer, default=1)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
@@ -316,6 +324,10 @@ class ProgramItem(Base):
     position: Mapped[int] = mapped_column(Integer)
     title: Mapped[str] = mapped_column(String(160))
     activity: Mapped[str] = mapped_column(Text, default="")
+    # The course stage this lesson belongs to, such as "Stage 1: greetings". Empty means no stage.
+    stage: Mapped[str] = mapped_column(String(80), default="")
+    # The concepts this one lesson covers. One item is one lesson, so its concepts belong to that lesson only.
+    concepts: Mapped[list] = mapped_column(JSON, default=list)
     phrases: Mapped[list] = mapped_column(JSON, default=list)
 
 
@@ -349,3 +361,85 @@ class LessonItem(Base):
     program_version: Mapped[int] = mapped_column(Integer)
     counted: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class CooperationRequest(Base):
+    # A public request from the cooperation form, for people who want to work with the company (not learners).
+    __tablename__ = "cooperation_requests"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    subject: Mapped[str] = mapped_column(String(160))
+    phone: Mapped[str] = mapped_column(String(16))
+    email: Mapped[str | None] = mapped_column(String(190), nullable=True)
+    message: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(20), default="new")  # new, contacted, closed
+    request_ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+
+
+class HelpContent(Base):
+    # A learning aid: a podcast, story, animation, video or sample. It is either a file stored in the database
+    # (data and mime) or a link (url). Learners see only the items that match their age, level and interests.
+    __tablename__ = "help_content"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    title: Mapped[str] = mapped_column(String(160))
+    category: Mapped[str] = mapped_column(String(20))  # podcast, story, animation, video, sample, other
+    age_band: Mapped[str] = mapped_column(String(1))  # K, J, T, S, A (same codes as the curriculum)
+    level: Mapped[str] = mapped_column(String(2))
+    gender: Mapped[str | None] = mapped_column(String(10), nullable=True)  # empty means for everyone
+    interests: Mapped[str] = mapped_column(String(200), default="")  # comma-separated tags
+    topic_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    stage: Mapped[str | None] = mapped_column(String(40), nullable=True)  # course stage, free text
+    url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    mime: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    data: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class SelfTest(Base):
+    # An adult or learner's own test ("خودت رو محک بزن"). The config holds the choices the learner made.
+    __tablename__ = "self_tests"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    student_id: Mapped[str] = mapped_column(ForeignKey("students.id"), index=True)
+    kind: Mapped[str] = mapped_column(String(20))  # qa, conversation, mixed, suggested
+    skill: Mapped[str] = mapped_column(String(20))  # writing, listening, speaking, mixed
+    minutes: Mapped[int] = mapped_column(Integer)
+    level_used: Mapped[str | None] = mapped_column(String(4), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="active")  # active, finished
+    ends_at: Mapped[datetime] = mapped_column(DateTime)
+    result: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+    messages: Mapped[list["SelfTestMessage"]] = relationship(
+        back_populates="test", cascade="all, delete-orphan", order_by="SelfTestMessage.id"
+    )
+
+
+class SelfTestMessage(Base):
+    __tablename__ = "self_test_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    test_id: Mapped[str] = mapped_column(ForeignKey("self_tests.id"), index=True)
+    role: Mapped[str] = mapped_column(String(10))
+    content: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+    test: Mapped[SelfTest] = relationship(back_populates="messages")
+
+
+class LearnerDetails(Base):
+    # Personal facts about a learner that shape the lesson prompt. Filled by the learner, or by the parent for a child.
+    __tablename__ = "learner_details"
+
+    student_id: Mapped[str] = mapped_column(ForeignKey("students.id"), primary_key=True)
+    age: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    gender: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    grade: Mapped[str | None] = mapped_column(String(40), nullable=True)  # school grade, free text
+    attributes: Mapped[str] = mapped_column(Text, default="")  # personality and what they like in a teacher
+    conversation_style: Mapped[str | None] = mapped_column(String(20), nullable=True)  # chat, story, role_play, quiz, mixed
+    response_style: Mapped[str | None] = mapped_column(String(20), nullable=True)  # gentle, direct, playful, strict
+    level_sample: Mapped[str] = mapped_column(Text, default="")  # a sample of the learner's English or a level code
+    free_text: Mapped[str] = mapped_column(Text, default="")  # anything else the learner wants Niko to know
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)

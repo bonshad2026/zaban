@@ -62,6 +62,11 @@
 
   const loaders = {
     consults: loadConsults,
+    cooperations: loadCooperations,
+    overview: loadOverview,
+    helpcontent: loadHelpContent,
+    settings: loadSettings,
+    build: async () => {},
     adults: loadAdults,
     payments: loadPayments,
     plans: loadPlans,
@@ -74,7 +79,8 @@
 
   function openTab(name) {
     document.querySelectorAll(".admin-tabs .tab").forEach((t) => t.classList.toggle("is-active", t.dataset.tab === name));
-    ["consults", "adults", "payments", "plans", "students", "curriculum", "programs", "global", "voices"].forEach((n) => show(`tab-${n}`, n === name));
+    ["overview", "consults", "cooperations", "helpcontent", "settings", "build", "adults", "payments", "plans", "students", "curriculum", "programs", "global", "voices"]
+      .forEach((n) => show(`tab-${n}`, n === name));
     return run(loaders[name]);
   }
 
@@ -82,16 +88,21 @@
 
   async function loadConsults() {
     const rows = await Z.request("GET", `${API}/consults`);
-    fill($("consultTable"), ["زمان", "نام", "شماره", "زمان ترجیحی", "پیام", "وضعیت", "عملیات"],
+    fill($("consultTable"), ["زمان", "نام", "موضوع", "شماره", "اجازه‌ی تماس", "زمان ترجیحی", "پیام", "وضعیت", "عملیات"],
       rows.map((r) => [
         Z.fmtDateTime(r.created_at),
-        r.name,
+        `${r.name} ${r.last_name || ""}`.trim(),
+        r.subject || "—",
         r.phone,
+        r.contact_permission ? "بله" : "نه",
         r.preferred_time,
         r.message,
         r.status,
         actions(
-          button("تماس گرفته شد", () => setConsultStatus(r.id, "contacted")),
+          button("بررسی شد", () => setConsultStatus(r.id, "reviewed")),
+          button("تماس گرفته شد", () => setConsultStatus(r.id, "called")),
+          button("تماس مجدد", () => setConsultStatus(r.id, "recall")),
+          button("منتظر پاسخ", () => setConsultStatus(r.id, "awaiting_reply")),
           button("بسته شد", () => setConsultStatus(r.id, "closed")),
         ),
       ]));
@@ -102,6 +113,186 @@
       await Z.request("POST", `${API}/consults/${id}/status`, { status });
       await loadConsults();
     });
+  }
+
+  // ----- Cooperation requests -----
+
+  async function loadCooperations() {
+    const rows = await Z.request("GET", `${API}/cooperations`);
+    fill($("cooperationTable"), ["زمان", "موضوع", "شماره", "ایمیل", "توضیحات", "وضعیت", "عملیات"],
+      rows.map((r) => [
+        Z.fmtDateTime(r.created_at),
+        r.subject,
+        r.phone,
+        r.email,
+        r.message,
+        r.status,
+        actions(
+          button("تماس گرفته شد", () => setCooperationStatus(r.id, "contacted")),
+          button("بسته شد", () => setCooperationStatus(r.id, "closed")),
+        ),
+      ]));
+  }
+
+  function setCooperationStatus(id, status) {
+    return run(async () => {
+      await Z.request("POST", `${API}/cooperations/${id}/status`, { status });
+      await loadCooperations();
+    });
+  }
+
+  // ----- Overview, learner detail, help content, settings and build -----
+
+  function kv(label, value) {
+    return Z.el("div", "kv", `${label}: ${value}`);
+  }
+
+  async function loadOverview() {
+    const data = await Z.request("GET", `${API}/overview`);
+    const box = $("overviewBox");
+    box.replaceChildren(
+      kv("ثبت‌نام‌کنندگان بزرگسال", data.users.adults),
+      kv("دانش‌آموزان", data.users.learners),
+      kv("پلن‌های فعال", data.active_plans),
+      kv("پرداخت‌ها (بر اساس وضعیت)", JSON.stringify(data.payments)),
+      kv("درخواست‌های مشاوره", JSON.stringify(data.consults)),
+      kv("درخواست‌های همکاری", JSON.stringify(data.cooperations)),
+      kv("جلسه‌ها (کل / کامل‌شده)", `${data.lessons.total} / ${data.lessons.completed}`),
+      kv("آزمون‌های «خودت رو محک بزن»", data.self_tests),
+    );
+    data.tokens.forEach((t) => box.appendChild(kv(`توکن ${t.tenant}`,
+      `مصرف ${t.used} از ${t.quota} (${t.percent_used}٪) — باقی‌مانده ${t.remaining}`
+      + (t.expires_at ? ` — انقضا ${Z.fmtDate(t.expires_at)}` : ""))));
+  }
+
+  async function loadLearner(event) {
+    event.preventDefault();
+    const id = $("learnerId").value.trim();
+    const box = $("learnerBox");
+    box.replaceChildren();
+    try {
+      const d = await Z.request("GET", `${API}/learners/${encodeURIComponent(id)}`);
+      box.append(
+        kv("نام", d.display_name || "—"),
+        kv("سن (گروه)", d.age_band),
+        kv("سطح", d.cefr_level || "تعیین نشده"),
+        kv("اطلاعات", JSON.stringify(d.details)),
+        kv("برنامه", d.progress.program ? `${d.progress.program.name} — ${d.progress.percent}٪` : "بدون برنامه"),
+        kv("ارزیابی‌ها", d.evaluations || "—"),
+      );
+    } catch (err) {
+      box.appendChild(Z.el("p", "error", err.message));
+    }
+  }
+
+  async function loadHelpContent() {
+    const rows = await Z.request("GET", `${API}/help-content`);
+    fill($("helpTable"), ["عنوان", "دسته", "گروه سنی", "سطح", "منبع", "عملیات"],
+      rows.map((r) => [
+        r.title,
+        r.category,
+        r.age_band,
+        r.level,
+        r.url || `فایل (${Math.round(r.size_bytes / 1024)} کیلوبایت)`,
+        actions(button("حذف", () => deleteHelpContent(r.id))),
+      ]));
+  }
+
+  function deleteHelpContent(id) {
+    return run(async () => {
+      if (!confirm("این محتوا حذف شود؟")) return;
+      await Z.request("DELETE", `${API}/help-content/${id}`);
+      await loadHelpContent();
+    });
+  }
+
+  function readFileBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(",")[1]);
+      reader.onerror = () => reject(new Error("فایل خوانده نشد"));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function addHelpContent(event) {
+    event.preventDefault();
+    Z.showError($("hcError"), "");
+    const file = $("hcFile").files[0];
+    const url = $("hcUrl").value.trim();
+    const body = {
+      title: $("hcTitle").value.trim(),
+      category: $("hcCategory").value,
+      age_band: $("hcBand").value,
+      level: $("hcLevel").value,
+      gender: $("hcGender").value || null,
+      interests: $("hcInterests").value.trim(),
+      stage: $("hcStage").value.trim() || null,
+    };
+    if (file) {
+      body.data_base64 = await readFileBase64(file);
+      body.mime = file.type || "application/octet-stream";
+    } else {
+      body.url = url || null;
+    }
+    try {
+      await Z.request("POST", `${API}/help-content`, body);
+      event.target.reset();
+      await loadHelpContent();
+    } catch (err) {
+      Z.showError($("hcError"), err.message);
+    }
+  }
+
+  async function loadSettings() {
+    const data = await Z.request("GET", `${API}/settings`);
+    $("setMode").value = data.prompt_mode;
+    $("setExpected").value = data.expected_output || "";
+    $("setProvider").value = data.payment_provider;
+    $("secretsList").replaceChildren(
+      ...Object.entries(data.secrets).map(([k, v]) => Z.el("li", "", `${k}: ${v === true ? "تنظیم شده" : v === false ? "تنظیم نشده" : v}`)),
+    );
+    const prompt = await Z.request("GET", `${API}/self-test-prompt`);
+    $("stPrompt").value = prompt.text;
+  }
+
+  function saveSettings() {
+    return run(async () => {
+      await Z.request("POST", `${API}/settings`, {
+        prompt_mode: $("setMode").value,
+        expected_output: $("setExpected").value,
+        payment_provider: $("setProvider").value,
+      });
+      $("settingsNotice").hidden = false;
+      $("settingsNotice").textContent = "تنظیمات ذخیره شد.";
+    });
+  }
+
+  function saveSelfTestPrompt() {
+    return run(async () => {
+      await Z.request("POST", `${API}/self-test-prompt`, { text: $("stPrompt").value });
+      $("settingsNotice").hidden = false;
+      $("settingsNotice").textContent = "پرامپت آزمون ذخیره شد.";
+    });
+  }
+
+  async function downloadBuild(event) {
+    event.preventDefault();
+    Z.showError($("buildError"), "");
+    const since = $("buildSince").value.trim();
+    const query = since ? `?since=${encodeURIComponent(since)}` : "";
+    const response = await fetch(`${API}/build${query}`, { method: "POST", credentials: "same-origin" });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      Z.showError($("buildError"), typeof data.detail === "string" ? data.detail : "خروجی ساخته نشد.");
+      return;
+    }
+    const blob = await response.blob();
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "zaban-build.zip";
+    link.click();
+    URL.revokeObjectURL(link.href);
   }
 
   // ----- Sign-ups -----
@@ -452,6 +643,9 @@
     if (!item) return;
     $("progNumber").value = item.position;
     $("progTitle").value = item.title;
+    $("progStage").value = item.stage || "";
+    $("progConcepts").value = (item.concepts || []).join("\n");
+    $("progDuration").value = program.duration_months;
     $("progActivity").value = item.activity;
     $("progPhrases").value = item.phrases.join("\n");
     setError("progError", "");
@@ -495,6 +689,16 @@
     });
   }
 
+  async function saveProgramDuration(event) {
+    event.preventDefault();
+    const program = selectedProgram();
+    if (!program) return;
+    await run(async () => {
+      await Z.request("POST", `${API}/programs/${program.id}/duration`, { duration_months: Number($("progDuration").value) });
+      await loadPrograms();
+    });
+  }
+
   async function saveProgramItem(event) {
     event.preventDefault();
     setError("progError", "");
@@ -504,6 +708,8 @@
       const number = Number($("progNumber").value);
       const result = await Z.request("PUT", `${API}/programs/${program.id}/items/${number}`, {
         title: $("progTitle").value,
+        stage: $("progStage").value.trim(),
+        concepts: $("progConcepts").value.split("\n").map((c) => c.trim()).filter(Boolean),
         activity: $("progActivity").value,
         phrases: $("progPhrases").value.split("\n").map((p) => p.trim()).filter(Boolean),
       });
@@ -551,10 +757,16 @@
     $("voiceForm").addEventListener("submit", addVoice);
     $("variantForm").addEventListener("submit", saveVariant);
     $("progItemForm").addEventListener("submit", saveProgramItem);
+    $("progDurationForm").addEventListener("submit", saveProgramDuration);
     $("progSelect").addEventListener("change", () => { renderProgramItems(); showProgramItem(1); });
     ["curTopic", "curBand", "curLevel"].forEach((id) => $(id).addEventListener("change", showSelectedVariant));
     $("globalText").addEventListener("input", updateGlobalCount);
     $("profileText").addEventListener("input", updateProfileCount);
+    $("learnerForm").addEventListener("submit", loadLearner);
+    $("helpForm").addEventListener("submit", addHelpContent);
+    $("setSave").addEventListener("click", saveSettings);
+    $("stPromptSave").addEventListener("click", saveSelfTestPrompt);
+    $("buildForm").addEventListener("submit", downloadBuild);
     $("profileCancel").addEventListener("click", () => {
       editingStudent = null;
       show("profileForm", false);

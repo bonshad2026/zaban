@@ -22,6 +22,10 @@ from zaban.schemas import (
 )
 from zaban.security import Auth, get_auth, get_student_for_auth, issue_student_token, require_manager
 from zaban.services.ai import tutor_reply
+from zaban.models import LearnerDetails
+from zaban.services.evaluation import course_note, evaluate_session, past_evaluations
+from zaban.services.learner_details import details_out
+from zaban.services.settings_store import EXPECTED_OUTPUT_KEY, PROMPT_MODE_DEFAULT, PROMPT_MODE_KEY, get_setting
 from zaban.services.curriculum import choose_topic, record_lesson_topic, session_topic, topic_note
 from zaban.services.programs import (
     advance_if_done,
@@ -55,6 +59,20 @@ def _require_student_plan(db: DBSession, student: Student) -> None:
     owner_id = student.guardian_id or student.self_owner_id
     if owner_id:
         require_plan(db.get(Guardian, owner_id))
+
+
+def _require_complete_profile(db: DBSession, student: Student) -> None:
+    # A lesson needs the level and the basic facts (age and gender) first, so the prompt is never built from guesses.
+    details = db.get(LearnerDetails, student.id)
+    missing = []
+    if not student.cefr_level:
+        missing.append("level")
+    if details is None or not details.age:
+        missing.append("age")
+    if details is None or not details.gender:
+        missing.append("gender")
+    if missing:
+        raise HTTPException(status_code=409, detail="Complete the profile before starting a lesson: " + ", ".join(missing))
 
 
 def _check_pin_if_guardian(auth: Auth, password: str) -> None:
@@ -386,6 +404,7 @@ def start_session(
     student = get_student_for_auth(db, auth, student_id)
     _require_consent(db, student)
     _require_student_plan(db, student)
+    _require_complete_profile(db, student)
     ensure_quota(auth.tenant)
 
     now = utcnow()
@@ -441,6 +460,7 @@ def get_session(session_id: str, auth: Auth = Depends(get_auth), db: DBSession =
     now = utcnow()
     finish_if_due(session, now)
     db.commit()
+    evaluate_session(db, session)
     return _session_out(session, now)
 
 
@@ -481,6 +501,11 @@ def send_message(
         db.get(TutorProfile, student.id),
         get_accent(db, student.id),
         _lesson_note(db, session.id),
+        details=db.get(LearnerDetails, student.id),
+        mode=get_setting(db, PROMPT_MODE_KEY, PROMPT_MODE_DEFAULT),
+        expected_output=get_setting(db, EXPECTED_OUTPUT_KEY),
+        past_notes=past_evaluations(db, student.id),
+        course_note=course_note(db, student),
     )
     reply = tutor_reply(system_prompt, history)
 

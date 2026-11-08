@@ -2,6 +2,7 @@ import os
 
 from zaban.db import SessionLocal
 from zaban.models import Tenant
+from zaban.models import LearnerDetails, Student
 from zaban.services.progress import cefr_from_score, progress_status
 
 DEMO = {"X-API-Key": os.environ["ZABAN_DEMO_API_KEY"]}
@@ -36,6 +37,7 @@ def test_lesson_requires_parent_consent(client):
 def test_full_lesson_flow_and_reports(client):
     student_id = _create_student(client, "full-flow")
     _give_consent(client, student_id)
+    _complete_profile(student_id)
 
     placement = client.post(f"/v1/students/{student_id}/placement", json={"score": 45}, headers=DEMO)
     assert placement.json()["cefr_level"] == "B1"
@@ -100,6 +102,7 @@ def test_student_token_only_reaches_own_data(client):
 def test_quota_exhaustion_blocks_new_lessons(client):
     student_id = _create_student(client, "quota")
     _give_consent(client, student_id)
+    _complete_profile(student_id)
 
     with SessionLocal() as db:
         tenant = db.query(Tenant).filter(Tenant.name == "Demo Tenant").one()
@@ -135,3 +138,12 @@ def test_progress_status_thresholds():
     assert progress_status(50, 45) == "on_track"
     assert progress_status(50, 30) == "behind"
     assert progress_status(50, 10) == "well_behind"
+
+
+def _complete_profile(student_id: str) -> None:
+    # A lesson needs a level, an age and a gender. Tests set them directly, as the parent or learner would.
+    with SessionLocal() as db:
+        student = db.get(Student, student_id)
+        student.cefr_level = student.cefr_level or "A2"
+        db.merge(LearnerDetails(student_id=student_id, age=11, gender="female"))
+        db.commit()

@@ -21,6 +21,7 @@
         <p></p>
         <button type="submit" class="wide">ورود</button>
         <p class="error" id="loginError" hidden></p>
+        <p class="muted">والد یا بزرگسال هستید؟ <a href="/parent">از اینجا وارد شوید</a></p>
       </form>
     </div>
   </section>
@@ -32,6 +33,11 @@
       <button class="tab is-active" type="button" data-tab="lesson">جلسه</button>
       <button class="tab" type="button" data-tab="accent">لهجه</button>
       <button class="tab" type="button" data-tab="report">گزارش من</button>
+      <button class="tab" type="button" data-tab="progress">پیشرفت</button>
+      <button class="tab" type="button" data-tab="profile">اطلاعات من</button>
+      <button class="tab" type="button" data-tab="help">کمک‌آموزشی</button>
+      <button class="tab" type="button" data-tab="test">خودت رو محک بزن</button>
+      <button class="tab" type="button" data-tab="payments">پرداخت‌ها</button>
     </nav>
 
     <main class="wrap">
@@ -112,6 +118,150 @@
       <section id="tab-report" hidden>
         <div class="card" id="reportBox"></div>
       </section>
+
+      <section id="tab-profile" class="tool-section" hidden>
+        <div class="card">
+          <h2>اطلاعات من</h2>
+          <p class="muted">این اطلاعات به Niko کمک می‌کند جلسه را برای شما شخصی‌سازی کند. هر وقت بخواهید می‌توانید آن‌ها را تغییر دهید.</p>
+          <p class="notice" id="profileNotice" hidden></p>
+          <label for="pfLevel">سطح انگلیسی من</label>
+          <div class="row">
+            <select id="pfLevel">
+              <option value="">هنوز نمی‌دانم</option>
+              <option value="A1">A1 (تازه شروع کرده‌ام)</option>
+              <option value="A2">A2 (کلمات ساده را می‌فهمم)</option>
+              <option value="B1">B1 (درباره‌ی زندگی‌ام حرف می‌زنم)</option>
+              <option value="B2">B2 (با اعتماد به نفس حرف می‌زنم)</option>
+              <option value="C1">C1 (خیلی مسلط)</option>
+              <option value="C2">C2 (تقریباً مثل بومی‌ها)</option>
+            </select>
+            <button type="button" id="pfLevelSave" class="ghost">ذخیره‌ی سطح</button>
+          </div>
+          <form id="profileForm">
+            <label for="pfAge">سن</label>
+            <input id="pfAge" type="number" min="3" max="99" class="ltr-field">
+            <label for="pfGender">جنسیت</label>
+            <select id="pfGender">
+              <option value="">انتخاب نشده</option>
+              <option value="female">دختر / زن</option>
+              <option value="male">پسر / مرد</option>
+              <option value="other">دیگر</option>
+            </select>
+            <label for="pfGrade">مقطع تحصیلی</label>
+            <input id="pfGrade" maxlength="40" placeholder="مثلاً پنجم دبستان">
+            <label for="pfAttributes">دوست دارم معلمم چطور باشد</label>
+            <textarea id="pfAttributes" rows="2" maxlength="1000" placeholder="مثلاً مهربان، با شوخی، صبور"></textarea>
+            <label for="pfConversation">دوست دارم چطور حرف بزنیم</label>
+            <select id="pfConversation">
+              <option value="">انتخاب نشده</option>
+              <option value="chat">گفتگوی آزاد</option>
+              <option value="story">داستان ساختن با هم</option>
+              <option value="role_play">نقش‌بازی</option>
+              <option value="quiz">سؤال و جواب</option>
+              <option value="mixed">ترکیبی</option>
+            </select>
+            <label for="pfResponse">سبک پاسخ Niko</label>
+            <select id="pfResponse">
+              <option value="">انتخاب نشده</option>
+              <option value="gentle">ملایم</option>
+              <option value="direct">مستقیم</option>
+              <option value="playful">بازیگوش</option>
+              <option value="strict">سخت‌گیر</option>
+            </select>
+            <label for="pfSample">یک جمله‌ی انگلیسی خودتان (اختیاری)</label>
+            <textarea id="pfSample" rows="2" maxlength="1000" class="ltr-field"></textarea>
+            <label for="pfFree">هر چیز دیگری که Niko باید بداند</label>
+            <textarea id="pfFree" rows="3" maxlength="1000"></textarea>
+            <p><button type="submit">ذخیره‌ی اطلاعات</button></p>
+            <p class="error" id="profileError" hidden></p>
+          </form>
+        </div>
+      </section>
+
+      <section id="tab-progress" class="tool-section" hidden>
+        <div class="card">
+          <h2>پیشرفت من</h2>
+          <p class="notice" id="progressNotice" hidden></p>
+          <p id="progressSummary" class="muted"></p>
+          <div class="bar" aria-hidden="true"><span id="progressBar"></span></div>
+          <h3>مرحله‌ها</h3>
+          <div id="progressStages"></div>
+          <h3>جلسه‌های من</h3>
+          <div id="progressSessions"></div>
+        </div>
+      </section>
+
+      <section id="tab-help" class="tool-section" hidden>
+        <div class="card">
+          <h2>محتوای کمک‌آموزشی</h2>
+          <p class="muted">پادکست، داستان، انیمیشن و نمونه‌ها برای سطح و سن شما.</p>
+          <div class="row">
+            <select id="helpCategory">
+              <option value="">همه‌ی دسته‌ها</option>
+              <option value="podcast">پادکست</option>
+              <option value="story">داستان</option>
+              <option value="animation">انیمیشن</option>
+              <option value="video">ویدئو</option>
+              <option value="sample">نمونه</option>
+              <option value="other">دیگر</option>
+            </select>
+            <input id="helpSearch" type="search" placeholder="جست‌وجو">
+            <button type="button" id="helpGo" class="ghost">نمایش</button>
+          </div>
+          <p class="notice" id="helpNotice" hidden></p>
+          <div id="helpList"></div>
+        </div>
+      </section>
+
+      <section id="tab-test" class="tool-section" hidden>
+        <div class="card" id="testSetup">
+          <h2>خودت رو محک بزن</h2>
+          <p class="muted">Niko از شما سؤال می‌پرسد و در پایان یک ارزیابی کوتاه می‌نویسد.</p>
+          <label for="testKind">نوع آزمون</label>
+          <select id="testKind">
+            <option value="suggested" selected>پیشنهاد سیستم</option>
+            <option value="qa">سؤال و جواب</option>
+            <option value="conversation">مکالمه</option>
+            <option value="mixed">ترکیبی</option>
+          </select>
+          <label for="testSkill">مهارت</label>
+          <select id="testSkill">
+            <option value="mixed" selected>چند مهارت</option>
+            <option value="writing">نوشتن</option>
+            <option value="listening">شنیداری</option>
+            <option value="speaking">گفتاری</option>
+          </select>
+          <label for="testMinutes">مدت آزمون</label>
+          <select id="testMinutes">
+            <option value="5">۵ دقیقه</option>
+            <option value="10" selected>۱۰ دقیقه</option>
+            <option value="15">۱۵ دقیقه</option>
+            <option value="20">۲۰ دقیقه</option>
+            <option value="30">۳۰ دقیقه</option>
+          </select>
+          <p><button type="button" id="testStart">شروع آزمون</button></p>
+          <p class="error" id="testError" hidden></p>
+        </div>
+        <div class="card" id="testRun" hidden>
+          <div class="lesson-top">
+            <span class="chip" id="testStatus"></span>
+            <button type="button" id="testFinish" class="ghost">پایان آزمون</button>
+          </div>
+          <div class="chat" id="testChat" aria-live="polite"></div>
+          <div class="composer">
+            <textarea id="testInput" class="ltr-field" rows="2" maxlength="500"></textarea>
+            <button type="button" id="testSend" class="send">ارسال</button>
+          </div>
+          <div id="testResult" hidden></div>
+        </div>
+      </section>
+
+      <section id="tab-payments" class="tool-section" hidden>
+        <div class="card">
+          <h2>پرداخت‌ها</h2>
+          <div class="table-box"><table class="admin-table" id="paymentTable"></table></div>
+        </div>
+      </section>
     </main>
   </div>
 
@@ -120,5 +270,6 @@
   <script src="/static/js/accents.js"></script>
   <script src="/static/js/lesson.js"></script>
   <script src="/static/js/student.js"></script>
+  <script src="/static/js/student-tools.js"></script>
 </body>
 </html>

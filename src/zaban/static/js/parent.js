@@ -130,6 +130,7 @@
     renderStudents();
     const s = await Z.request("GET", `/v1/students/${id}`);
     Z.show($("detailBox"), true);
+    $("detailBox").dataset.studentId = id;
     $("detailTitle").textContent = s.display_name || s.username || "فرزند";
     $("infoName").value = s.display_name || "";
     $("infoAge").value = s.age_band;

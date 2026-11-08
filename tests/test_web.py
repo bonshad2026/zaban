@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 from zaban.db import SessionLocal
 from zaban.main import app
-from zaban.models import OtpCode, Student
+from zaban.models import LearnerDetails, OtpCode, Student
 from zaban.services.otp import normalize_phone
 from zaban.services.passwords import hash_password, verify_password
 from zaban.services.sms import dev_outbox
@@ -238,6 +238,7 @@ def test_adult_creates_child_who_signs_in_with_pin_and_starts_a_lesson(client):
     assert created.status_code == 201, created.text
     student_id = created.json()["id"]
     assert client.post(f"/v1/students/{student_id}/consent", json={"accepted": True}).status_code == 201
+    _complete_profile(student_id)
 
     child = TestClient(app)
     assert _student_login(child, NEW_CHILD_PIN, NEW_CHILD_USERNAME).status_code == 200
@@ -405,3 +406,12 @@ def test_adult_and_child_can_be_signed_in_together(client):
     assert client.get("/v1/web/me?role=parent").json()["role"] == "parent"
     assert client.get("/v1/students", headers={"X-Zaban-Role": "parent"}).status_code == 200
     assert client.get("/v1/students", headers={"X-Zaban-Role": "student"}).status_code == 403
+
+
+def _complete_profile(student_id: str) -> None:
+    # A lesson needs a level, an age and a gender. Tests set them directly, as the parent or learner would.
+    with SessionLocal() as db:
+        student = db.get(Student, student_id)
+        student.cefr_level = student.cefr_level or "A2"
+        db.merge(LearnerDetails(student_id=student_id, age=11, gender="female"))
+        db.commit()

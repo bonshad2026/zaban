@@ -10,10 +10,13 @@ from sqlalchemy.orm import Session as DBSession
 from zaban.config import settings
 from zaban.db import get_db
 from zaban.models import (
+    AppSetting,
     BillingPlan,
     ConsultRequest,
+    CooperationRequest,
     CurriculumVariant,
     Guardian,
+    HelpContent,
     Payment,
     Student,
     TutorProfile,
@@ -23,7 +26,8 @@ from zaban.models import (
     VoiceSample,
 )
 from zaban.services.learner import get_global_prompt, set_global_prompt, set_learner_profile
-from zaban.schemas import VoiceSampleCreate
+from zaban.schemas import HelpContentCreate, VoiceSampleCreate
+from zaban.services.self_test import DEFAULT_SELF_TEST_PROMPT, SELF_TEST_PROMPT_KEY
 from zaban.services.payments import confirm_payment
 from zaban.program_data import GOALS
 from zaban.services.programs import approve_block
@@ -57,7 +61,7 @@ class AdminLogin(BaseModel):
 
 
 class StatusUpdate(BaseModel):
-    status: str = Field(pattern=r"^(new|contacted|closed)$")
+    status: str = Field(pattern=r"^(new|reviewed|called|recall|awaiting_reply|contacted|closed)$")
 
 
 class PaymentDecision(BaseModel):
@@ -117,6 +121,9 @@ def list_consults(db: DBSession = Depends(get_db)) -> list[dict]:
         {
             "id": r.id,
             "name": r.name,
+            "last_name": r.last_name,
+            "subject": r.subject,
+            "contact_permission": r.contact_permission,
             "phone": r.phone,
             "message": r.message,
             "preferred_time": r.preferred_time,
@@ -369,6 +376,9 @@ def add_variant(body: VariantCreate, db: DBSession = Depends(get_db)) -> dict:
 
 class ProgramItemSave(BaseModel):
     title: str = Field(min_length=1, max_length=160)
+    # The course stage this lesson belongs to. Empty means no stage.
+    stage: str = Field(default="", max_length=80)
+    concepts: list[str] = Field(default_factory=list, max_length=12)
     activity: str = Field(default="", max_length=600)
     phrases: list[str] = Field(default_factory=list, max_length=12)
 
@@ -391,9 +401,10 @@ def list_programs(db: DBSession = Depends(get_db)) -> dict:
                 "level": program.level,
                 "goal": program.goal,
                 "block_size": program.block_size,
+                "duration_months": program.duration_months,
                 "version": program.version,
                 "items": [
-                    {"position": i.position + 1, "title": i.title, "activity": i.activity, "phrases": i.phrases}
+                    {"position": i.position + 1, "title": i.title, "stage": i.stage, "concepts": i.concepts or [], "activity": i.activity, "phrases": i.phrases}
                     for i in items
                 ],
             }
@@ -412,6 +423,8 @@ def save_program_item(program_id: str, number: int, body: ProgramItemSave, db: D
     if item is None:
         raise HTTPException(status_code=404, detail="Not found")
     item.title = body.title.strip()
+    item.stage = body.stage.strip()
+    item.concepts = [c.strip() for c in body.concepts if c.strip()]
     item.activity = body.activity.strip()
     item.phrases = [p.strip() for p in body.phrases if p.strip()]
     program = db.get(LearningProgram, program_id)
@@ -448,3 +461,126 @@ def list_program_approvals(db: DBSession = Depends(get_db)) -> list[dict]:
             }
         )
     return out
+
+
+# ----- Cooperation requests (people who want to work with the company, not learners) -----
+
+COOPERATION_STATUSES = r"^(new|contacted|closed)$"
+
+
+class CooperationStatus(BaseModel):
+    status: str = Field(pattern=COOPERATION_STATUSES)
+
+
+@router.get("/cooperations", dependencies=[Depends(require_admin)])
+def list_cooperations(db: DBSession = Depends(get_db)) -> list[dict]:
+    rows = db.query(CooperationRequest).order_by(CooperationRequest.created_at.desc()).limit(200).all()
+    return [
+        {
+            "id": r.id,
+            "subject": r.subject,
+            "phone": r.phone,
+            "email": r.email,
+            "message": r.message,
+            "status": r.status,
+            "created_at": r.created_at.isoformat(),
+        }
+        for r in rows
+    ]
+
+
+@router.post("/cooperations/{item_id}/status", dependencies=[Depends(require_admin)])
+def update_cooperation(item_id: int, body: CooperationStatus, db: DBSession = Depends(get_db)) -> dict:
+    item = db.get(CooperationRequest, item_id)
+    if item is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    item.status = body.status
+    db.commit()
+    return {"ok": True}
+
+
+# ----- Help content: podcasts, stories, animations, videos and samples -----
+
+@router.get("/help-content", dependencies=[Depends(require_admin)])
+def list_help_content(db: DBSession = Depends(get_db)) -> list[dict]:
+    rows = db.query(HelpContent).order_by(HelpContent.created_at.desc()).all()
+    return [
+        {
+            "id": h.id,
+            "title": h.title,
+            "category": h.category,
+            "age_band": h.age_band,
+            "level": h.level,
+            "gender": h.gender,
+            "interests": h.interests,
+            "topic_id": h.topic_id,
+            "stage": h.stage,
+            "url": h.url,
+            "mime": h.mime,
+            "size_bytes": len(h.data) if h.data else 0,
+        }
+        for h in rows
+    ]
+
+
+@router.post("/help-content", status_code=201, dependencies=[Depends(require_admin)])
+def add_help_content(body: HelpContentCreate, db: DBSession = Depends(get_db)) -> dict:
+    data = None
+    if body.data_base64 is not None:
+        try:
+            data = base64.b64decode(body.data_base64, validate=True)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="The file could not be read")
+        if not data:
+            raise HTTPException(status_code=400, detail="The file is empty")
+        if len(data) > MAX_SAMPLE_BYTES:
+            raise HTTPException(status_code=413, detail="The file is too large. Use a file under 3 MB")
+    item = HelpContent(
+        title=body.title.strip(),
+        category=body.category,
+        age_band=body.age_band,
+        level=body.level,
+        gender=body.gender,
+        interests=body.interests.strip(),
+        topic_id=body.topic_id,
+        stage=(body.stage or "").strip() or None,
+        url=body.url,
+        mime=body.mime,
+        data=data,
+    )
+    db.add(item)
+    db.commit()
+    return {"id": item.id}
+
+
+@router.delete("/help-content/{item_id}", dependencies=[Depends(require_admin)])
+def delete_help_content(item_id: str, db: DBSession = Depends(get_db)) -> dict:
+    item = db.get(HelpContent, item_id)
+    if item is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    db.delete(item)
+    db.commit()
+    return {"ok": True}
+
+
+# ----- Self-test prompt: the admin can replace the base text used for every test -----
+
+class SelfTestPrompt(BaseModel):
+    text: str = Field(min_length=1, max_length=4000)
+
+
+@router.get("/self-test-prompt", dependencies=[Depends(require_admin)])
+def read_self_test_prompt(db: DBSession = Depends(get_db)) -> dict:
+    row = db.get(AppSetting, SELF_TEST_PROMPT_KEY)
+    return {"text": row.value if row else DEFAULT_SELF_TEST_PROMPT}
+
+
+@router.post("/self-test-prompt", dependencies=[Depends(require_admin)])
+def save_self_test_prompt(body: SelfTestPrompt, db: DBSession = Depends(get_db)) -> dict:
+    row = db.get(AppSetting, SELF_TEST_PROMPT_KEY)
+    if row is None:
+        db.add(AppSetting(key=SELF_TEST_PROMPT_KEY, value=body.text))
+    else:
+        row.value = body.text
+    db.commit()
+    return {"ok": True}

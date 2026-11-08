@@ -289,3 +289,18 @@ ul.plain { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
   .hero-content { padding-top: 36px; }
   .choice { text-align: center; }
 }
+
+/* Learner tools: progress bars, help cards, self-test chat bubbles */
+.bar { height: 10px; background: #e6e0d4; border-radius: 6px; overflow: hidden; margin: 8px 0 16px; }
+.bar .progress-fill { display: block; height: 100%; background: #b8862b; border-radius: 6px; transition: width .3s; }
+.stage { border-bottom: 1px solid #e6e0d4; padding: 8px 0; }
+.help-item { border: 1px solid #e6e0d4; border-radius: 12px; padding: 12px 14px; margin: 10px 0; }
+.help-item audio, .help-item video { width: 100%; margin: 6px 0; }
+.help-video { max-height: 260px; }
+.bubble { max-width: 85%; padding: 8px 12px; border-radius: 14px; margin: 6px 0; white-space: pre-wrap; }
+.bubble.niko { background: #f4efe4; }
+.bubble.me { background: #dfeee6; margin-inline-start: auto; }
+.tool-section .row { gap: 8px; flex-wrap: wrap; }
+@media (max-width: 480px) {
+  .tool-section .row > * { flex: 1 1 100%; }
+}

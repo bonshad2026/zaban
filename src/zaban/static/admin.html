@@ -37,6 +37,11 @@
       <p class="page-actions"><button id="adminLogout" class="ghost" type="button">خروج</button></p>
       <nav class="admin-tabs" aria-label="بخش‌های مدیریت">
         <button type="button" class="tab" data-tab="consults">درخواست‌های مشاوره</button>
+        <button type="button" class="tab" data-tab="overview">نمای کلی</button>
+        <button type="button" class="tab" data-tab="cooperations">درخواست‌های همکاری</button>
+        <button type="button" class="tab" data-tab="helpcontent">محتوای کمک‌آموزشی</button>
+        <button type="button" class="tab" data-tab="settings">پرامپت و درگاه</button>
+        <button type="button" class="tab" data-tab="build">خروجی Build</button>
         <button type="button" class="tab" data-tab="adults">ثبت‌نام‌ها</button>
         <button type="button" class="tab" data-tab="payments">پرداخت‌ها</button>
         <button type="button" class="tab" data-tab="plans">پلن‌ها</button>
@@ -50,6 +55,104 @@
       <section class="card" id="tab-consults">
         <h2>درخواست‌های مشاوره</h2>
         <div class="table-box"><table class="admin-table" id="consultTable"></table></div>
+      </section>
+
+      <section class="card" id="tab-cooperations" hidden>
+        <h2>درخواست‌های همکاری</h2>
+        <div class="table-box"><table class="admin-table" id="cooperationTable"></table></div>
+      </section>
+
+      <section class="card" id="tab-overview" hidden>
+        <h2>نمای کلی</h2>
+        <div id="overviewBox"></div>
+        <h3>جزئیات یک دانش‌آموز</h3>
+        <form id="learnerForm" class="row">
+          <input id="learnerId" class="ltr-field" placeholder="شناسه‌ی دانش‌آموز" required>
+          <button type="submit" class="ghost">نمایش</button>
+        </form>
+        <div id="learnerBox"></div>
+      </section>
+
+      <section class="card" id="tab-helpcontent" hidden>
+        <h2>محتوای کمک‌آموزشی</h2>
+        <form id="helpForm">
+          <label for="hcTitle">عنوان</label>
+          <input id="hcTitle" maxlength="160" required>
+          <label for="hcCategory">دسته</label>
+          <select id="hcCategory">
+            <option value="podcast">پادکست</option>
+            <option value="story">داستان</option>
+            <option value="animation">انیمیشن</option>
+            <option value="video">ویدئو</option>
+            <option value="sample">نمونه</option>
+            <option value="other">دیگر</option>
+          </select>
+          <label for="hcBand">گروه سنی</label>
+          <select id="hcBand">
+            <option value="K">۴ تا ۶ سال</option>
+            <option value="J">۷ تا ۱۰ سال</option>
+            <option value="T">۱۱ تا ۱۴ سال</option>
+            <option value="S">۱۵ تا ۱۸ سال</option>
+            <option value="A">بزرگسال</option>
+          </select>
+          <label for="hcLevel">سطح</label>
+          <select id="hcLevel">
+            <option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option><option>C2</option>
+          </select>
+          <label for="hcGender">جنسیت (اختیاری)</label>
+          <select id="hcGender">
+            <option value="">برای همه</option>
+            <option value="female">دختر</option>
+            <option value="male">پسر</option>
+          </select>
+          <label for="hcInterests">علایق (با کاما جدا کنید)</label>
+          <input id="hcInterests" maxlength="200">
+          <label for="hcStage">مرحله‌ی دوره (اختیاری)</label>
+          <input id="hcStage" maxlength="40">
+          <label for="hcUrl">لینک (اگر فایل ندارید)</label>
+          <input id="hcUrl" type="url" class="ltr-field" placeholder="https://">
+          <label for="hcFile">یا فایل (زیر ۳ مگابایت)</label>
+          <input id="hcFile" type="file" accept="audio/*,video/mp4,application/pdf,image/png">
+          <p><button type="submit">افزودن</button></p>
+          <p class="error" id="hcError" hidden></p>
+        </form>
+        <div class="table-box"><table class="admin-table" id="helpTable"></table></div>
+      </section>
+
+      <section class="card" id="tab-settings" hidden>
+        <h2>پرامپت و درگاه</h2>
+        <p class="notice" id="settingsNotice" hidden></p>
+        <label for="setMode">ترکیب پرامپت کلاس</label>
+        <select id="setMode">
+          <option value="student">فقط پرامپت دانش‌آموز</option>
+          <option value="general">فقط پرامپت عمومی</option>
+          <option value="student_db">پرامپت دانش‌آموز همراه با اطلاعات دیتابیس</option>
+          <option value="all">ترکیب تمام پرامپت‌ها و اطلاعات دیتابیس</option>
+        </select>
+        <label for="setExpected">خروجی‌های موردانتظار از هوش مصنوعی</label>
+        <textarea id="setExpected" rows="4" maxlength="2000"></textarea>
+        <label for="setProvider">درگاه پرداخت</label>
+        <select id="setProvider">
+          <option value="fake">حالت آزمایشی (فقط توسعه)</option>
+          <option value="zarinpal">زرین‌پال</option>
+        </select>
+        <p><button type="button" id="setSave">ذخیره‌ی تنظیمات</button></p>
+        <h3>وضعیت کلیدها</h3>
+        <p class="muted">کلیدهای محرمانه در متغیرهای محیطی سرور نگهداری می‌شوند و در این پنل نمایش داده نمی‌شوند.</p>
+        <ul id="secretsList"></ul>
+        <h3>پرامپت «خودت رو محک بزن»</h3>
+        <textarea id="stPrompt" rows="5" maxlength="4000"></textarea>
+        <p><button type="button" id="stPromptSave">ذخیره‌ی پرامپت آزمون</button></p>
+      </section>
+
+      <section class="card" id="tab-build" hidden>
+        <h2>خروجی Build سایت</h2>
+        <p class="muted">فایل زیپ شامل کد سایت، ردیف‌های دیتابیس، فایل‌های رسانه‌ای و فایل تغییرات ساختار دیتابیس است. کلیدهای عبور و کلیدهای API در آن نیستند.</p>
+        <form id="buildForm" class="row">
+          <input id="buildSince" class="ltr-field" placeholder="فقط تغییرات از (مثلاً main یا یک commit) — خالی برای کل سایت">
+          <button type="submit">دریافت Build</button>
+        </form>
+        <p class="error" id="buildError" hidden></p>
       </section>
 
       <section class="card" id="tab-adults" hidden>
@@ -84,7 +187,13 @@
         </div>
         <div class="table-box"><table class="admin-table" id="progItemsTable"></table></div>
         <h2 style="margin-top:20px">ویرایش یک جلسه</h2>
+        <form id="progDurationForm" class="row">
+          <div><label for="progDuration">مدت دوره (ماه)</label><input id="progDuration" type="number" min="1" max="60"></div>
+          <div><button type="submit" class="ghost">ذخیره‌ی مدت دوره</button></div>
+        </form>
         <form id="progItemForm" class="row">
+          <div class="full"><label for="progStage">مرحله‌ی دوره (اختیاری)</label><input id="progStage" maxlength="80"></div>
+          <div class="full"><label for="progConcepts">مفاهیم این جلسه (هر خط یک مفهوم)</label><textarea id="progConcepts" rows="3" maxlength="800"></textarea></div>
           <div><label for="progNumber">شماره‌ی جلسه</label><input id="progNumber" type="number" min="1" readonly></div>
           <div class="full"><label for="progTitle">عنوان</label><input id="progTitle" maxlength="160"></div>
           <div class="full"><label for="progActivity">فعالیت</label><textarea id="progActivity" rows="2" maxlength="600"></textarea></div>

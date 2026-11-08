@@ -25,13 +25,13 @@ def test_public_pages_are_served_without_sign_in(client):
 def test_consult_request_needs_no_sign_in(client):
     response = client.post(
         "/v1/public/consult",
-        json={"name": "Parisa", "phone": "+98 912 555 0101", "message": "How does it work?", "preferred_time": "evenings"},
+        json={"name": "Parisa", "last_name": "Karimi", "subject": "Kids class", "contact_permission": True, "phone": "+98 912 555 0101", "message": "How does it work?", "preferred_time": "evenings"},
     )
     assert response.status_code == 201, response.text
 
 
 def test_consult_request_rejects_a_bad_number(client):
-    response = client.post("/v1/public/consult", json={"name": "Parisa", "phone": "12345678"})
+    response = client.post("/v1/public/consult", json={"name": "Parisa", "last_name": "Karimi", "subject": "Kids class", "contact_permission": True, "phone": "12345678"})
     assert response.status_code == 400
 
 
@@ -47,7 +47,7 @@ def test_admin_rejects_a_wrong_password(client):
 def test_admin_sees_consult_requests_and_updates_their_status(client):
     client.post(
         "/v1/public/consult",
-        json={"name": "Reza", "phone": "09121110099", "message": "Price?"},
+        json={"name": "Reza", "last_name": "Ahmadi", "subject": "Prices", "contact_permission": True, "phone": "09121110099", "message": "Price?"},
     )
     admin = TestClient(app)
     _admin(admin)

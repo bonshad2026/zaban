@@ -6,8 +6,15 @@
     const form = event.target;
     Z.showError($("consultError"), "");
     try {
+      if (!form.contact_permission.checked) {
+        Z.showError($("consultError"), "برای ارسال درخواست، اجازه‌ی تماس را تأیید کنید.");
+        return;
+      }
       await Z.request("POST", "/v1/public/consult", {
         name: form.name.value.trim(),
+        last_name: form.last_name.value.trim(),
+        subject: form.subject.value,
+        contact_permission: true,
         phone: form.phone.value.trim(),
         preferred_time: form.preferred_time.value.trim() || null,
         message: form.message.value.trim(),
