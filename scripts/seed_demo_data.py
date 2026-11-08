@@ -270,6 +270,8 @@ def main() -> None:
 
         # ----- Admin settings and the self-test prompt -----
         db.merge(AppSetting(key="prompt_mode", value="all"))
+        db.merge(AppSetting(key="global_prompt", value="Teach with short, clear sentences. Praise effort before correcting. "
+                                                       "Use pictures and stories from everyday life in the UK and US. Never rush the learner."))
         db.merge(AppSetting(key="expected_output",
                             value="Use the words from the last lesson. End each lesson with one short task."))
         db.merge(AppSetting(key=SELF_TEST_PROMPT_KEY, value=DEFAULT_SELF_TEST_PROMPT))

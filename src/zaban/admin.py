@@ -17,15 +17,21 @@ from zaban.models import (
     CurriculumVariant,
     Guardian,
     HelpContent,
-    Payment,
-    Student,
-    TutorProfile,
+    LearnerDetails,
     LearningProgram,
+    Payment,
+    Plan,
     ProgramItem,
+    Student,
     StudentProgress,
+    TutorProfile,
     VoiceSample,
 )
-from zaban.services.learner import get_global_prompt, set_global_prompt, set_learner_profile
+from zaban.services.evaluation import course_note, past_evaluations
+from zaban.services.learner import get_accent, get_global_prompt, set_global_prompt, set_learner_profile
+from zaban.services.settings_store import EXPECTED_OUTPUT_KEY, PROMPT_MODE_DEFAULT, PROMPT_MODE_KEY, get_setting
+from zaban.services.programs import current_item, program_note, total_items
+from zaban.services.sessions import compose_start_prompt, join_prompt
 from zaban.schemas import HelpContentCreate, VoiceSampleCreate
 from zaban.services.self_test import DEFAULT_SELF_TEST_PROMPT, SELF_TEST_PROMPT_KEY
 from zaban.services.payments import confirm_payment
@@ -268,6 +274,42 @@ def save_profile(student_id: str, body: ProfileUpdate, db: DBSession = Depends(g
     )
     db.commit()
     return {"ok": True}
+
+
+# The prompt a lesson for this learner would start with, built from the same sources as a real lesson.
+# The parts are returned one by one, so the administrator can see where each sentence comes from.
+@router.get("/students/{student_id}/start-prompt", dependencies=[Depends(require_admin)])
+def preview_start_prompt(student_id: str, db: DBSession = Depends(get_db)) -> dict:
+    student = db.get(Student, student_id)
+    if student is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    plan = (
+        db.query(Plan)
+        .filter(Plan.student_id == student.id, Plan.status == "active")
+        .order_by(Plan.start_date.desc())
+        .first()
+    )
+    lesson = ""
+    progress = db.get(StudentProgress, student.id)
+    if progress is not None:
+        item = current_item(db, progress)
+        if item is not None:
+            lesson = program_note(db.get(LearningProgram, progress.program_id), item, total_items(db, progress.program_id))
+    parts = compose_start_prompt(
+        student,
+        plan,
+        10,
+        get_global_prompt(db),
+        db.get(TutorProfile, student.id),
+        get_accent(db, student.id),
+        lesson,
+        details=db.get(LearnerDetails, student.id),
+        mode=get_setting(db, PROMPT_MODE_KEY, PROMPT_MODE_DEFAULT),
+        expected_output=get_setting(db, EXPECTED_OUTPUT_KEY),
+        past_notes=past_evaluations(db, student.id),
+        course_note=course_note(db, student),
+    )
+    return {"parts": parts, "prompt": join_prompt(parts)}
 
 
 # The general prompt that every lesson uses, before the learner's own details.

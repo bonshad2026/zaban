@@ -45,12 +45,12 @@
     const sample = samples.find((s) => s.accent === code);
     if (sample) {
       new Audio(`/v1/web/student/voice-samples/${sample.id}/audio`).play().catch(() => {
-        Z.showError($("accentNotice"), "نمونه‌ی صوتی پخش نشد. دوباره تلاش کنید.");
+        Z.showError($("accentNotice"), Z.tr("نمونه‌ی صوتی پخش نشد. دوباره تلاش کنید."));
       });
       return;
     }
     if (!Accents.speakSample(code)) {
-      Z.showError($("accentNotice"), "صدای این لهجه روی این دستگاه پیدا نشد.");
+      Z.showError($("accentNotice"), Z.tr("صدای این لهجه روی این دستگاه پیدا نشد."));
     }
   }
 
@@ -62,7 +62,7 @@
     const missing = Accents.LIST.filter((a) => !hasSound(a.code));
     Z.show($("accentNotice"), missing.length > 0);
     $("accentNotice").textContent = missing.length
-      ? "این دستگاه بعضی لهجه‌ها را ندارد. برای همه‌ی لهجه‌ها، Chrome یا Edge را با صدای انگلیسی نصب‌شده امتحان کنید."
+      ? Z.tr("این دستگاه بعضی لهجه‌ها را ندارد. برای همه‌ی لهجه‌ها، Chrome یا Edge را با صدای انگلیسی نصب‌شده امتحان کنید.")
       : "";
     Accents.LIST.forEach((accent) => {
       const selected = accent.code === accentCode;
@@ -70,12 +70,12 @@
       card.appendChild(Z.el("strong", null, `${accent.name} (${accent.nameEn})`));
       card.appendChild(Z.el("p", "sample", accent.sample));
       const recorded = samples.find((s) => s.accent === accent.code);
-      if (recorded) card.appendChild(Z.el("p", "muted", `نمونه‌ی ضبط‌شده: ${recorded.name}`));
+      if (recorded) card.appendChild(Z.el("p", "muted", Z.pick(`نمونه‌ی ضبط‌شده: ${recorded.name}`, `Recorded sample: ${recorded.name}`)));
       const actions = Z.el("div", "actions");
-      const play = Z.el("button", "ghost", "پخش نمونه");
+      const play = Z.el("button", "ghost", Z.tr("پخش نمونه"));
       play.type = "button";
       play.addEventListener("click", () => playAccent(accent.code));
-      const choose = Z.el("button", "", selected ? "انتخاب‌شده" : "انتخاب این لهجه");
+      const choose = Z.el("button", "", selected ? Z.tr("انتخاب‌شده") : Z.tr("انتخاب این لهجه"));
       choose.type = "button";
       choose.disabled = selected;
       choose.addEventListener("click", () => chooseAccent(accent.code));
@@ -104,7 +104,7 @@
     // Lessons need the plan of the adult who owns this profile. Without it, the learner is told why and cannot start.
     if (me.has_active_plan === false) {
       $("startBtn").disabled = true;
-      Z.showError($("startError"), "پلن والدتان فعال نیست، بنابراین جلسه فعلاً شروع نمی‌شود. لطفاً به والدتان بگویید پلن را فعال کنند.");
+      Z.showError($("startError"), Z.tr("پلن والدتان فعال نیست، بنابراین جلسه فعلاً شروع نمی‌شود. لطفاً به والدتان بگویید پلن را فعال کنند."));
     }
     selectTab("lesson");
     const { session } = await Z.request("GET", `/v1/students/${me.id}/sessions/active`);
@@ -133,17 +133,17 @@
     }
     const program = data.program;
     Z.show($("programBox"), true);
-    $("programName").textContent = `${program.name}: ${program.done} از ${program.total} جلسه انجام شده`;
+    $("programName").textContent = Z.pick(`${program.name}: ${program.done} از ${program.total} جلسه انجام شده`, `${program.name}: ${program.done} of ${program.total} lessons done`);
     const notice = $("programNotice");
     if (program.status === "waiting_approval") {
-      notice.textContent = "این بخش از برنامه تمام شد. برنامه‌ی بعدی بعد از تأیید والدین یا معلم ادامه پیدا می‌کند.";
+      notice.textContent = Z.tr("این بخش از برنامه تمام شد. برنامه‌ی بعدی بعد از تأیید والدین یا معلم ادامه پیدا می‌کند.");
     } else if (program.status === "finished") {
-      notice.textContent = "برنامه‌ی شما تمام شد. آفرین!";
+      notice.textContent = Z.tr("برنامه‌ی شما تمام شد. آفرین!");
     }
     Z.show(notice, Boolean(notice.textContent));
     Z.show($("programCurrent"), Boolean(data.current));
     if (data.current) {
-      $("programTitle").textContent = `جلسه ${data.current.number}: ${data.current.title}`;
+      $("programTitle").textContent = Z.pick(`جلسه ${data.current.number}: ${data.current.title}`, `Lesson ${data.current.number}: ${data.current.title}`);
       $("programActivity").textContent = data.current.activity;
       $("programPhrases").textContent = data.current.phrases.join("  ·  ");
     }
@@ -161,7 +161,7 @@
 
   function programRow(item) {
     const mark = item.state === "done" ? "✓ " : item.state === "current" ? "➜ " : "";
-    return Z.el("li", `plan-item is-${item.state}`, `${mark}جلسه ${item.number}: ${item.title}`);
+    return Z.el("li", `plan-item is-${item.state}`, `${mark}${Z.pick("جلسه", "Lesson")} ${item.number}: ${item.title}`);
   }
 
   function renderProgramWindow() {
@@ -206,7 +206,7 @@
   async function loadReport() {
     const box = $("reportBox");
     box.innerHTML = "";
-    box.appendChild(Z.el("p", "muted", "در حال بارگذاری گزارش…"));
+    box.appendChild(Z.el("p", "muted", Z.tr("در حال بارگذاری گزارش…")));
     try {
       const [report, detail] = await Promise.all([
         Z.request("GET", `/v1/students/${me.id}/reports/progress`),
@@ -242,39 +242,42 @@
     const box = $("reportBox");
     box.innerHTML = "";
     const level = detail.cefr_level;
-    const levelText = level ? `${level} (${Z.LEVEL_FA[level]})` : "هنوز تعیین نشده";
+    const levelText = level ? `${level} (${Z.LEVEL_FA[level]})` : Z.tr("هنوز تعیین نشده");
     const completed = report.sessions.filter((s) => s.status === "completed").length;
 
-    box.appendChild(Z.el("h2", null, "گزارش یادگیری من"));
+    box.appendChild(Z.el("h2", null, Z.tr("گزارش یادگیری من")));
     const stats = Z.el("div", "stats");
     stats.append(
-      stat("سطح من", levelText),
-      stat("وضعیت من", Z.STATUS_FA[report.status]),
-      stat("جلسه‌های کامل", String(completed)),
+      stat(Z.tr("سطح من"), levelText),
+      stat(Z.tr("وضعیت من"), Z.STATUS_FA[report.status]),
+      stat(Z.tr("جلسه‌های کامل"), String(completed)),
     );
     box.appendChild(stats);
 
     if (report.plan) {
-      box.appendChild(Z.el("h2", null, "پیشرفت نسبت به برنامه"));
-      box.appendChild(bar("طبق برنامه", report.planned_percent, true));
-      box.appendChild(bar("میزان یادگیری تو", report.actual_percent, false));
-      box.appendChild(Z.el("p", "muted", `پایان برنامه: ${Z.fmtDate(report.plan.end_date)}`));
+      box.appendChild(Z.el("h2", null, Z.tr("پیشرفت نسبت به برنامه")));
+      box.appendChild(bar(Z.tr("طبق برنامه"), report.planned_percent, true));
+      box.appendChild(bar(Z.tr("میزان یادگیری تو"), report.actual_percent, false));
+      box.appendChild(Z.el("p", "muted", Z.pick(`پایان برنامه: ${Z.fmtDate(report.plan.end_date)}`, `The plan ends: ${Z.fmtDate(report.plan.end_date)}`)));
     }
 
-    box.appendChild(Z.el("h2", null, "پیشنهاد برای ادامه"));
+    box.appendChild(Z.el("h2", null, Z.tr("پیشنهاد برای ادامه")));
     box.appendChild(Z.el("p", "suggestion", Z.SUGGESTION_FA[report.status]));
 
     if (report.sessions.length) {
-      box.appendChild(Z.el("h2", null, "جلسه‌های من"));
+      box.appendChild(Z.el("h2", null, Z.tr("جلسه‌های من")));
       const table = document.createElement("table");
       const head = Z.el("tr");
-      ["تاریخ", "عنوان جلسه", "مدت", "امتیاز", "وضعیت"].forEach((title) => head.appendChild(Z.el("th", null, title)));
+      [Z.tr("تاریخ"), Z.tr("عنوان جلسه"), Z.tr("مدت"), Z.tr("امتیاز"), Z.tr("وضعیت")].forEach((title) => head.appendChild(Z.el("th", null, title)));
       table.appendChild(head);
       for (const s of report.sessions) {
         const row = Z.el("tr");
         row.appendChild(Z.el("td", null, Z.fmtDateTime(s.started_at)));
-        row.appendChild(Z.el("td", null, s.title));
-        row.appendChild(Z.el("td", null, `${s.duration_minutes} دقیقه`));
+        const title = s.lesson_number
+          ? `${Z.pick("جلسه", "Lesson")} ${s.lesson_number}: ${s.lesson_title}`
+          : Z.tr("گفتگوی آزاد با Niko");
+        row.appendChild(Z.el("td", null, title));
+        row.appendChild(Z.el("td", null, Z.pick(`${s.duration_minutes} دقیقه`, `${s.duration_minutes} min`)));
         row.appendChild(Z.el("td", null, s.score === null ? "—" : String(Math.round(s.score))));
         row.appendChild(Z.el("td", null, Z.SESSION_FA[s.status] || s.status));
         table.appendChild(row);
@@ -284,7 +287,7 @@
       scroll.appendChild(table);
       box.appendChild(scroll);
     } else {
-      box.appendChild(Z.el("p", "muted", "هنوز جلسه‌ای ثبت نشده است. از تب «جلسه» شروع کن."));
+      box.appendChild(Z.el("p", "muted", Z.tr("هنوز جلسه‌ای ثبت نشده است. از تب «جلسه» شروع کن.")));
     }
   }
 
@@ -312,10 +315,10 @@
       const student = await Z.request("GET", `/v1/students/${me.id}`);
       const notice = $("levelNotice");
       if (student.cefr_level) {
-        notice.textContent = `سطح شما: ${student.cefr_level} (${Z.LEVEL_FA[student.cefr_level]})`;
+        notice.textContent = Z.pick(`سطح شما: ${student.cefr_level} (${Z.LEVEL_FA[student.cefr_level]})`, `Your level: ${student.cefr_level} (${Z.LEVEL_FA[student.cefr_level]})`);
         Z.show($("levelTestBox"), false);
       } else {
-        notice.textContent = "سطح شما هنوز تعیین نشده است. با ۶ سؤال کوتاه سطحتان را پیدا کنید، یا والدتان می‌توانند آن را انتخاب کنند. تا آن زمان Niko از سطح مقدماتی شروع می‌کند.";
+        notice.textContent = Z.tr("سطح شما هنوز تعیین نشده است. با ۶ سؤال کوتاه سطحتان را پیدا کنید، یا والدتان می‌توانند آن را انتخاب کنند. تا آن زمان Niko از سطح مقدماتی شروع می‌کند.");
         Z.show($("levelTestBox"), true);
       }
       Z.show(notice, true);
@@ -365,7 +368,7 @@
       const result = await Z.request("POST", "/v1/web/student/level-test", { answers });
       Z.show($("levelTestForm"), false);
       Z.show($("levelTestStart"), false);
-      $("levelNotice").textContent = `سطح شما تعیین شد: ${result.level} (${Z.LEVEL_FA[result.level]}). ${result.score} از ${result.total} پاسخ درست بود.`;
+      $("levelNotice").textContent = Z.pick(`سطح شما تعیین شد: ${result.level} (${Z.LEVEL_FA[result.level]}). ${result.score} از ${result.total} پاسخ درست بود.`, `Your level is set: ${result.level} (${Z.LEVEL_FA[result.level]}). ${result.score} of ${result.total} answers were correct.`);
       Z.show($("levelTestBox"), false);
     } catch (err) {
       Z.showError($("levelTestError"), err.message);

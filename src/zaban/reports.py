@@ -66,11 +66,12 @@ def _session_rows(db: DBSession, student: Student) -> list[dict]:
     for s in sessions:
         # A lesson of the learning program is titled with its program item. A free talk has no program item.
         found = lesson_item_for(db, s.id)
-        title = f"جلسه {found[1].position + 1}: {found[1].title}" if found else "گفتگوی آزاد با Niko"
+        # The number and title are sent apart, so the page can write the words "Lesson" or "جلسه" in its own language.
         rows.append(
             {
                 "id": s.id,
-                "title": title,
+                "lesson_number": found[1].position + 1 if found else None,
+                "lesson_title": found[1].title if found else None,
                 "started_at": s.started_at.isoformat(),
                 "duration_minutes": s.duration_minutes,
                 "status": s.status,

@@ -4,28 +4,28 @@ const Accents = (() => {
   const LIST = [
     {
       code: "en-US",
-      name: "امریکایی",
+      name: Z.tr("امریکایی"),
       nameEn: "American",
       sample: "Hi there! I'm Niko. Let's practice together. What did you do today?",
       voices: ["Aria", "Jenny", "Zira", "Guy", "Google US English"],
     },
     {
       code: "en-GB",
-      name: "بریتانیایی",
+      name: Z.tr("بریتانیایی"),
       nameEn: "British",
       sample: "Hello! I'm Niko. Shall we have a little chat? How was your day?",
       voices: ["Sonia", "Libby", "Hazel", "Google UK English Female", "Google UK English Male"],
     },
     {
       code: "en-AU",
-      name: "استرالیایی",
+      name: Z.tr("استرالیایی"),
       nameEn: "Australian",
       sample: "G'day! I'm Niko. Let's have a yarn about your day.",
       voices: ["Natasha", "Annette", "Catherine"],
     },
     {
       code: "en-CA",
-      name: "کانادایی",
+      name: Z.tr("کانادایی"),
       nameEn: "Canadian",
       sample: "Hi! I'm Niko. Let's chat a bit. How was your day?",
       voices: ["Clara", "Linda"],

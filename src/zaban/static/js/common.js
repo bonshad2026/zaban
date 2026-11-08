@@ -125,14 +125,24 @@ const Z = (() => {
     return new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(iso) ? iso : iso + "Z");
   }
 
+  // Dates and numbers follow the language the visitor chose.
+  // The language is read from storage, so it is known before the page's first script runs.
+  function currentLang() {
+    try { return localStorage.getItem("zaban-lang") === "en" ? "en" : "fa"; } catch (_) { return "fa"; }
+  }
+
+  function locale() {
+    return currentLang() === "en" ? "en-US" : "fa-IR";
+  }
+
   function fmtDate(iso) {
     const d = parseUtc(iso);
-    return d ? d.toLocaleDateString("fa-IR", { year: "numeric", month: "long", day: "numeric" }) : "—";
+    return d ? d.toLocaleDateString(locale(), { year: "numeric", month: "long", day: "numeric" }) : "—";
   }
 
   function fmtDateTime(iso) {
     const d = parseUtc(iso);
-    return d ? d.toLocaleString("fa-IR", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
+    return d ? d.toLocaleString(locale(), { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
   }
 
   function el(tag, className, text) {
@@ -211,6 +221,7 @@ const Z = (() => {
         const next = document.documentElement.lang === "en" ? "fa" : "en";
         try { localStorage.setItem("zaban-lang", next); } catch (_) { /* storage blocked */ }
         applyLang(next);
+        document.dispatchEvent(new Event("zaban:lang"));
       });
     }
   }
@@ -255,7 +266,7 @@ const Z = (() => {
   }
 
   return {
-    request, friendly, pageRole, parseUtc, fmtDate, fmtDateTime, el, show, showError, showDevCode, initLang,
+    request, friendly, pageRole, parseUtc, locale, currentLang, fmtDate, fmtDateTime, el, show, showError, showDevCode, initLang,
     initSiteHeader, STATUS_FA, SUGGESTION_FA, LEVEL_FA, SESSION_FA,
   };
 })();

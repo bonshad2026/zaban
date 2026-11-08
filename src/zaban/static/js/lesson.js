@@ -4,21 +4,21 @@ const Lesson = (() => {
   const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
   const canSpeak = "speechSynthesis" in window;
   const OPENING = "Hi Niko, I am ready.";
-  const GUARD_NOTE = "این موضوع خارج از درس است. دوباره به انگلیسی و درباره‌ی درس حرف بزن.";
+  const GUARD_NOTE = Z.tr("این موضوع خارج از درس است. دوباره به انگلیسی و درباره‌ی درس حرف بزن.");
 
   const CHIP = {
-    your_turn: ["نوبت توست. بنویس یا میکروفون را بزن", "turn-you"],
-    recording: ["در حال ضبط صدای تو… وقتی تمام شد «ارسال» را بزن", "turn-recording"],
-    waiting: ["Niko در حال فکر کردن است…", "turn-niko"],
-    speaking: ["Niko در حال صحبت است… لطفاً صبر کن", "turn-niko"],
-    ended: ["جلسه تمام شد", "turn-ended"],
+    your_turn: [Z.tr("نوبت توست. بنویس یا میکروفون را بزن"), "turn-you"],
+    recording: [Z.tr("در حال ضبط صدای تو… وقتی تمام شد «ارسال» را بزن"), "turn-recording"],
+    waiting: [Z.tr("Niko در حال فکر کردن است…"), "turn-niko"],
+    speaking: [Z.tr("Niko در حال صحبت است… لطفاً صبر کن"), "turn-niko"],
+    ended: [Z.tr("جلسه تمام شد"), "turn-ended"],
     idle: ["", "turn-ended"],
   };
   const HINT = {
-    your_turn: "Enter یعنی ارسال. برای خط جدید Shift+Enter را بزن.",
-    recording: "حرف بزن. هر وقت تمام شد، روی «ارسال» بزن.",
-    waiting: "منتظر جواب Niko باش.",
-    speaking: "وقت Niko است. بعد از تمام شدن جواب، نوبت تو می‌شود.",
+    your_turn: Z.tr("Enter یعنی ارسال. برای خط جدید Shift+Enter را بزن."),
+    recording: Z.tr("حرف بزن. هر وقت تمام شد، روی «ارسال» بزن."),
+    waiting: Z.tr("منتظر جواب Niko باش."),
+    speaking: Z.tr("وقت Niko است. بعد از تمام شدن جواب، نوبت تو می‌شود."),
     ended: "",
   };
 
@@ -63,7 +63,7 @@ const Lesson = (() => {
 
   function bubble(role, text) {
     const node = Z.el("div", `bubble ${role}`);
-    node.appendChild(Z.el("span", "who-label", role === "user" ? "شما" : "Niko"));
+    node.appendChild(Z.el("span", "who-label", role === "user" ? Z.tr("شما") : "Niko"));
     node.appendChild(document.createTextNode(text));
     $("chat").appendChild(node);
     $("chat").scrollTop = $("chat").scrollHeight;
@@ -86,7 +86,7 @@ const Lesson = (() => {
     const left = Math.max(0, Math.round((S.endsAt - Date.now()) / 1000));
     const minutes = String(Math.floor(left / 60)).padStart(2, "0");
     const seconds = String(left % 60).padStart(2, "0");
-    $("timeLeft").textContent = `زمان باقی‌مانده: ${minutes}:${seconds}`;
+    $("timeLeft").textContent = Z.pick(`زمان باقی‌مانده: ${minutes}:${seconds}`, `Time left: ${minutes}:${seconds}`);
     if (left === 0 && S.sessionId && S.phase !== "ended") endLesson(true);
   }
 
@@ -171,9 +171,9 @@ const Lesson = (() => {
       render();
     };
     rec.onerror = (event) => {
-      if (event.error === "not-allowed") S.lastError = "مرورگر اجازه‌ی استفاده از میکروفون را نداده است.";
-      else if (event.error === "no-speech") S.lastError = "صدایی شنیده نشد. دوباره میکروفون را بزن.";
-      else if (event.error !== "aborted") S.lastError = "میکروفون در دسترس نیست. می‌توانی تایپ کنی.";
+      if (event.error === "not-allowed") S.lastError = Z.tr("مرورگر اجازه‌ی استفاده از میکروفون را نداده است.");
+      else if (event.error === "no-speech") S.lastError = Z.tr("صدایی شنیده نشد. دوباره میکروفون را بزن.");
+      else if (event.error !== "aborted") S.lastError = Z.tr("میکروفون در دسترس نیست. می‌توانی تایپ کنی.");
     };
     rec.onend = () => {
       S.recognizer = null;
@@ -212,7 +212,7 @@ const Lesson = (() => {
     } catch (_) { /* the lesson still closes on screen */ }
     setPhase("ended");
     $("timeLeft").textContent = "";
-    note(automatic ? "زمان جلسه تمام شد. کار خوبی بود!" : "جلسه تمام شد. آفرین!");
+    note(automatic ? Z.tr("زمان جلسه تمام شد. کار خوبی بود!") : Z.tr("جلسه تمام شد. آفرین!"));
     if (S.onEnded) S.onEnded();
   }
 
@@ -241,7 +241,7 @@ const Lesson = (() => {
   function init({ onEnded }) {
     S.onEnded = onEnded;
     if (!SpeechRec) {
-      $("voiceNotice").textContent = "این مرورگر میکروفون ندارد. از Chrome یا Edge استفاده کنید. تایپ همچنان کار می‌کند.";
+      $("voiceNotice").textContent = Z.tr("این مرورگر میکروفون ندارد. از Chrome یا Edge استفاده کنید. تایپ همچنان کار می‌کند.");
       Z.show($("voiceNotice"), true);
     }
     $("micBtn").addEventListener("click", toggleMic);

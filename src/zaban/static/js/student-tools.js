@@ -12,15 +12,15 @@
   };
 
   const CATEGORY_LABELS = {
-    podcast: "پادکست",
-    story: "داستان",
-    animation: "انیمیشن",
-    video: "ویدئو",
-    sample: "نمونه",
-    other: "دیگر",
+    podcast: Z.tr("پادکست"),
+    story: Z.tr("داستان"),
+    animation: Z.tr("انیمیشن"),
+    video: Z.tr("ویدئو"),
+    sample: Z.tr("نمونه"),
+    other: Z.tr("دیگر"),
   };
 
-  const STATUS_LABELS = { paid: "منتظر تأیید", confirmed: "تأیید شده", pending: "در انتظار پرداخت", failed: "ناموفق" };
+  const STATUS_LABELS = { paid: Z.tr("منتظر تأیید"), confirmed: Z.tr("تأیید شده"), pending: Z.tr("در انتظار پرداخت"), failed: Z.tr("ناموفق") };
 
   function toolTab(name) {
     Object.entries(SECTIONS).forEach(([key, id]) => Z.show($(id), key === name));
@@ -79,7 +79,7 @@
       });
       Z.showError($("profileNotice"), "");
       $("profileNotice").hidden = false;
-      $("profileNotice").textContent = "اطلاعات شما ذخیره شد.";
+      $("profileNotice").textContent = Z.tr("اطلاعات شما ذخیره شد.");
     } catch (err) {
       Z.showError($("profileError"), err.message);
     }
@@ -88,13 +88,13 @@
   async function saveLevel() {
     const level = $("pfLevel").value;
     if (!level) {
-      Z.showError($("profileError"), "یک سطح را انتخاب کنید.");
+      Z.showError($("profileError"), Z.tr("یک سطح را انتخاب کنید."));
       return;
     }
     try {
       await Z.request("PUT", "/v1/web/student/level", { cefr_level: level });
       $("profileNotice").hidden = false;
-      $("profileNotice").textContent = `سطح ${level} ذخیره شد.`;
+      $("profileNotice").textContent = Z.pick(`سطح ${level} ذخیره شد.`, `Level ${level} saved.`);
     } catch (err) {
       Z.showError($("profileError"), err.message);
     }
@@ -122,24 +122,24 @@
       stages.replaceChildren();
       sessions.replaceChildren();
       if (!data.program) {
-        $("progressSummary").textContent = "هنوز برنامه‌ای برای شما تعیین نشده است.";
+        $("progressSummary").textContent = Z.tr("هنوز برنامه‌ای برای شما تعیین نشده است.");
         $("progressBar").style.width = "0%";
         return;
       }
       $("progressSummary").textContent =
-        `${data.program.name} — ${data.program.duration_months} ماه — جلسه‌ی ${data.session_number} — ${data.percent}٪ کامل شده`;
+        Z.pick(`${data.program.name} — ${data.program.duration_months} ماه — جلسه‌ی ${data.session_number} — ${data.percent}٪ کامل شده`, `${data.program.name} — ${data.program.duration_months} months — lesson ${data.session_number} — ${data.percent}% complete`);
       $("progressBar").style.width = `${data.percent}%`;
       data.stages.forEach((stage) => {
         const row = el("div", "stage");
-        row.append(el("strong", "", `${stage.name}: ${stage.done} از ${stage.total}`), bar(stage.percent));
+        row.append(el("strong", "", Z.pick(`${stage.name}: ${stage.done} از ${stage.total}`, `${stage.name}: ${stage.done} of ${stage.total}`)), bar(stage.percent));
         stages.appendChild(row);
       });
       if (data.sessions.length === 0) {
-        sessions.appendChild(el("p", "muted", "هنوز جلسه‌ای کامل نشده است."));
+        sessions.appendChild(el("p", "muted", Z.tr("هنوز جلسه‌ای کامل نشده است.")));
       }
       data.sessions.forEach((s) => {
         const row = el("div", "stage");
-        row.append(el("strong", "", Z.fmtDateTime(s.started_at)), el("p", "", s.evaluation || "ارزیابی هنوز نوشته نشده است."));
+        row.append(el("strong", "", Z.fmtDateTime(s.started_at)), el("p", "", s.evaluation || Z.tr("ارزیابی هنوز نوشته نشده است.")));
         sessions.appendChild(row);
       });
     } catch (err) {
@@ -151,8 +151,8 @@
 
   function helpItem(item) {
     const card = el("article", "help-item");
-    card.append(el("h3", "", item.title), el("p", "muted", `${CATEGORY_LABELS[item.category] || item.category} — سطح ${item.level}`));
-    if (item.interests) card.append(el("p", "muted", `موضوع: ${item.interests}`));
+    card.append(el("h3", "", item.title), el("p", "muted", Z.pick(`${CATEGORY_LABELS[item.category] || item.category} — سطح ${item.level}`, `${CATEGORY_LABELS[item.category] || item.category} — level ${item.level}`)));
+    if (item.interests) card.append(el("p", "muted", Z.pick(`موضوع: ${item.interests}`, `Topics: ${item.interests}`)));
     if (item.has_file) {
       const src = `/v1/web/student/help-content/${item.id}/file`;
       if (item.mime && item.mime.startsWith("audio/")) {
@@ -167,13 +167,13 @@
         video.className = "help-video";
         card.appendChild(video);
       }
-      const download = el("a", "btn-link", "دانلود");
+      const download = el("a", "btn-link", Z.tr("دانلود"));
       download.href = src;
       download.setAttribute("download", item.title);
       card.appendChild(download);
     }
     if (item.url) {
-      const link = el("a", "btn-link", "باز کردن");
+      const link = el("a", "btn-link", Z.tr("باز کردن"));
       link.href = item.url;
       link.target = "_blank";
       link.rel = "noopener noreferrer";
@@ -183,7 +183,7 @@
   }
 
   // The category tabs. "" means every category. The tabs use their own class, so the main tab handlers do not catch them.
-  const HELP_TABS = [["", "همه"], ...Object.entries(CATEGORY_LABELS)];
+  const HELP_TABS = [["", Z.tr("همه")], ...Object.entries(CATEGORY_LABELS)];
   let helpCategory = "";
 
   function renderHelpTabs() {
@@ -213,7 +213,7 @@
       const list = $("helpList");
       list.replaceChildren();
       Z.show($("helpNotice"), rows.length === 0);
-      $("helpNotice").textContent = rows.length === 0 ? "برای این سطح و جست‌وجو محتوایی پیدا نشد." : "";
+      $("helpNotice").textContent = rows.length === 0 ? Z.tr("برای این سطح و جست‌وجو محتوایی پیدا نشد.") : "";
       rows.forEach((item) => list.appendChild(helpItem(item)));
     } catch (err) {
       Z.showError($("helpNotice"), err.message);
@@ -231,7 +231,7 @@
 
   // The score Niko gives at the end of a test, out of 100. Older tests have none.
   function scoreText(score) {
-    return score === null || score === undefined ? "نمره ندارد" : `نمره ${Math.round(score).toLocaleString("fa-IR")} از ۱۰۰`;
+    return score === null || score === undefined ? Z.tr("نمره ندارد") : Z.pick(`نمره ${Math.round(score).toLocaleString(Z.locale())} از ۱۰۰`, `Score ${Math.round(score)} of 100`);
   }
 
   // The test run card shows one test at a time: a running test, or a finished one read back from the list.
@@ -244,8 +244,8 @@
     testId = test.id;
     showTestRun(true);
     $("testStatus").textContent = test.status === "finished"
-      ? `آزمون تمام شد — ${scoreText(test.score)}`
-      : `سطح ${test.level || "؟"} — ${test.minutes} دقیقه`;
+      ? Z.pick(`آزمون تمام شد — ${scoreText(test.score)}`, `Test finished — ${scoreText(test.score)}`)
+      : Z.pick(`سطح ${test.level || "؟"} — ${test.minutes} دقیقه`, `Level ${test.level || "?"} — ${test.minutes} min`);
     $("testChat").replaceChildren(...test.messages.map(bubble));
     const finished = test.status === "finished";
     Z.show(document.querySelector("#testRun .composer"), !finished);
@@ -255,8 +255,8 @@
     $("testChat").scrollTop = $("testChat").scrollHeight;
   }
 
-  const KIND_LABELS = { qa: "سؤال و جواب", conversation: "مکالمه", mixed: "ترکیبی", suggested: "پیشنهاد سیستم" };
-  const SKILL_LABELS = { writing: "نوشتن", listening: "شنیداری", speaking: "گفتاری", mixed: "چند مهارت" };
+  const KIND_LABELS = { qa: Z.tr("سؤال و جواب"), conversation: Z.tr("مکالمه"), mixed: Z.tr("ترکیبی"), suggested: Z.tr("پیشنهاد سیستم") };
+  const SKILL_LABELS = { writing: Z.tr("نوشتن"), listening: Z.tr("شنیداری"), speaking: Z.tr("گفتاری"), mixed: Z.tr("چند مهارت") };
 
   async function loadTests() {
     try {
@@ -264,18 +264,18 @@
       const list = $("testList");
       list.replaceChildren();
       Z.show($("testListNotice"), rows.length === 0);
-      $("testListNotice").textContent = rows.length === 0 ? "هنوز آزمونی نداده‌اید. از پایین شروع کنید." : "";
+      $("testListNotice").textContent = rows.length === 0 ? Z.tr("هنوز آزمونی نداده‌اید. از پایین شروع کنید.") : "";
       rows.forEach((t) => {
         const card = el("article", "help-item");
-        const status = t.status === "finished" ? "تمام شده" : "در حال انجام";
-        const view = el("button", "ghost", t.status === "finished" ? "مشاهده‌ی آزمون" : "ادامه‌ی آزمون");
+        const status = t.status === "finished" ? Z.tr("تمام شده") : Z.tr("در حال انجام");
+        const view = el("button", "ghost", t.status === "finished" ? Z.tr("مشاهده‌ی آزمون") : Z.tr("ادامه‌ی آزمون"));
         view.type = "button";
         view.addEventListener("click", () => openTest(t.id));
         card.append(
           el("h3", "", `${KIND_LABELS[t.kind] || t.kind} — ${SKILL_LABELS[t.skill] || t.skill}`),
-          el("p", "muted", `${Z.fmtDateTime(t.created_at)} — ${t.minutes} دقیقه — سطح ${t.level || "؟"} — ${status}`),
+          el("p", "muted", Z.pick(`${Z.fmtDateTime(t.created_at)} — ${t.minutes} دقیقه — سطح ${t.level || "؟"} — ${status}`, `${Z.fmtDateTime(t.created_at)} — ${t.minutes} min — level ${t.level || "?"} — ${status}`)),
           el("p", "muted", t.status === "finished" ? scoreText(t.score) : ""),
-          el("p", "", t.result || "ارزیابی هنوز نوشته نشده است."),
+          el("p", "", t.result || Z.tr("ارزیابی هنوز نوشته نشده است.")),
           view,
         );
         list.appendChild(card);
@@ -341,14 +341,14 @@
       const table = $("paymentTable");
       table.replaceChildren();
       const head = el("tr");
-      ["تاریخ", "پلن", "مبلغ (تومان)", "وضعیت"].forEach((h) => head.appendChild(el("th", "", h)));
+      [Z.tr("تاریخ"), Z.tr("پلن"), Z.tr("مبلغ (تومان)"), Z.tr("وضعیت")].forEach((h) => head.appendChild(el("th", "", h)));
       table.appendChild(head);
       rows.forEach((p) => {
         const tr = el("tr");
         [
           Z.fmtDate(p.created_at),
           p.plan_name || "—",
-          p.amount_toman.toLocaleString("fa-IR"),
+          p.amount_toman.toLocaleString(Z.locale()),
           STATUS_LABELS[p.status] || p.status,
         ].forEach((v) => tr.appendChild(el("td", "", v)));
         table.appendChild(tr);

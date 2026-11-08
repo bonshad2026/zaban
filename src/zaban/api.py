@@ -42,11 +42,14 @@ from zaban.services.payments import require_plan
 from zaban.services.passwords import hash_password
 from zaban.services.progress import build_milestones, cefr_from_score
 from zaban.services.sessions import (
+    block_line,
     build_system_prompt,
+    compose_start_prompt,
     current_block,
     finish_if_due,
     finish_session,
     guard_message,
+    join_prompt,
 )
 
 router = APIRouter()
@@ -130,6 +133,24 @@ def _lesson_note(db: DBSession, session_id: str) -> str:
         return program_note(program, item, total_items(db, program.id))
     chosen = session_topic(db, session_id)
     return topic_note(*chosen) if chosen else ""
+
+
+def _start_parts(db: DBSession, student: Student, session: TutorSession) -> dict[str, str]:
+    # Each source is read from the database here, so the prompt matches what the learner and administrator set.
+    return compose_start_prompt(
+        student,
+        _active_plan(db, student),
+        session.duration_minutes,
+        get_global_prompt(db),
+        db.get(TutorProfile, student.id),
+        get_accent(db, student.id),
+        _lesson_note(db, session.id),
+        details=db.get(LearnerDetails, student.id),
+        mode=get_setting(db, PROMPT_MODE_KEY, PROMPT_MODE_DEFAULT),
+        expected_output=get_setting(db, EXPECTED_OUTPUT_KEY),
+        past_notes=past_evaluations(db, student.id),
+        course_note=course_note(db, student),
+    )
 
 
 def _active_plan(db: DBSession, student: Student) -> Plan | None:
@@ -451,6 +472,9 @@ def start_session(
         record_lesson_topic(db, session.id, topic, variant)
         db.commit()
         out["topic"] = {"id": topic.id, "title": topic.title, "variant": variant.id}
+    # The start prompt is composed once here and sent as the first input of every reply in this lesson.
+    session.start_prompt = join_prompt(_start_parts(db, student, session))
+    db.commit()
     return out
 
 
@@ -492,21 +516,24 @@ def send_message(
 
     history = [{"role": m.role, "content": m.content} for m in session.messages]
     history.append({"role": "user", "content": text})
-    system_prompt = build_system_prompt(
-        student,
-        _active_plan(db, student),
-        block,
-        session.duration_minutes,
-        get_global_prompt(db),
-        db.get(TutorProfile, student.id),
-        get_accent(db, student.id),
-        _lesson_note(db, session.id),
-        details=db.get(LearnerDetails, student.id),
-        mode=get_setting(db, PROMPT_MODE_KEY, PROMPT_MODE_DEFAULT),
-        expected_output=get_setting(db, EXPECTED_OUTPUT_KEY),
-        past_notes=past_evaluations(db, student.id),
-        course_note=course_note(db, student),
-    )
+    if session.start_prompt:
+        system_prompt = session.start_prompt + "\n\n" + block_line(block, session.duration_minutes)
+    else:
+        system_prompt = build_system_prompt(
+            student,
+            _active_plan(db, student),
+            block,
+            session.duration_minutes,
+            get_global_prompt(db),
+            db.get(TutorProfile, student.id),
+            get_accent(db, student.id),
+            _lesson_note(db, session.id),
+            details=db.get(LearnerDetails, student.id),
+            mode=get_setting(db, PROMPT_MODE_KEY, PROMPT_MODE_DEFAULT),
+            expected_output=get_setting(db, EXPECTED_OUTPUT_KEY),
+            past_notes=past_evaluations(db, student.id),
+            course_note=course_note(db, student),
+        )
     reply = tutor_reply(system_prompt, history)
 
     db.add(Message(session_id=session.id, role="user", content=text))

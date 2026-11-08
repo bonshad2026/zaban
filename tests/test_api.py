@@ -53,6 +53,11 @@ def test_full_lesson_flow_and_reports(client):
     lesson = client.post(f"/v1/students/{student_id}/sessions", json={"duration_minutes": 10}, headers=DEMO)
     assert lesson.status_code == 201, lesson.text
     session_id = lesson.json()["id"]
+    from zaban.models import TutorSession
+
+    with SessionLocal() as db:
+        start_prompt = db.get(TutorSession, session_id).start_prompt
+    assert start_prompt.startswith("You are Niko") and "Rules:" in start_prompt
 
     reply = client.post(f"/v1/sessions/{session_id}/messages", json={"content": "I like football"}, headers=DEMO)
     assert reply.status_code == 200

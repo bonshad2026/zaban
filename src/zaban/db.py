@@ -10,7 +10,14 @@ engine = create_engine(settings.database_url, connect_args=connect_args, pool_pr
 SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
 
 # Columns added after a table was first created. create_all does not add columns to an existing table.
-ADDED_COLUMNS = [("self_tests", "score", "FLOAT")]
+ADDED_COLUMNS = [
+    ("self_tests", "score", "FLOAT"),
+    ("sessions", "evaluation", "TEXT"),
+    ("sessions", "start_prompt", "TEXT"),
+    ("consult_requests", "last_name", "VARCHAR(120) NOT NULL DEFAULT ''"),
+    ("consult_requests", "subject", "VARCHAR(160) NOT NULL DEFAULT ''"),
+    ("consult_requests", "contact_permission", "BOOLEAN NOT NULL DEFAULT FALSE"),
+]
 
 
 class Base(DeclarativeBase):

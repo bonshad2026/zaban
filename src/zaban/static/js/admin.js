@@ -405,8 +405,48 @@
     $("profileMotivation").value = student.motivation;
     $("profileText").value = student.instructions;
     updateProfileCount();
+    Z.show($("promptPreview"), false);
     show("profileForm", true);
     $("profileInterests").focus();
+  }
+
+  // The prompt a lesson for this learner starts with. Each part is shown with the source it comes from.
+  const PROMPT_PARTS = [
+    ["intro", "معرفی Niko"],
+    ["accent", "لهجه‌ی تمرین"],
+    ["admin", "۱. دستورهای کلی ادمین"],
+    ["database", "۲. اطلاعات از دیتابیس"],
+    ["learner", "۳. پرامپت اختصاصی این دانش‌آموز"],
+    ["lesson", "۴. جلسه‌ی برنامه"],
+    ["expected", "۵. انتظار ادمین از جلسه"],
+    ["rules", "قوانین ایمنی"],
+  ];
+
+  async function previewPrompt() {
+    setError("profileError", "");
+    const data = await Z.request("GET", `${API}/students/${editingStudent.id}/start-prompt`);
+    const box = $("promptPreview");
+    box.replaceChildren();
+    PROMPT_PARTS.forEach(([key, title]) => {
+      const section = document.createElement("details");
+      section.open = true;
+      const heading = document.createElement("summary");
+      heading.textContent = title;
+      const body = document.createElement("pre");
+      body.className = "prompt-part";
+      body.textContent = data.parts[key] || "— این بخش در این دانش‌آموز خالی است —";
+      section.append(heading, body);
+      box.appendChild(section);
+    });
+    const final = document.createElement("details");
+    const finalHeading = document.createElement("summary");
+    finalHeading.textContent = "پرامپت نهایی؛ این متن اولین ورودی API در شروع جلسه است";
+    const finalBody = document.createElement("pre");
+    finalBody.className = "prompt-part";
+    finalBody.textContent = data.prompt;
+    final.append(finalHeading, finalBody);
+    box.appendChild(final);
+    Z.show(box, true);
   }
 
   // ----- Voice samples -----
@@ -767,6 +807,7 @@
     $("setSave").addEventListener("click", saveSettings);
     $("stPromptSave").addEventListener("click", saveSelfTestPrompt);
     $("buildForm").addEventListener("submit", downloadBuild);
+    $("previewPrompt").addEventListener("click", () => run(previewPrompt));
     $("profileCancel").addEventListener("click", () => {
       editingStudent = null;
       show("profileForm", false);

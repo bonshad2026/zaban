@@ -215,6 +215,8 @@ class TutorSession(Base):
     score: Mapped[float | None] = mapped_column(Float, nullable=True)
     # The short evaluation written after the lesson, shown in the learner progress and the parent report.
     evaluation: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # The system prompt built when the lesson started: admin guidance, database facts, the learner and the lesson item.
+    start_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     student: Mapped[Student] = relationship(back_populates="sessions")
     messages: Mapped[list["Message"]] = relationship(

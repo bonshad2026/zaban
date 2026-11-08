@@ -322,3 +322,7 @@ ul.plain { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
 .filter-tab { background: transparent; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 6px 14px; }
 .filter-tab.is-active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 .filter-tab:hover:not(.is-active) { background: var(--accent-soft); color: var(--accent); }
+
+/* Admin: the start prompt of one learner, part by part */
+.prompt-part { direction: ltr; text-align: left; white-space: pre-wrap; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px; font-size: 14px; line-height: 1.6; margin: 8px 0 14px; }
+#promptPreview summary { cursor: pointer; font-weight: 600; margin-top: 10px; }

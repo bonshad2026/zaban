@@ -32,8 +32,9 @@ def test_report_rows_title_program_lessons_and_free_talks(client):
         db.commit()
         try:
             rows = {row["id"]: row for row in _session_rows(db, student)}
-            assert rows[lesson.id]["title"] == f"جلسه {item.position + 1}: {item.title}"
-            assert rows[free.id]["title"] == "گفتگوی آزاد با Niko"
+            assert rows[lesson.id]["lesson_number"] == item.position + 1
+            assert rows[lesson.id]["lesson_title"] == item.title
+            assert rows[free.id]["lesson_number"] is None
         finally:
             db.query(LessonItem).filter(LessonItem.session_id.in_([lesson.id, free.id])).delete(synchronize_session=False)
             db.query(TutorSession).filter(TutorSession.id.in_([lesson.id, free.id])).delete(synchronize_session=False)
