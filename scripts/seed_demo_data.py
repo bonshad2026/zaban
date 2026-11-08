@@ -157,7 +157,7 @@ def main() -> None:
         # Sara has a plan: three lessons a week, two months.
         db.add(Plan(
             student_id=sara.id, goal="Daily conversation", months=2, sessions_per_week=3, minutes_per_session=10,
-            start_date=now - timedelta(days=14), end_date=now + timedelta(days=46),
+            start_date=now - timedelta(days=30), end_date=now + timedelta(days=60),
             milestones=["Greetings", "Family", "Food", "Daily routine"], status="active",
         ))
         db.flush()
@@ -182,10 +182,13 @@ def main() -> None:
                 item.concepts = [f"concept {item.position + 1}a", f"concept {item.position + 1}b"]
 
         # Two finished lessons with messages and evaluations for Sara.
+        # Sara's lessons belong to her plan, so her progress and report count them.
+        sara_plan_id = db.query(Plan.id).filter(Plan.student_id == sara.id).scalar()
+
         def lesson(days_ago: int, minutes: int, score: float, evaluation: str, turns: list[tuple[str, str]]) -> TutorSession:
             started = now - timedelta(days=days_ago)
             session = TutorSession(
-                student_id=sara.id, duration_minutes=minutes, status="completed", started_at=started,
+                student_id=sara.id, plan_id=sara_plan_id, duration_minutes=minutes, status="completed", started_at=started,
                 ends_at=started + timedelta(minutes=minutes), ended_at=started + timedelta(minutes=minutes),
                 score=score, evaluation=evaluation,
             )
