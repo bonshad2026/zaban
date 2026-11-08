@@ -60,3 +60,19 @@ def test_student_payments_show_the_plan_name(client):
         finally:
             db.query(Payment).filter(Payment.id == payment_id).delete()
             db.commit()
+
+
+def test_score_line_is_read_and_removed_from_the_evaluation():
+    from zaban.services.self_test import split_score
+
+    text, score = split_score("Strengths: clear answers.\nNext steps: practise questions.\nSCORE: 85")
+    assert score == 85.0
+    assert "SCORE" not in text
+    assert text.startswith("Strengths: clear answers.")
+
+
+def test_missing_or_large_score_is_handled():
+    from zaban.services.self_test import split_score
+
+    assert split_score("A short evaluation without a score.") == ("A short evaluation without a score.", None)
+    assert split_score("Good.\nSCORE: 150")[1] == 100.0

@@ -11,7 +11,7 @@ from zaban.api import router as api_router
 from zaban.admin import router as admin_router
 from zaban.billing import router as billing_router
 from zaban.config import settings
-from zaban.db import Base, SessionLocal, engine
+from zaban.db import Base, SessionLocal, add_missing_columns, engine
 from zaban.reports import router as reports_router
 from zaban.seed import seed_demo_accounts, seed_demo_plans, seed_demo_tenant
 from zaban.public import router as public_router
@@ -33,6 +33,7 @@ async def lifespan(_: FastAPI):
     if settings.environment == "production" and not os.getenv("SECRET_KEY"):
         raise RuntimeError("SECRET_KEY must be set in production")
     Base.metadata.create_all(engine)
+    add_missing_columns()
     with SessionLocal() as db:
         seed_curriculum(db)
         seed_programs(db)

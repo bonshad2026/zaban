@@ -215,6 +215,7 @@ def main() -> None:
         # ----- Self-tests: one finished, one running -----
         finished = SelfTest(student_id=sara.id, kind="qa", skill="writing", minutes=10, level_used="A1",
                             status="finished", ends_at=now - timedelta(days=1), created_at=now - timedelta(days=1),
+                            score=78.0,
                             result="Strengths: clear short answers. Next steps: write three sentences about your day.")
         db.add(finished)
         db.flush()

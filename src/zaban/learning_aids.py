@@ -96,6 +96,7 @@ def _test_out(test: SelfTest, db: DBSession) -> dict:
         "level": test.level_used,
         "status": test.status,
         "ends_at": test.ends_at.isoformat(),
+        "score": test.score,
         "result": test.result,
         "messages": [{"role": m.role, "content": m.content} for m in messages],
     }
@@ -124,6 +125,7 @@ def list_self_tests(
             "level": t.level_used,
             "status": t.status,
             "created_at": t.created_at.isoformat(),
+            "score": t.score,
             "result": t.result,
         }
         for t in rows

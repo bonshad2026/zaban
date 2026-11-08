@@ -410,6 +410,8 @@ class SelfTest(Base):
     status: Mapped[str] = mapped_column(String(20), default="active")  # active, finished
     ends_at: Mapped[datetime] = mapped_column(DateTime)
     result: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # A score from 0 to 100 that Niko gives at the end. Empty for tests finished before scores existed.
+    score: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
     messages: Mapped[list["SelfTestMessage"]] = relationship(

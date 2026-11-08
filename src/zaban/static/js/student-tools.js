@@ -229,6 +229,11 @@
     return node;
   }
 
+  // The score Niko gives at the end of a test, out of 100. Older tests have none.
+  function scoreText(score) {
+    return score === null || score === undefined ? "نمره ندارد" : `نمره ${Math.round(score).toLocaleString("fa-IR")} از ۱۰۰`;
+  }
+
   // The test run card shows one test at a time: a running test, or a finished one read back from the list.
   function showTestRun(on) {
     Z.show($("testSetup"), !on);
@@ -238,7 +243,9 @@
   function renderTest(test) {
     testId = test.id;
     showTestRun(true);
-    $("testStatus").textContent = test.status === "finished" ? "آزمون تمام شد" : `سطح ${test.level || "؟"} — ${test.minutes} دقیقه`;
+    $("testStatus").textContent = test.status === "finished"
+      ? `آزمون تمام شد — ${scoreText(test.score)}`
+      : `سطح ${test.level || "؟"} — ${test.minutes} دقیقه`;
     $("testChat").replaceChildren(...test.messages.map(bubble));
     const finished = test.status === "finished";
     Z.show(document.querySelector("#testRun .composer"), !finished);
@@ -267,6 +274,7 @@
         card.append(
           el("h3", "", `${KIND_LABELS[t.kind] || t.kind} — ${SKILL_LABELS[t.skill] || t.skill}`),
           el("p", "muted", `${Z.fmtDateTime(t.created_at)} — ${t.minutes} دقیقه — سطح ${t.level || "؟"} — ${status}`),
+          el("p", "muted", t.status === "finished" ? scoreText(t.score) : ""),
           el("p", "", t.result || "ارزیابی هنوز نوشته نشده است."),
           view,
         );

@@ -1,3 +1,4 @@
+import re
 from datetime import timedelta
 
 from fastapi import HTTPException
@@ -104,15 +105,34 @@ def answer_test(db: DBSession, student: Student, test: SelfTest, content: str) -
     return test
 
 
+SCORE_LINE = re.compile(r"^\s*SCORE:\s*(\d{1,3})\s*$", re.MULTILINE)
+
+
+def split_score(text: str) -> tuple[str, float | None]:
+    # The evaluation ends with a line "SCORE: <0 to 100>". The line is taken out of the text the learner reads.
+    match = SCORE_LINE.search(text)
+    if match is None:
+        return text.strip(), None
+    score = min(100, int(match.group(1)))
+    return SCORE_LINE.sub("", text).strip(), float(score)
+
+
 def finish_test(db: DBSession, student: Student, test: SelfTest) -> SelfTest:
     if test.status == "finished":
         return test
     level = test.level_used or DEFAULT_LEVEL
     system = _system_prompt(db, student, choose_kind(test.kind, level), test.skill, test.minutes, level)
     closing = _history(test) + [
-        {"role": "user", "content": "The test is over. Write a short evaluation: strengths, weak points, and next steps."}
+        {
+            "role": "user",
+            "content": (
+                "The test is over. Write a short evaluation: strengths, weak points, and next steps. "
+                "Then add one last line exactly in this form: SCORE: <a whole number from 0 to 100>, "
+                "judging the answers for the learner's level."
+            ),
+        }
     ]
-    test.result = _ask(db, student, test, system, closing, 600)
+    test.result, test.score = split_score(_ask(db, student, test, system, closing, 600))
     test.status = "finished"
     db.commit()
     return test
