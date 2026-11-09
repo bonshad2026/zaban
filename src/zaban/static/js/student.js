@@ -277,7 +277,7 @@
         row.appendChild(Z.el("td", null, Z.fmtDateTime(s.started_at)));
         const title = s.lesson_number
           ? `${Z.pick("جلسه", "Lesson")} ${s.lesson_number}: ${Z.pick(s.lesson_title, s.lesson_title_en || s.lesson_title)}`
-          : Z.tr("گفتگوی آزاد با Niko");
+          : Z.tr("گفتگوی آزاد با معلم");
         row.appendChild(Z.el("td", null, title));
         row.appendChild(Z.el("td", null, Z.pick(`${s.duration_minutes} دقیقه`, `${s.duration_minutes} min`)));
         row.appendChild(Z.el("td", null, s.score === null ? "—" : String(Math.round(s.score))));
@@ -320,7 +320,7 @@
         notice.textContent = Z.pick(`سطح شما: ${student.cefr_level} (${Z.LEVEL_FA[student.cefr_level]})`, `Your level: ${student.cefr_level} (${Z.LEVEL_FA[student.cefr_level]})`);
         Z.show($("levelTestBox"), false);
       } else {
-        notice.textContent = Z.tr("سطح شما هنوز تعیین نشده است. با ۶ سؤال کوتاه سطحتان را پیدا کنید، یا والدتان می‌توانند آن را انتخاب کنند. تا آن زمان Niko از سطح مقدماتی شروع می‌کند.");
+        notice.textContent = Z.tr("سطح شما هنوز تعیین نشده است. با ۶ سؤال کوتاه سطحتان را پیدا کنید، یا والدتان می‌توانند آن را انتخاب کنند. تا آن زمان معلم از سطح مقدماتی شروع می‌کند.");
         Z.show($("levelTestBox"), true);
       }
       Z.show(notice, true);

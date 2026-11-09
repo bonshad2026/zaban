@@ -203,8 +203,48 @@ const Z = (() => {
     document.querySelectorAll("[data-fa]").forEach((node) => {
       node.textContent = lang === "en" ? node.dataset.en : node.dataset.fa;
     });
-    const toggle = document.getElementById("langToggle");
-    if (toggle) toggle.textContent = lang === "en" ? "فارسی" : "English";
+    // Placeholders in forms follow the language too.
+    document.querySelectorAll("[data-placeholder-fa]").forEach((node) => {
+      node.placeholder = lang === "en" ? node.dataset.placeholderEn : node.dataset.placeholderFa;
+    });
+    document.querySelectorAll("#langToggle [data-lang]").forEach((node) => {
+      node.classList.toggle("is-active", node.dataset.lang === lang);
+    });
+    paintThemeToggle();
+  }
+
+  // Light or dark theme. Dark is the default. The choice is remembered in this browser.
+  function applyTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+    paintThemeToggle();
+  }
+
+  // The button names the theme it will switch to, in the language the page is showing.
+  function paintThemeToggle() {
+    const button = document.getElementById("themeToggle");
+    if (!button) return;
+    const english = document.documentElement.lang === "en";
+    const light = document.documentElement.dataset.theme === "light";
+    const label = light ? (english ? "Dark theme" : "تم تاریک") : (english ? "Light theme" : "تم روشن");
+    button.setAttribute("aria-label", label);
+    button.title = label;
+  }
+
+  let themeReady = false;
+  function initTheme() {
+    if (themeReady) return;
+    themeReady = true;
+    let theme = "dark";
+    try { theme = localStorage.getItem("zaban-theme") === "light" ? "light" : "dark"; } catch (_) { /* storage blocked */ }
+    applyTheme(theme);
+    const button = document.getElementById("themeToggle");
+    if (button) {
+      button.addEventListener("click", () => {
+        const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+        try { localStorage.setItem("zaban-theme", next); } catch (_) { /* storage blocked */ }
+        applyTheme(next);
+      });
+    }
   }
 
   // Runs once per page. Pages may call it again without adding a second click handler.
@@ -250,9 +290,7 @@ const Z = (() => {
       if (href) node.href = href;
       return node;
     };
-    const toggle = document.getElementById("langToggle");
     box.replaceChildren();
-    if (toggle) box.appendChild(toggle);
     box.appendChild(el("span", "site-greeting", `${english ? "Hi" : "سلام"} ${greeting}`));
     if (signedIn.includes("parent")) box.appendChild(labelled("a", "pill", "/parent", "پنل والد", "Parent area"));
     if (signedIn.includes("student")) box.appendChild(labelled("a", "pill", "/student", "یادگیری من", "My learning"));
@@ -265,8 +303,26 @@ const Z = (() => {
     box.dataset.state = "member";
   }
 
+  // Blocks marked .reveal rise in once they reach the screen. Each one animates only once.
+  function initReveal() {
+    const items = document.querySelectorAll(".reveal");
+    if (!items.length) return;
+    if (!("IntersectionObserver" in window)) {
+      items.forEach((node) => node.classList.add("is-visible"));
+      return;
+    }
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("is-visible");
+        observer.unobserve(entry.target);
+      });
+    }, { threshold: 0.12 });
+    items.forEach((node) => observer.observe(node));
+  }
+
   return {
-    request, friendly, pageRole, parseUtc, locale, currentLang, fmtDate, fmtDateTime, el, show, showError, showDevCode, initLang,
+    request, friendly, pageRole, parseUtc, locale, currentLang, fmtDate, fmtDateTime, el, show, showError, showDevCode, initLang, initTheme, initReveal,
     initSiteHeader, STATUS_FA, SUGGESTION_FA, LEVEL_FA, SESSION_FA,
   };
 })();
@@ -274,5 +330,7 @@ const Z = (() => {
 // Every page gets the language switch and the sign-in state of the header.
 document.addEventListener("DOMContentLoaded", () => {
   Z.initLang();
+  Z.initTheme();
+  Z.initReveal();
   Z.initSiteHeader();
 });

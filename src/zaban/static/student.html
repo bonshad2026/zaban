@@ -12,16 +12,15 @@
   <section id="loginView" class="hero" hidden>
     <div class="auth-wrap">
       <form id="loginForm" class="auth-card" autocomplete="on">
-        <a class="back" href="/">بازگشت به صفحه‌ی اصلی</a>
-        <h1>ورود دانش‌آموز</h1>
-        <label for="studentUsername">نام کاربری</label>
+        <h1 data-fa="ورود دانش‌آموز" data-en="Learner sign in">ورود دانش‌آموز</h1>
+        <label for="studentUsername" data-fa="نام کاربری" data-en="Username">نام کاربری</label>
         <input id="studentUsername" name="username" class="ltr-field" autocomplete="username" required autofocus>
-        <label for="studentPassword">PIN ورود (۴ تا ۶ رقم)</label>
+        <label for="studentPassword" data-fa="PIN ورود (۴ تا ۶ رقم)" data-en="Sign-in PIN (4 to 6 digits)">PIN ورود (۴ تا ۶ رقم)</label>
         <input id="studentPassword" name="password" type="password" inputmode="numeric" class="ltr-field" autocomplete="new-password" pattern="\d{4,6}" required>
         <p></p>
-        <button type="submit" class="wide">ورود</button>
+        <button type="submit" class="wide" data-fa="ورود" data-en="Sign in">ورود</button>
         <p class="error" id="loginError" hidden></p>
-        <p class="muted">والد یا بزرگسال هستید؟ <a href="/parent">از اینجا وارد شوید</a></p>
+        <p class="muted">والد یا بزرگسال هستید؟ <a href="/parent" data-fa="از اینجا وارد شوید" data-en="Sign in here">از اینجا وارد شوید</a></p>
       </form>
     </div>
   </section>
@@ -67,7 +66,7 @@
         </div>
         <div class="card" id="setupBox" hidden>
           <h2>شروع یک جلسه</h2>
-          <p class="muted">Niko، معلم انگلیسی‌ات، منتظر توست. مدت جلسه را انتخاب کن و شروع کن.</p>
+          <p class="muted">معلم انگلیسی‌ات، منتظر توست. مدت جلسه را انتخاب کن و شروع کن.</p>
           <p class="notice" id="levelNotice" hidden></p>
           <div id="levelTestBox" hidden>
             <p><button id="levelTestStart" type="button" class="ghost">تعیین سطح با ۶ سؤال کوتاه</button></p>
@@ -108,8 +107,8 @@
           <p class="hint" id="composerHint"></p>
 
           <div class="options">
-            <label class="inline"><input type="checkbox" id="autoSpeak" checked> پاسخ صوتی Niko</label>
-            <label class="inline"><input type="checkbox" id="autoListen" checked> بعد از جواب Niko، میکروفون خودکار باز شود</label>
+            <label class="inline"><input type="checkbox" id="autoSpeak" checked> پاسخ صوتی معلم</label>
+            <label class="inline"><input type="checkbox" id="autoListen" checked> بعد از جواب معلم، میکروفون خودکار باز شود</label>
           </div>
           <p class="notice" id="voiceNotice" hidden></p>
         </div>
@@ -118,7 +117,7 @@
       <section id="tab-accent" hidden>
         <div class="card">
           <h2>لهجه‌ی تمرین</h2>
-          <p class="muted">لهجه‌ای را انتخاب کنید. Niko با همان لهجه صحبت می‌کند و درک صدای شما هم بر همان اساس انجام می‌شود. برای شنیدن نمونه، روی «پخش نمونه» بزنید.</p>
+          <p class="muted">لهجه‌ای را انتخاب کنید. معلم با همان لهجه صحبت می‌کند و درک صدای شما هم بر همان اساس انجام می‌شود. برای شنیدن نمونه، روی «پخش نمونه» بزنید.</p>
           <p class="notice" id="accentNotice" hidden></p>
           <div class="accent-list" id="accentList"></div>
         </div>
@@ -131,7 +130,7 @@
       <section id="tab-profile" class="tool-section" hidden>
         <div class="card">
           <h2>اطلاعات من</h2>
-          <p class="muted">این اطلاعات به Niko کمک می‌کند جلسه را برای شما شخصی‌سازی کند. هر وقت بخواهید می‌توانید آن‌ها را تغییر دهید.</p>
+          <p class="muted">این اطلاعات به معلم کمک می‌کند جلسه را برای شما شخصی‌سازی کند. هر وقت بخواهید می‌توانید آن‌ها را تغییر دهید.</p>
           <p class="notice" id="profileNotice" hidden></p>
           <label for="pfLevel">سطح انگلیسی من</label>
           <div class="row">
@@ -169,7 +168,7 @@
               <option value="quiz">سؤال و جواب</option>
               <option value="mixed">ترکیبی</option>
             </select>
-            <label for="pfResponse">سبک پاسخ Niko</label>
+            <label for="pfResponse">سبک پاسخ معلم</label>
             <select id="pfResponse">
               <option value="">انتخاب نشده</option>
               <option value="gentle">ملایم</option>
@@ -179,7 +178,7 @@
             </select>
             <label for="pfSample">یک جمله‌ی انگلیسی خودتان (اختیاری)</label>
             <textarea id="pfSample" rows="2" maxlength="1000" class="ltr-field"></textarea>
-            <label for="pfFree">هر چیز دیگری که Niko باید بداند</label>
+            <label for="pfFree">هر چیز دیگری که معلم باید بداند</label>
             <textarea id="pfFree" rows="3" maxlength="1000"></textarea>
             <p><button type="submit">ذخیره‌ی اطلاعات</button></p>
             <p class="error" id="profileError" hidden></p>
@@ -222,7 +221,7 @@
         </div>
         <div class="card" id="testSetup">
           <h2>خودت رو محک بزن</h2>
-          <p class="muted">Niko از شما سؤال می‌پرسد و در پایان یک ارزیابی کوتاه می‌نویسد.</p>
+          <p class="muted">معلم از شما سؤال می‌پرسد و در پایان یک ارزیابی کوتاه می‌نویسد.</p>
           <label for="testKind">نوع آزمون</label>
           <select id="testKind">
             <option value="suggested" selected>پیشنهاد سیستم</option>
@@ -272,7 +271,6 @@
     </main>
   </div>
 
-  <!--site-footer-->
   <script src="/static/js/common.js?v=4"></script>
   <script src="/static/js/student-i18n.js?v=4"></script>
   <script src="/static/js/accents.js?v=4"></script>

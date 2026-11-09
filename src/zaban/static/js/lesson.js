@@ -1,24 +1,24 @@
 // Turn-taking voice lesson. Only one side talks at a time:
-// the student speaks or types, then presses Send -> Niko thinks and speaks -> the student's turn again.
+// the student speaks or types, then presses Send -> معلم thinks and speaks -> the student's turn again.
 const Lesson = (() => {
   const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
   const canSpeak = "speechSynthesis" in window;
-  const OPENING = "Hi Niko, I am ready.";
+  const OPENING = "Hi, I am ready.";
   const GUARD_NOTE = Z.tr("این موضوع خارج از درس است. دوباره به انگلیسی و درباره‌ی درس حرف بزن.");
 
   const CHIP = {
     your_turn: [Z.tr("نوبت توست. بنویس یا میکروفون را بزن"), "turn-you"],
     recording: [Z.tr("در حال ضبط صدای تو… وقتی تمام شد «ارسال» را بزن"), "turn-recording"],
-    waiting: [Z.tr("Niko در حال فکر کردن است…"), "turn-niko"],
-    speaking: [Z.tr("Niko در حال صحبت است… لطفاً صبر کن"), "turn-niko"],
+    waiting: [Z.tr("معلم در حال فکر کردن است…"), "turn-niko"],
+    speaking: [Z.tr("معلم در حال صحبت است… لطفاً صبر کن"), "turn-niko"],
     ended: [Z.tr("جلسه تمام شد"), "turn-ended"],
     idle: ["", "turn-ended"],
   };
   const HINT = {
     your_turn: Z.tr("Enter یعنی ارسال. برای خط جدید Shift+Enter را بزن."),
     recording: Z.tr("حرف بزن. هر وقت تمام شد، روی «ارسال» بزن."),
-    waiting: Z.tr("منتظر جواب Niko باش."),
-    speaking: Z.tr("وقت Niko است. بعد از تمام شدن جواب، نوبت تو می‌شود."),
+    waiting: Z.tr("منتظر جواب معلم باش."),
+    speaking: Z.tr("وقت معلم است. بعد از تمام شدن جواب، نوبت تو می‌شود."),
     ended: "",
   };
 
@@ -63,7 +63,7 @@ const Lesson = (() => {
 
   function bubble(role, text) {
     const node = Z.el("div", `bubble ${role}`);
-    node.appendChild(Z.el("span", "who-label", role === "user" ? Z.tr("شما") : "Niko"));
+    node.appendChild(Z.el("span", "who-label", role === "user" ? Z.tr("شما") : Z.tr("معلم")));
     node.appendChild(document.createTextNode(text));
     $("chat").appendChild(node);
     $("chat").scrollTop = $("chat").scrollHeight;
@@ -115,7 +115,7 @@ const Lesson = (() => {
     });
   }
 
-  // Sends one message to the server and plays Niko's reply. Used for the opening line and for student turns.
+  // Sends one message to the server and plays معلم's reply. Used for the opening line and for student turns.
   async function ask(text, showUser) {
     setPhase("waiting");
     if (showUser) bubble("user", text);

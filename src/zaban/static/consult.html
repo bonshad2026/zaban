@@ -6,58 +6,72 @@
   <title>درخواست مشاوره | زبان</title>
   <link rel="stylesheet" href="/static/css/app.css">
 </head>
-<body>
+<body data-bilingual>
   <!--site-header-->
-  <main class="hero">
-    <div class="auth-wrap">
-      <form id="consultForm" class="auth-card" novalidate>
-        <a class="back" href="/">بازگشت به صفحه‌ی اصلی</a>
-        <h1>درخواست مشاوره</h1>
-        <p class="muted">نام، شماره‌ی تماس و سؤال خود را بنویسید. یکی از مشاوران با شما تماس می‌گیرد. ورود لازم نیست.</p>
+  <main class="page-main">
+    <div class="page-wrap">
+      <div class="page-stack">
+        <h1 class="page-title accent-title" data-fa="درخواست مشاوره" data-en="Request a call">درخواست مشاوره</h1>
 
-        <label for="consultName">نام</label>
-        <input id="consultName" name="name" maxlength="120" required>
+        <div class="reveal">
+          <form id="consultForm" class="page-card form-grid" novalidate>
+            <h2 class="full" data-fa="فرم درخواست مشاوره" data-en="Consultation request form">فرم درخواست مشاوره</h2>
 
-        <label for="consultLast">نام خانوادگی</label>
-        <input id="consultLast" name="last_name" maxlength="120" required>
+            <div>
+              <label for="consultName" data-fa="نام" data-en="First name">نام</label>
+              <input id="consultName" name="name" maxlength="120" required>
+            </div>
+            <div>
+              <label for="consultLast" data-fa="نام خانوادگی" data-en="Last name">نام خانوادگی</label>
+              <input id="consultLast" name="last_name" maxlength="120" required>
+            </div>
 
-        <label for="consultPhone">شماره‌ی تماس</label>
-        <input id="consultPhone" name="phone" type="tel" inputmode="tel" class="ltr-field" placeholder="09121234567" required>
+            <div>
+              <label for="consultPhone" data-fa="شماره‌ی تماس" data-en="Phone number">شماره‌ی تماس</label>
+              <input id="consultPhone" name="phone" type="tel" inputmode="tel" class="ltr-field" placeholder="09121234567" required>
+            </div>
+            <div>
+              <label for="consultSubject" data-fa="موضوع درخواست" data-en="Topic">موضوع درخواست</label>
+              <select id="consultSubject" name="subject" required>
+                <option value="" data-fa="یک موضوع را انتخاب کنید" data-en="Choose a topic">یک موضوع را انتخاب کنید</option>
+                <option value="کلاس برای کودک" data-fa="کلاس برای کودک" data-en="Class for a child">کلاس برای کودک</option>
+                <option value="کلاس برای نوجوان" data-fa="کلاس برای نوجوان" data-en="Class for a teen">کلاس برای نوجوان</option>
+                <option value="کلاس برای بزرگسال" data-fa="کلاس برای بزرگسال" data-en="Class for an adult">کلاس برای بزرگسال</option>
+                <option value="قیمت و پلن‌ها" data-fa="قیمت و پلن‌ها" data-en="Prices and plans">قیمت و پلن‌ها</option>
+                <option value="سؤال فنی یا دیگر" data-fa="سؤال فنی یا دیگر" data-en="Technical or other question">سؤال فنی یا دیگر</option>
+              </select>
+            </div>
 
-        <label for="consultSubject">موضوع درخواست</label>
-        <select id="consultSubject" name="subject" required>
-          <option value="">یک موضوع را انتخاب کنید</option>
-          <option value="کلاس برای کودک">کلاس برای کودک</option>
-          <option value="کلاس برای نوجوان">کلاس برای نوجوان</option>
-          <option value="کلاس برای بزرگسال">کلاس برای بزرگسال</option>
-          <option value="قیمت و پلن‌ها">قیمت و پلن‌ها</option>
-          <option value="سؤال فنی یا دیگر">سؤال فنی یا دیگر</option>
-        </select>
+            <div class="full">
+              <label for="consultTime" data-fa="زمان مناسب برای تماس (اختیاری)" data-en="Preferred call time (optional)">زمان مناسب برای تماس (اختیاری)</label>
+              <input id="consultTime" name="preferred_time" maxlength="60" data-placeholder-fa="مثلاً عصرها" data-placeholder-en="For example, evenings" placeholder="مثلاً عصرها">
+            </div>
 
-        <label for="consultTime">زمان مناسب برای تماس (اختیاری)</label>
-        <input id="consultTime" name="preferred_time" maxlength="60" placeholder="مثلاً عصرها">
+            <div class="full">
+              <label for="consultMessage" data-fa="سؤال یا توضیح شما" data-en="Your question or details">سؤال یا توضیح شما</label>
+              <textarea id="consultMessage" name="message" rows="5" maxlength="1000"></textarea>
+            </div>
 
-        <label for="consultMessage">سؤال یا توضیح شما</label>
-        <textarea id="consultMessage" name="message" rows="4" maxlength="1000"></textarea>
+            <label class="inline full"><input id="consultPermission" name="contact_permission" type="checkbox" required> <span data-fa="اجازه می‌دهم با این شماره تماس گرفته شود." data-en="I allow a call to this number.">اجازه می‌دهم با این شماره تماس گرفته شود.</span></label>
 
-        <label class="inline"><input id="consultPermission" name="contact_permission" type="checkbox" required> اجازه می‌دهم با این شماره تماس گرفته شود.</label>
+            <div class="page-submit">
+              <button type="submit" class="wide" data-fa="ارسال درخواست" data-en="Send request">ارسال درخواست</button>
+            </div>
+            <p class="error full" id="consultError" hidden></p>
+          </form>
 
-        <p></p>
-        <button type="submit" class="wide">ارسال درخواست</button>
-        <p class="error" id="consultError" hidden></p>
-      </form>
-
-      <section class="auth-card" id="consultDone" hidden>
-        <h1 data-fa="درخواست شما ثبت شد" data-en="Your request was sent">درخواست شما ثبت شد</h1>
-        <p class="muted" data-fa="یکی از مشاوران به‌زودی با شما تماس می‌گیرد." data-en="One of our advisers will contact you soon.">یکی از مشاوران به‌زودی با شما تماس می‌گیرد.</p>
-        <div class="row">
-          <button type="button" id="consultAgain" data-fa="ثبت درخواست جدید" data-en="Send another request">ثبت درخواست جدید</button>
-          <a class="btn-link" href="/" data-fa="صفحه‌ی اول" data-en="Home page">صفحه‌ی اول</a>
+          <section class="page-card" id="consultDone" hidden>
+            <h2 data-fa="درخواست شما ثبت شد" data-en="Your request was sent">درخواست شما ثبت شد</h2>
+            <p class="muted" data-fa="یکی از مشاوران به‌زودی با شما تماس می‌گیرد." data-en="One of our advisers will contact you soon.">یکی از مشاوران به‌زودی با شما تماس می‌گیرد.</p>
+            <div class="row">
+              <button type="button" id="consultAgain" data-fa="ثبت درخواست جدید" data-en="Send another request">ثبت درخواست جدید</button>
+              <a class="btn-link" href="/" data-fa="صفحه‌ی اول" data-en="Home page">صفحه‌ی اول</a>
+            </div>
+          </section>
         </div>
-      </section>
+      </div>
     </div>
   </main>
-  <!--site-footer-->
   <script src="/static/js/common.js"></script>
   <script src="/static/js/consult.js"></script>
 </body>

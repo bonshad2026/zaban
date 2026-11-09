@@ -6,42 +6,53 @@
   <title>درخواست همکاری | زبان</title>
   <link rel="stylesheet" href="/static/css/app.css">
 </head>
-<body>
+<body data-bilingual>
   <!--site-header-->
-  <main class="hero">
-    <div class="auth-wrap">
-      <form id="cooperationForm" class="auth-card" novalidate>
-        <a class="back" href="/">بازگشت به صفحه‌ی اصلی</a>
-        <h1>درخواست همکاری</h1>
-        <p class="muted">اگر می‌خواهید با زبان همکاری کنید، فرم را پر کنید. ورود لازم نیست.</p>
+  <main class="page-main">
+    <div class="page-wrap">
+      <div class="page-stack">
+        <h1 class="page-title accent-title" data-fa="درخواست همکاری" data-en="Cooperation request">درخواست همکاری</h1>
 
-        <label for="coopSubject">موضوع همکاری</label>
-        <input id="coopSubject" name="subject" maxlength="160" required>
+        <div class="reveal">
+          <form id="cooperationForm" class="page-card form-grid" novalidate>
+            <h2 class="full" data-fa="فرم درخواست همکاری" data-en="Cooperation request form">فرم درخواست همکاری</h2>
 
-        <label for="coopPhone">شماره‌ی تماس</label>
-        <input id="coopPhone" name="phone" type="tel" inputmode="tel" class="ltr-field" placeholder="09121234567" required>
+            <div class="full">
+              <label for="coopSubject" data-fa="موضوع همکاری" data-en="Subject of cooperation">موضوع همکاری</label>
+              <input id="coopSubject" name="subject" maxlength="160" required>
+            </div>
 
-        <label for="coopEmail">ایمیل (اختیاری)</label>
-        <input id="coopEmail" name="email" type="email" maxlength="190" class="ltr-field">
+            <div>
+              <label for="coopPhone" data-fa="شماره‌ی تماس" data-en="Phone number">شماره‌ی تماس</label>
+              <input id="coopPhone" name="phone" type="tel" inputmode="tel" class="ltr-field" placeholder="09121234567" required>
+            </div>
+            <div>
+              <label for="coopEmail" data-fa="ایمیل (اختیاری)" data-en="Email (optional)">ایمیل (اختیاری)</label>
+              <input id="coopEmail" name="email" type="email" maxlength="190" class="ltr-field">
+            </div>
 
-        <label for="coopMessage">توضیحات و شرح درخواست</label>
-        <textarea id="coopMessage" name="message" rows="5" maxlength="2000"></textarea>
+            <div class="full">
+              <label for="coopMessage" data-fa="توضیحات و شرح درخواست" data-en="Details of your request">توضیحات و شرح درخواست</label>
+              <textarea id="coopMessage" name="message" rows="6" maxlength="2000"></textarea>
+            </div>
 
-        <p></p>
-        <button type="submit" class="wide">ارسال درخواست</button>
-        <p class="error" id="coopError" hidden></p>
-      </form>
+            <div class="page-submit">
+              <button type="submit" class="wide" data-fa="ارسال درخواست" data-en="Send request">ارسال درخواست</button>
+            </div>
+            <p class="error full" id="coopError" hidden></p>
+          </form>
 
-      <section class="auth-card" id="coopDone" hidden>
-        <h1>درخواست شما ثبت شد</h1>
-        <p class="muted">به‌زودی با شما تماس می‌گیریم.</p>
-        <div class="row">
-          <a class="btn-link" href="/">صفحه‌ی اول</a>
+          <section class="page-card" id="coopDone" hidden>
+            <h2 data-fa="درخواست شما ثبت شد" data-en="Your request was sent">درخواست شما ثبت شد</h2>
+            <p class="muted" data-fa="به‌زودی با شما تماس می‌گیریم." data-en="We will contact you soon.">به‌زودی با شما تماس می‌گیریم.</p>
+            <div class="row">
+              <a class="btn-link" href="/" data-fa="صفحه‌ی اول" data-en="Home page">صفحه‌ی اول</a>
+            </div>
+          </section>
         </div>
-      </section>
+      </div>
     </div>
   </main>
-  <!--site-footer-->
   <script src="/static/js/common.js"></script>
   <script src="/static/js/cooperation.js"></script>
 </body>

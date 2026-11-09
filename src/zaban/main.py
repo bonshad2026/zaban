@@ -1,5 +1,6 @@
 import os
 from contextlib import asynccontextmanager
+from html import escape
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -64,15 +65,30 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+def _contact_block() -> str:
+    # Only the details that are set in .env are shown, so an empty value never leaves a blank row.
+    rows = []
+    if settings.contact_phone:
+        phone = escape(settings.contact_phone)
+        rows.append(f'<p class="contact-row"><span data-fa="شماره‌ی تماس" data-en="Phone">شماره‌ی تماس</span><a href="tel:{phone}">{phone}</a></p>')
+    if settings.contact_email:
+        email = escape(settings.contact_email)
+        rows.append(f'<p class="contact-row"><span data-fa="ایمیل" data-en="Email">ایمیل</span><a href="mailto:{email}">{email}</a></p>')
+    return f'<div class="contact-details reveal">{"".join(rows)}</div>' if rows else ""
+
+
 def _page(name: str, current: str = "") -> HTMLResponse:
-    # Every page gets the same header and footer, so moving between pages keeps the same frame.
+    # Every page gets the same header, so moving between pages keeps the same frame.
     # The link to the current page is marked, so the menu shows where the visitor is.
     header = (PARTIALS_DIR / "header.html").read_text(encoding="utf-8")
-    footer = (PARTIALS_DIR / "footer.html").read_text(encoding="utf-8")
     if current:
         header = header.replace(f'href="{current}"', f'href="{current}" aria-current="page"')
     html = (STATIC_DIR / name).read_text(encoding="utf-8")
-    return HTMLResponse(html.replace("<!--site-header-->", header).replace("<!--site-footer-->", footer))
+    html = html.replace("<!--contact-details-->", _contact_block())
+    # The copyright footer goes at the end of every page.
+    footer = (PARTIALS_DIR / "footer.html").read_text(encoding="utf-8")
+    html = html.replace("</body>", f"{footer}</body>")
+    return HTMLResponse(html.replace("<!--site-header-->", header))
 
 
 @app.get("/", include_in_schema=False)
@@ -108,6 +124,16 @@ def consult_page() -> HTMLResponse:
 @app.get("/cooperation", include_in_schema=False)
 def cooperation_page() -> HTMLResponse:
     return _page("cooperation.html", "/cooperation")
+
+
+@app.get("/about", include_in_schema=False)
+def about_page() -> HTMLResponse:
+    return _page("about.html", "/about")
+
+
+@app.get("/contact", include_in_schema=False)
+def contact_page() -> HTMLResponse:
+    return _page("contact.html", "/contact")
 
 
 @app.get("/admin", include_in_schema=False)

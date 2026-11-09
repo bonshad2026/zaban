@@ -7,7 +7,7 @@
     Z.showError($("consultError"), "");
     try {
       if (!form.contact_permission.checked) {
-        Z.showError($("consultError"), "برای ارسال درخواست، اجازه‌ی تماس را تأیید کنید.");
+        Z.showError($("consultError"), document.documentElement.lang === "en" ? "Please confirm that we may call you before sending." : "برای ارسال درخواست، اجازه‌ی تماس را تأیید کنید.");
         return;
       }
       await Z.request("POST", "/v1/public/consult", {

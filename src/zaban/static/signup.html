@@ -6,54 +6,52 @@
   <title>ثبت‌نام | زبان</title>
   <link rel="stylesheet" href="/static/css/app.css">
 </head>
-<body>
+<body data-bilingual>
   <!--site-header-->
   <main class="hero">
     <div class="auth-wrap">
       <form id="signupForm" class="auth-card" autocomplete="on" novalidate>
-        <a class="back" href="/">بازگشت به صفحه‌ی اصلی</a>
-        <h1>ساخت حساب</h1>
-        <p class="muted">ثبت‌نام رایگان است. پس از ورود، برای شروع یک پلن را انتخاب می‌کنید.</p>
+        <h1 data-fa="ساخت حساب" data-en="Create an account">ساخت حساب</h1>
+        <p class="muted" data-fa="ثبت‌نام رایگان است. پس از ورود، برای شروع یک پلن را انتخاب می‌کنید." data-en="Sign-up is free. After you sign in, choose a plan to start.">ثبت‌نام رایگان است. پس از ورود، برای شروع یک پلن را انتخاب می‌کنید.</p>
 
-        <label for="signupPhone">شماره‌ی موبایل</label>
+        <label for="signupPhone" data-fa="شماره‌ی موبایل" data-en="Mobile number">شماره‌ی موبایل</label>
         <input id="signupPhone" name="phone" type="tel" inputmode="tel" class="ltr-field" autocomplete="tel" placeholder="09121234567" required autofocus>
-        <button type="button" id="sendCodeBtn" class="secondary wide">ارسال کد پیامکی</button>
+        <button type="button" id="sendCodeBtn" class="secondary wide" data-fa="ارسال کد پیامکی" data-en="Send SMS code">ارسال کد پیامکی</button>
 
         <div id="signupStep" hidden>
           <p class="notice" id="signupDevHint" hidden></p>
-          <label for="signupCode">کد پیامکی</label>
+          <label for="signupCode" data-fa="کد پیامکی" data-en="SMS code">کد پیامکی</label>
           <input id="signupCode" name="code" inputmode="numeric" class="ltr-field" autocomplete="one-time-code" maxlength="8" required>
 
-          <label for="signupName">نام و نام خانوادگی</label>
+          <label for="signupName" data-fa="نام و نام خانوادگی" data-en="Full name">نام و نام خانوادگی</label>
           <input id="signupName" name="full_name" maxlength="120" required>
 
-          <label for="signupPassword">رمز عبور (حداقل ۸ نویسه)</label>
+          <label for="signupPassword" data-fa="رمز عبور (حداقل ۸ نویسه)" data-en="Password (at least 8 characters)">رمز عبور (حداقل ۸ نویسه)</label>
           <input id="signupPassword" name="password" type="password" class="ltr-field" minlength="8" autocomplete="new-password" required>
 
-          <label for="signupGoal">هدف شما از یادگیری</label>
+          <label for="signupGoal" data-fa="هدف شما از یادگیری" data-en="Your goal">هدف شما از یادگیری</label>
           <select id="signupGoal" name="goal">
-            <option value="">انتخاب کنید</option>
-            <option value="مکالمه‌ی روزمره">مکالمه‌ی روزمره</option>
-            <option value="سفر">سفر</option>
-            <option value="کار و شغل">کار و شغل</option>
-            <option value="آزمون">آزمون</option>
-            <option value="مدرسه">مدرسه</option>
+            <option value="" data-fa="انتخاب کنید" data-en="Choose">انتخاب کنید</option>
+            <option value="مکالمه‌ی روزمره" data-fa="مکالمه‌ی روزمره" data-en="Everyday conversation">مکالمه‌ی روزمره</option>
+            <option value="سفر" data-fa="سفر" data-en="Travel">سفر</option>
+            <option value="کار و شغل" data-fa="کار و شغل" data-en="Work">کار و شغل</option>
+            <option value="آزمون" data-fa="آزمون" data-en="Exams">آزمون</option>
+            <option value="مدرسه" data-fa="مدرسه" data-en="School">مدرسه</option>
           </select>
 
-          <label class="inline"><input type="checkbox" name="age_confirmed" required> من بزرگسال هستم (۱۸ سال یا بیشتر).</label>
-          <label class="inline"><input type="checkbox" name="consent" required> قوانین استفاده و حریم خصوصی را می‌پذیرم.</label>
+          <label class="inline"><input type="checkbox" name="age_confirmed" required> <span data-fa="من بزرگسال هستم (۱۸ سال یا بیشتر)." data-en="I am an adult (18 or older).">من بزرگسال هستم (۱۸ سال یا بیشتر).</span></label>
+          <label class="inline"><input type="checkbox" name="consent" required> <span data-fa="قوانین استفاده و حریم خصوصی را می‌پذیرم." data-en="I accept the terms of use and privacy policy.">قوانین استفاده و حریم خصوصی را می‌پذیرم.</span></label>
 
           <p></p>
-          <button type="submit" class="wide">ساخت حساب</button>
+          <button type="submit" class="wide" data-fa="ساخت حساب" data-en="Create account">ساخت حساب</button>
         </div>
 
         <p class="error" id="signupError" hidden></p>
-        <p class="links">حساب دارید؟ <a href="/parent">وارد شوید</a></p>
+        <p class="links"><span data-fa="حساب دارید؟" data-en="Already have an account?">حساب دارید؟</span> <a href="/parent" data-fa="وارد شوید" data-en="Sign in">وارد شوید</a></p>
       </form>
     </div>
   </main>
 
-  <!--site-footer-->
   <script src="/static/js/common.js"></script>
   <script src="/static/js/signup.js"></script>
 </body>

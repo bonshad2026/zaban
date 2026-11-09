@@ -413,7 +413,7 @@
 
   // The prompt a lesson for this learner starts with. Each part is shown with the source it comes from.
   const PROMPT_PARTS = [
-    ["intro", "معرفی Niko"],
+    ["intro", "معرفی معلم"],
     ["accent", "لهجه‌ی تمرین"],
     ["admin", "۱. دستورهای کلی ادمین"],
     ["database", "۲. اطلاعات از دیتابیس"],

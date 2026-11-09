@@ -1,4 +1,4 @@
-// English accents the learner can practise. Niko's voice and the learner's speech recognition use the chosen one.
+// English accents the learner can practise. معلم's voice and the learner's speech recognition use the chosen one.
 // Voices come from the browser and operating system, so a missing voice is reported on the page, not hidden.
 const Accents = (() => {
   const LIST = [
@@ -6,28 +6,28 @@ const Accents = (() => {
       code: "en-US",
       name: Z.tr("امریکایی"),
       nameEn: "American",
-      sample: "Hi there! I'm Niko. Let's practice together. What did you do today?",
+      sample: "Hi there! I'm your teacher. Let's practice together. What did you do today?",
       voices: ["Aria", "Jenny", "Zira", "Guy", "Google US English"],
     },
     {
       code: "en-GB",
       name: Z.tr("بریتانیایی"),
       nameEn: "British",
-      sample: "Hello! I'm Niko. Shall we have a little chat? How was your day?",
+      sample: "Hello! I'm your teacher. Shall we have a little chat? How was your day?",
       voices: ["Sonia", "Libby", "Hazel", "Google UK English Female", "Google UK English Male"],
     },
     {
       code: "en-AU",
       name: Z.tr("استرالیایی"),
       nameEn: "Australian",
-      sample: "G'day! I'm Niko. Let's have a yarn about your day.",
+      sample: "G'day! I'm your teacher. Let's have a yarn about your day.",
       voices: ["Natasha", "Annette", "Catherine"],
     },
     {
       code: "en-CA",
       name: Z.tr("کانادایی"),
       nameEn: "Canadian",
-      sample: "Hi! I'm Niko. Let's chat a bit. How was your day?",
+      sample: "Hi! I'm your teacher. Let's chat a bit. How was your day?",
       voices: ["Clara", "Linda"],
     },
   ];

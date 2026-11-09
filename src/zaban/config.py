@@ -31,6 +31,9 @@ class Settings:
     demo_student_password: str | None
     # The public address of this site, used for the payment gateway's return address.
     public_base_url: str
+    # Contact details shown on the contact page. Leave empty to hide them.
+    contact_phone: str | None
+    contact_email: str | None
 
 
 def load_settings() -> Settings:
@@ -58,6 +61,8 @@ def load_settings() -> Settings:
         demo_student_username=os.getenv("ZABAN_DEMO_STUDENT_USERNAME") or None,
         demo_student_password=os.getenv("ZABAN_DEMO_STUDENT_PASSWORD") or None,
         public_base_url=os.getenv("PUBLIC_BASE_URL", "http://127.0.0.1:8000").rstrip("/"),
+        contact_phone=os.getenv("CONTACT_PHONE") or None,
+        contact_email=os.getenv("CONTACT_EMAIL") or None,
     )
 
 

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>تماس با ما | زبان</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;600;800&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&display=swap">
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body data-bilingual>
+  <!--site-header-->
+  <main class="page-main">
+    <div class="page-wrap">
+      <div class="page-stack">
+        <h1 class="page-title accent-title" data-fa="تماس با ما" data-en="Contact us">تماس با ما</h1>
+        <!--contact-details-->
+
+        <div class="reveal">
+          <form id="contactForm" class="page-card form-grid" novalidate>
+            <h2 class="full" data-fa="فرم تماس" data-en="Contact form">فرم تماس</h2>
+
+            <div>
+              <label for="contactName" data-fa="نام" data-en="First name">نام</label>
+              <input id="contactName" name="name" maxlength="120" required>
+            </div>
+            <div>
+              <label for="contactLast" data-fa="نام خانوادگی" data-en="Last name">نام خانوادگی</label>
+              <input id="contactLast" name="last_name" maxlength="120" required>
+            </div>
+
+            <div>
+              <label for="contactPhone" data-fa="شماره‌ی تماس" data-en="Phone number">شماره‌ی تماس</label>
+              <input id="contactPhone" name="phone" type="tel" inputmode="tel" class="ltr-field" placeholder="09121234567" required>
+            </div>
+            <div>
+              <label for="contactSubject" data-fa="موضوع" data-en="Topic">موضوع</label>
+              <select id="contactSubject" name="subject" required>
+                <option value="" data-fa="یک موضوع را انتخاب کنید" data-en="Choose a topic">یک موضوع را انتخاب کنید</option>
+                <option value="کلاس برای کودک" data-fa="کلاس برای کودک" data-en="Class for a child">کلاس برای کودک</option>
+                <option value="کلاس برای نوجوان" data-fa="کلاس برای نوجوان" data-en="Class for a teen">کلاس برای نوجوان</option>
+                <option value="کلاس برای بزرگسال" data-fa="کلاس برای بزرگسال" data-en="Class for an adult">کلاس برای بزرگسال</option>
+                <option value="قیمت و پلن‌ها" data-fa="قیمت و پلن‌ها" data-en="Prices and plans">قیمت و پلن‌ها</option>
+                <option value="همکاری" data-fa="همکاری" data-en="Cooperation">همکاری</option>
+                <option value="سؤال فنی یا دیگر" data-fa="سؤال فنی یا دیگر" data-en="Technical or other question">سؤال فنی یا دیگر</option>
+              </select>
+            </div>
+
+            <div class="full">
+              <label for="contactMessage" data-fa="توضیحات (اختیاری)" data-en="Details (optional)">توضیحات (اختیاری)</label>
+              <textarea id="contactMessage" name="message" rows="6" maxlength="1000"></textarea>
+            </div>
+
+            <label class="inline full"><input id="contactPermission" name="contact_permission" type="checkbox" required> <span data-fa="اجازه می‌دهم با این شماره تماس گرفته شود." data-en="I allow a call to this number.">اجازه می‌دهم با این شماره تماس گرفته شود.</span></label>
+
+            <div class="page-submit">
+              <button type="submit" class="wide" data-fa="ارسال درخواست" data-en="Send request">ارسال درخواست</button>
+            </div>
+            <p class="error full" id="contactError" hidden></p>
+          </form>
+
+          <section class="page-card" id="contactDone" hidden>
+            <h2 data-fa="پیام شما ثبت شد" data-en="Your message was sent">پیام شما ثبت شد</h2>
+            <p class="muted" data-fa="یکی از مشاوران به‌زودی با شما تماس می‌گیرد." data-en="One of our advisers will call you soon.">یکی از مشاوران به‌زودی با شما تماس می‌گیرد.</p>
+            <div class="row">
+              <button type="button" id="contactAgain" data-fa="ارسال پیام جدید" data-en="Send another message">ارسال پیام جدید</button>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </main>
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/contact.js"></script>
+</body>
+</html>

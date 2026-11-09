@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="room" cx="68%" cy="38%" r="60%">
+      <stop offset="0" stop-color="#2a2418" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#0b0b0e" stop-opacity="1"/>
+    </radialGradient>
+    <radialGradient id="screenGlow" cx="62%" cy="40%" r="40%">
+      <stop offset="0" stop-color="#c9a46a" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#c9a46a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e3c58f"/>
+      <stop offset="1" stop-color="#b8862b"/>
+    </linearGradient>
+  </defs>
+
+  <!-- room and warm light from the screen -->
+  <rect width="1600" height="900" fill="url(#room)"/>
+  <rect width="1600" height="900" fill="url(#screenGlow)"/>
+
+  <!-- desk -->
+  <rect x="0" y="716" width="1600" height="184" fill="#16151a"/>
+  <rect x="0" y="716" width="1600" height="2" fill="#c9a46a" fill-opacity="0.35"/>
+
+  <!-- monitor -->
+  <rect x="880" y="236" width="540" height="340" rx="26" fill="#0b0b0e" stroke="#c9a46a" stroke-opacity="0.55" stroke-width="2"/>
+  <rect x="900" y="256" width="500" height="300" rx="16" fill="#15151b"/>
+  <rect x="1126" y="576" width="48" height="90" fill="#1f1d22"/>
+  <rect x="1040" y="660" width="220" height="16" rx="8" fill="#1f1d22"/>
+
+  <!-- app on the screen: a teacher line and a learner reply -->
+  <rect x="930" y="290" width="250" height="56" rx="20" fill="none" stroke="#c9a46a" stroke-opacity="0.6" stroke-width="2"/>
+  <rect x="948" y="310" width="170" height="12" rx="6" fill="#e3c58f" fill-opacity="0.6"/>
+  <rect x="1020" y="372" width="260" height="62" rx="20" fill="#c9a46a" fill-opacity="0.92"/>
+  <rect x="1040" y="394" width="180" height="12" rx="6" fill="#0b0b0e" fill-opacity="0.55"/>
+  <rect x="930" y="466" width="200" height="50" rx="18" fill="none" stroke="#c9a46a" stroke-opacity="0.45" stroke-width="2"/>
+  <!-- voice level bars -->
+  <g fill="#e3c58f">
+    <rect x="1190" y="500" width="8" height="18" rx="4" fill-opacity="0.5"/>
+    <rect x="1206" y="488" width="8" height="30" rx="4" fill-opacity="0.7"/>
+    <rect x="1222" y="478" width="8" height="40" rx="4"/>
+    <rect x="1238" y="490" width="8" height="28" rx="4" fill-opacity="0.7"/>
+    <rect x="1254" y="500" width="8" height="16" rx="4" fill-opacity="0.5"/>
+  </g>
+
+  <!-- person: headphones, hoodie, looking at the screen -->
+  <path d="M430 720 C 440 560, 500 500, 600 490 C 700 500, 760 560, 770 720 Z" fill="#24222a" stroke="#c9a46a" stroke-opacity="0.35" stroke-width="2"/>
+  <path d="M560 490 L 600 540 L 640 490" fill="#1a191e"/>
+  <rect x="566" y="430" width="68" height="70" rx="26" fill="#3a2f22"/>
+  <ellipse cx="600" cy="360" rx="78" ry="90" fill="#3a2f22"/>
+  <path d="M522 350 C 522 260, 680 260, 678 350 C 668 300, 540 300, 522 350 Z" fill="#1d1b20"/>
+  <path d="M506 360 C 506 220, 694 220, 694 360" fill="none" stroke="url(#rim)" stroke-width="16" stroke-linecap="round"/>
+  <rect x="488" y="340" width="40" height="72" rx="14" fill="url(#rim)"/>
+  <rect x="672" y="340" width="40" height="72" rx="14" fill="url(#rim)"/>
+  <!-- arm reaching to the keyboard -->
+  <path d="M700 560 C 760 600, 800 640, 830 672" fill="none" stroke="#24222a" stroke-width="44" stroke-linecap="round"/>
+  <path d="M700 560 C 760 600, 800 640, 830 672" fill="none" stroke="#c9a46a" stroke-opacity="0.25" stroke-width="2"/>
+  <!-- keyboard -->
+  <rect x="790" y="676" width="200" height="22" rx="8" fill="#1f1d22" stroke="#c9a46a" stroke-opacity="0.3"/>
+
+  <!-- warm rim light along the desk edge -->
+  <path d="M0 716 H1600" stroke="#e3c58f" stroke-opacity="0.25" stroke-width="2"/>
+</svg>
