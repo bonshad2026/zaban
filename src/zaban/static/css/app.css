@@ -55,7 +55,13 @@ body {
   font-family: "Vazirmatn", system-ui, sans-serif;
   line-height: 1.9;
   font-size: 16px;
+  /* Header on top, page content in the middle, footer at the bottom of the screen */
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
+.site-main { flex: 1 0 auto; display: flex; flex-direction: column; }
+.site-main > * { flex-shrink: 0; }
 [hidden] { display: none !important; }
 h1 { font-size: 24px; margin: 0 0 16px; }
 h2 { font-size: 18px; margin: 0 0 8px; }
@@ -105,7 +111,8 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent-soft
 
 /* Public pages (landing and login) */
 .hero {
-  min-height: 100vh;
+  min-height: 0;
+  flex: 1 0 auto;
   background: transparent;
   color: var(--text);
   position: relative;
@@ -155,16 +162,31 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent-soft
 .choice:hover, .choice:focus-visible { transform: translateY(-3px); border-color: var(--accent); outline: none; }
 .choice strong { display: block; font-size: 22px; margin-bottom: 6px; }
 .choice span { opacity: 0.85; font-size: 15px; }
-.auth-wrap { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+.auth-wrap { display: grid; place-items: center; padding: 56px 24px 72px; }
 .auth-card {
   width: 100%;
-  max-width: 420px;
+  max-width: 720px;
   background: var(--card);
   color: var(--text);
-  border-radius: 20px;
-  padding: 28px 26px;
+  border-radius: 24px;
+  padding: 40px 48px;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
 }
+.auth-card.auth-wide { max-width: 900px; }
+.auth-card h1 { margin-bottom: 10px; }
+.auth-card label:not(.inline) { margin-top: 18px; }
+.auth-card .links { margin-top: 24px; }
+/* A field with a button beside it: the button sits on the same line as the input, with room around it */
+.field-action { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: end; margin-top: 4px; }
+.field-action button { white-space: nowrap; padding: 12px 22px; }
+button.secondary { background: var(--accent-soft); color: var(--accent); }
+button.secondary:hover:not(:disabled) { background: var(--accent); color: var(--on-accent); }
+/* Two columns on wide screens, one on phones */
+.auth-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px; }
+.auth-grid .full { grid-column: 1 / -1; }
+.auth-grid > button.full { margin-top: 28px; padding: 14px 18px; }
+.auth-grid .inline + .inline { margin-top: 14px; }
+.auth-grid .full > label.inline { margin-top: 18px; }
 .auth-card .back { display: inline-block; margin-bottom: 8px; font-size: 14px; color: var(--accent); text-decoration: none; }
 .hero .auth-card .lang-row { display: flex; justify-content: flex-end; }
 .hero .auth-card .lang-toggle { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
@@ -423,7 +445,7 @@ html[dir="ltr"] .home-link .arrow { transform: scaleX(-1); }
 .page-card { background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 36px; box-shadow: var(--shadow); }
 .page-card h2 { font-size: 24px; margin: 0 0 8px; }
 .page-card input, .page-card select, .page-card textarea { width: 100%; }
-.video-frame { position: relative; aspect-ratio: 16 / 9; border-radius: 24px; border: 1px solid var(--border); background: var(--card) url("/static/img/demo-poster.svg") center / cover no-repeat; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-decoration: none; color: var(--text); overflow: hidden; box-shadow: var(--shadow); transition: border-color 0.3s ease; }
+.video-frame { position: relative; aspect-ratio: 16 / 9; border-radius: 24px; border: 1px solid var(--border); background: linear-gradient(90deg, rgba(8, 8, 10, 0.92) 0%, rgba(8, 8, 10, 0.6) 55%, rgba(8, 8, 10, 0.85) 100%), url("/static/img/demo-photo.webp") center / cover no-repeat; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-decoration: none; color: var(--text); overflow: hidden; box-shadow: var(--shadow); transition: border-color 0.3s ease; }
 .video-frame:hover { border-color: var(--accent); }
 .video-frame .play { width: 84px; height: 84px; border-radius: 50%; border: 1px solid var(--accent); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 26px; background: rgba(8, 8, 10, 0.35); }
 .video-frame .label { background: rgba(8, 8, 10, 0.6); color: #f4efe6; padding: 6px 16px; border-radius: 999px; font-size: 14px; }
@@ -474,3 +496,12 @@ html[dir="ltr"] .home-link .arrow { transform: scaleX(-1); }
 /* More space between the consent line and the submit button, and between the button and the field above */
 .form-grid .inline { margin-bottom: 8px; }
 .form-grid .page-submit { margin-top: 28px; }
+
+/* Sign-in and sign-up cards: one column and smaller padding on phones */
+@media (max-width: 760px) {
+  .auth-wrap { padding: 32px 16px 48px; }
+  .auth-card { padding: 28px 22px; border-radius: 20px; }
+  .auth-grid { grid-template-columns: 1fr; }
+  .field-action { grid-template-columns: 1fr; }
+  .field-action button { width: 100%; }
+}
