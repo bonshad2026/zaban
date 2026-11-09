@@ -39,6 +39,11 @@ class Guardian(Base):
     phone: Mapped[str] = mapped_column(String(16), unique=True, index=True)
     full_name: Mapped[str] = mapped_column(String(120))
     email: Mapped[str | None] = mapped_column(String(190), unique=True, nullable=True)
+    age: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # "female", "male" or "other". Empty means the adult has not said.
+    gender: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # A small square photo as a data URL, resized in the browser before upload. Empty means no photo.
+    avatar_data: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Set at sign-up. Used with the phone number at sign-in. Forgotten passwords are reset with an SMS code.
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     failed_logins: Mapped[int] = mapped_column(Integer, default=0)

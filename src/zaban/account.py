@@ -1,3 +1,6 @@
+import re
+from typing import Literal
+
 from fastapi import APIRouter, Cookie, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session as DBSession
@@ -13,6 +16,9 @@ from zaban.services.passwords import hash_password, verify_password
 router = APIRouter(prefix="/web/user")
 
 WRONG_PASSWORD = "The current password is not correct"
+EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+# The browser sends a square JPEG, PNG or WebP photo of a few kilobytes, so this limit is generous.
+AVATAR_PATTERN = re.compile(r"^data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/=]{1,200000}$")
 
 STATUS_FA = {
     "new": "ثبت شد",
@@ -26,7 +32,12 @@ STATUS_FA = {
 
 
 class ProfileUpdate(BaseModel):
-    full_name: str = Field(min_length=2, max_length=120)
+    # Every field is optional. Only the fields that are sent change, so the old profile page still works.
+    full_name: str | None = Field(default=None, min_length=2, max_length=120)
+    email: str | None = Field(default=None, max_length=190)
+    age: int | None = Field(default=None, ge=18, le=120)
+    gender: Literal["female", "male", "other"] | None = None
+    avatar: str | None = Field(default=None, max_length=200_000)
 
 
 class PasswordChange(BaseModel):
@@ -51,14 +62,26 @@ def _adult_from_cookies(db: DBSession, parent_token: str | None, student_token: 
     raise HTTPException(status_code=401, detail="Please sign in")
 
 
+def _profile_out(adult: Guardian) -> dict:
+    # The phone number is the sign-in, so it is shown but cannot be changed here.
+    return {
+        "name": adult.full_name,
+        "phone": adult.phone,
+        "email": adult.email or "",
+        "age": adult.age,
+        "gender": adult.gender or "",
+        "goal": adult.goal,
+        "avatar": adult.avatar_data or "",
+    }
+
+
 @router.get("/profile")
 def read_profile(
     zaban_parent: str | None = Cookie(default=None),
     zaban_student: str | None = Cookie(default=None),
     db: DBSession = Depends(get_db),
 ) -> dict:
-    adult = _adult_from_cookies(db, zaban_parent, zaban_student)
-    return {"name": adult.full_name, "phone": adult.phone, "goal": adult.goal}
+    return _profile_out(_adult_from_cookies(db, zaban_parent, zaban_student))
 
 
 @router.put("/profile")
@@ -69,9 +92,29 @@ def update_profile(
     db: DBSession = Depends(get_db),
 ) -> dict:
     adult = _adult_from_cookies(db, zaban_parent, zaban_student)
-    adult.full_name = body.full_name.strip()[:120]
+    sent = body.model_fields_set
+    if "full_name" in sent:
+        if not body.full_name or not body.full_name.strip():
+            raise HTTPException(status_code=400, detail="Your name is needed")
+        adult.full_name = body.full_name.strip()[:120]
+    if "email" in sent:
+        email = (body.email or "").strip().lower()
+        if email and not EMAIL_PATTERN.match(email):
+            raise HTTPException(status_code=400, detail="Enter a valid email address")
+        if email and db.query(Guardian).filter(Guardian.email == email, Guardian.id != adult.id).first():
+            raise HTTPException(status_code=409, detail="This email is already used by another account")
+        adult.email = email or None
+    if "age" in sent:
+        adult.age = body.age
+    if "gender" in sent:
+        adult.gender = body.gender
+    if "avatar" in sent:
+        avatar = body.avatar or ""
+        if avatar and not AVATAR_PATTERN.match(avatar):
+            raise HTTPException(status_code=400, detail="The photo must be a JPG, PNG or WebP image")
+        adult.avatar_data = avatar or None
     db.commit()
-    return {"name": adult.full_name, "phone": adult.phone, "goal": adult.goal}
+    return _profile_out(adult)
 
 
 @router.post("/password")

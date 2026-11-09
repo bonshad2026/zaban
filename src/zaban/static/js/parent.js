@@ -352,12 +352,6 @@
     }
   }
 
-  async function logoutEverywhere() {
-    if (!confirm("از همه‌ی دستگاه‌ها خارج شوید؟ دوباره باید با کد پیامکی وارد شوید.")) return;
-    await Z.request("POST", "/v1/web/user/logout-all").catch(() => {});
-    location.reload();
-  }
-
   async function boot() {
     Z.initLang();
     $("loginForm").addEventListener("submit", login);
@@ -366,7 +360,6 @@
     $("resetSendBtn").addEventListener("click", sendResetCode);
     $("resetForm").addEventListener("submit", saveNewPassword);
     $("selfBtn").addEventListener("click", startOwnLearning);
-    $("logoutAllBtn").addEventListener("click", logoutEverywhere);
     $("addForm").addEventListener("submit", addStudent);
     $("infoForm").addEventListener("submit", saveInfo);
     $("consentBtn").addEventListener("click", giveConsent);

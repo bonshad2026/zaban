@@ -40,3 +40,57 @@
     <nav class="member-nav" id="memberNav" aria-label="بخش من" hidden></nav>
   </div>
 </header>
+
+<!-- Account forms. They open from the profile menu in the header, which only shows after sign-in. -->
+<dialog id="accInfoDialog" class="account-dialog" aria-labelledby="infoTitle">
+  <form id="accInfoForm" novalidate>
+    <h2 id="infoTitle" data-fa="اطلاعات شخصی" data-en="Personal details">اطلاعات شخصی</h2>
+    <div class="avatar-edit">
+      <div class="avatar-preview" id="accAvatar" aria-hidden="true"></div>
+      <div class="avatar-edit-actions">
+        <button type="button" class="ghost" id="accAvatarPick" data-fa="تغییر عکس" data-en="Change photo">تغییر عکس</button>
+        <button type="button" class="ghost" id="accAvatarRemove" data-fa="حذف عکس" data-en="Remove photo">حذف عکس</button>
+        <input id="accAvatarFile" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+      </div>
+    </div>
+    <label for="accName" data-fa="نام و نام خانوادگی" data-en="Full name">نام و نام خانوادگی</label>
+    <input id="accName" name="full_name" maxlength="120" required>
+    <label for="accPhone" data-fa="شماره‌ی موبایل (برای ورود)" data-en="Mobile number (used to sign in)">شماره‌ی موبایل (برای ورود)</label>
+    <input id="accPhone" class="ltr-field" readonly>
+    <label for="accEmail" data-fa="ایمیل" data-en="Email">ایمیل</label>
+    <input id="accEmail" name="email" type="email" class="ltr-field" maxlength="190" autocomplete="email">
+    <label for="accAge" data-fa="سن" data-en="Age">سن</label>
+    <input id="accAge" name="age" type="number" min="18" max="120" inputmode="numeric" class="ltr-field">
+    <label for="accGender" data-fa="جنسیت" data-en="Gender">جنسیت</label>
+    <select id="accGender" name="gender">
+      <option value="" data-fa="ترجیح می‌دهم نگویم" data-en="Prefer not to say">ترجیح می‌دهم نگویم</option>
+      <option value="female" data-fa="زن" data-en="Woman">زن</option>
+      <option value="male" data-fa="مرد" data-en="Man">مرد</option>
+      <option value="other" data-fa="سایر" data-en="Other">سایر</option>
+    </select>
+    <p class="error" id="accInfoError" hidden></p>
+    <p class="ok-msg" id="accInfoOk" hidden></p>
+    <div class="dialog-actions">
+      <button type="button" class="ghost" data-close data-fa="بستن" data-en="Close">بستن</button>
+      <button type="submit" data-fa="ذخیره" data-en="Save">ذخیره</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="accPasswordDialog" class="account-dialog" aria-labelledby="passwordTitle">
+  <form id="accPasswordForm" novalidate>
+    <h2 id="passwordTitle" data-fa="تغییر رمز عبور" data-en="Change password">تغییر رمز عبور</h2>
+    <label for="accPwCurrent" data-fa="رمز فعلی" data-en="Current password">رمز فعلی</label>
+    <input id="accPwCurrent" name="current_password" type="password" class="ltr-field" autocomplete="current-password" required>
+    <label for="accPwNew" data-fa="رمز تازه (حداقل ۸ نویسه)" data-en="New password (at least 8 characters)">رمز تازه (حداقل ۸ نویسه)</label>
+    <input id="accPwNew" name="new_password" type="password" class="ltr-field" autocomplete="new-password" minlength="8" required>
+    <label for="accPwRepeat" data-fa="تکرار رمز تازه" data-en="Repeat new password">تکرار رمز تازه</label>
+    <input id="accPwRepeat" type="password" class="ltr-field" autocomplete="new-password" minlength="8" required>
+    <p class="error" id="accPwError" hidden></p>
+    <p class="ok-msg" id="accPwOk" hidden></p>
+    <div class="dialog-actions">
+      <button type="button" class="ghost" data-close data-fa="بستن" data-en="Close">بستن</button>
+      <button type="submit" data-fa="ذخیره‌ی رمز تازه" data-en="Save new password">ذخیره‌ی رمز تازه</button>
+    </div>
+  </form>
+</dialog>

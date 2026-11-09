@@ -34,6 +34,10 @@ const Z = (() => {
     ["Student not found", "این دانش‌آموز پیدا نشد."],
     ["A password is needed", "برای ساخت حساب ورود، رمز عبور لازم است."],
     ["Consent must be accepted", "برای ادامه، باید رضایت والد را تأیید کنید."],
+    ["Enter a valid email", "ایمیل معتبر نیست. مثلاً name@example.com را وارد کنید."],
+    ["already used by another", "این ایمیل برای حساب دیگری استفاده شده است."],
+    ["current password is not correct", "رمز فعلی درست نیست."],
+    ["photo must be", "عکس باید از نوع JPG، PNG یا WebP باشد."],
   ];
 
   // English messages for the same server errors, matched by the same keys, in the same order.
@@ -70,6 +74,10 @@ const Z = (() => {
     ["Student not found", "This learner was not found."],
     ["A password is needed", "A password is needed to create a sign-in."],
     ["Consent must be accepted", "The parent's consent must be accepted to continue."],
+    ["Enter a valid email", "Please enter a valid email address, for example name@example.com."],
+    ["already used by another", "This email is already used by another account."],
+    ["current password is not correct", "The current password is not correct."],
+    ["photo must be", "The photo must be a JPG, PNG or WebP image."],
   ];
 
   function isEnglish() {
@@ -87,6 +95,7 @@ const Z = (() => {
     if (status === 401) return english ? "Please sign in again." : "لطفاً دوباره وارد شوید.";
     if (status === 403) return english ? "You are not allowed to do this." : "شما اجازه‌ی انجام این کار را ندارید.";
     if (status === 404) return english ? "This item was not found." : "این مورد پیدا نشد.";
+    if (status === 422) return english ? "Please check the form and try again." : "لطفاً مقدارهای فرم را بررسی کنید.";
     if (status === 409) return english ? "This action is not possible right now." : "این کار هم‌اکنون امکان‌پذیر نیست.";
     return english ? "Something went wrong. Please try again." : "مشکلی پیش آمد. لطفاً دوباره تلاش کنید.";
   }
@@ -266,6 +275,222 @@ const Z = (() => {
     }
   }
 
+  function byId(id) {
+    return document.getElementById(id);
+  }
+
+  // Shown when the adult has no photo: a plain silhouette.
+  const AVATAR_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="4"/><path d="M4.5 20.5c1.2-3.9 4-6 7.5-6s6.3 2.1 7.5 6"/></svg>';
+
+  function paintAvatar(node, src) {
+    node.replaceChildren();
+    if (src) {
+      const img = el("img", "avatar-img");
+      img.src = src;
+      img.alt = "";
+      node.appendChild(img);
+    } else {
+      node.insertAdjacentHTML("beforeend", AVATAR_ICON);
+    }
+  }
+
+  // A link or button whose words follow the language switch.
+  function labelled(tag, className, href, fa, en) {
+    const node = el(tag, className, isEnglish() ? en : fa);
+    node.dataset.fa = fa;
+    node.dataset.en = en;
+    if (href) node.href = href;
+    return node;
+  }
+
+  // Resizes the picked photo to a 256 px square JPEG, so it is small enough to store with the profile.
+  function readPhoto(file) {
+    return new Promise((resolve, reject) => {
+      const fail = () => reject(new Error(isEnglish()
+        ? "This picture could not be read. Please choose another one."
+        : "این عکس خوانده نشد. عکس دیگری انتخاب کنید."));
+      if (!file || !file.type.startsWith("image/")) return fail();
+      const reader = new FileReader();
+      reader.onerror = fail;
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = fail;
+        img.onload = () => {
+          const side = Math.min(img.naturalWidth, img.naturalHeight);
+          const canvas = document.createElement("canvas");
+          canvas.width = 256;
+          canvas.height = 256;
+          const ctx = canvas.getContext("2d");
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, 256, 256);
+          ctx.drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, 256, 256);
+          resolve(canvas.toDataURL("image/jpeg", 0.85));
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Opens the personal-details form with the values the server has right now.
+  async function openPersonalDetails() {
+    const dialog = byId("accInfoDialog");
+    showError(byId("accInfoError"), "");
+    show(byId("accInfoOk"), false);
+    try {
+      const me = await request("GET", "/v1/web/user/profile");
+      byId("accName").value = me.name;
+      byId("accPhone").value = me.phone;
+      byId("accEmail").value = me.email;
+      byId("accAge").value = me.age == null ? "" : me.age;
+      byId("accGender").value = me.gender;
+      setPhoto(me.avatar);
+    } catch (err) {
+      showError(byId("accInfoError"), err.message);
+    }
+    dialog.showModal();
+  }
+
+  // The photo shown in the personal-details form. Only a change is sent when the form is saved.
+  let photoDraft = "";
+  let photoChanged = false;
+  function setPhoto(src) {
+    photoDraft = src || "";
+    photoChanged = false;
+    paintAvatar(byId("accAvatar"), photoDraft);
+  }
+
+  // Wires the two account forms once, on the first page that shows them. onSaved gets the saved profile.
+  function setupAccountForms(onSaved) {
+    document.querySelectorAll("#accInfoDialog [data-close], #accPasswordDialog [data-close]").forEach((button) => {
+      button.addEventListener("click", () => button.closest("dialog").close());
+    });
+    byId("accAvatarPick").addEventListener("click", () => byId("accAvatarFile").click());
+    byId("accAvatarRemove").addEventListener("click", () => {
+      photoDraft = "";
+      photoChanged = true;
+      paintAvatar(byId("accAvatar"), "");
+    });
+    byId("accAvatarFile").addEventListener("change", async (event) => {
+      const file = event.target.files[0];
+      event.target.value = "";
+      showError(byId("accInfoError"), "");
+      try {
+        photoDraft = await readPhoto(file);
+        photoChanged = true;
+        paintAvatar(byId("accAvatar"), photoDraft);
+      } catch (err) {
+        showError(byId("accInfoError"), err.message);
+      }
+    });
+    byId("accInfoForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      showError(byId("accInfoError"), "");
+      show(byId("accInfoOk"), false);
+      const body = {
+        full_name: byId("accName").value.trim(),
+        email: byId("accEmail").value.trim(),
+        age: byId("accAge").value ? Number(byId("accAge").value) : null,
+        gender: byId("accGender").value || null,
+      };
+      if (photoChanged) body.avatar = photoDraft;
+      try {
+        const saved = await request("PUT", "/v1/web/user/profile", body);
+        onSaved(saved);
+        setPhoto(saved.avatar);
+        byId("accInfoOk").textContent = isEnglish() ? "Saved." : "ذخیره شد.";
+        show(byId("accInfoOk"), true);
+      } catch (err) {
+        showError(byId("accInfoError"), err.message);
+      }
+    });
+    byId("accPasswordForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      showError(byId("accPwError"), "");
+      show(byId("accPwOk"), false);
+      if (byId("accPwNew").value !== byId("accPwRepeat").value) {
+        showError(byId("accPwError"), isEnglish() ? "The two new passwords do not match." : "دو رمز تازه یکسان نیست.");
+        return;
+      }
+      try {
+        await request("POST", "/v1/web/user/password", {
+          current_password: byId("accPwCurrent").value,
+          new_password: byId("accPwNew").value,
+        });
+        event.target.reset();
+        byId("accPwOk").textContent = isEnglish() ? "Your new password is saved." : "رمز تازه ذخیره شد.";
+        show(byId("accPwOk"), true);
+      } catch (err) {
+        showError(byId("accPwError"), err.message);
+      }
+    });
+  }
+
+  async function signOut(signedIn) {
+    await Promise.all(signedIn.map((role) => request("POST", `/v1/web/logout?role=${role}`).catch(() => {})));
+    location.href = "/";
+  }
+
+  // Ends every sign-in for this adult and their own learning, on every device. Only the adult can do this.
+  async function signOutEverywhere() {
+    const message = isEnglish()
+      ? "Sign out of all devices? You will need your password to sign in again."
+      : "از همه‌ی دستگاه‌ها خارج شوید؟ دوباره باید با رمز عبور وارد شوید.";
+    if (!confirm(message)) return;
+    await request("POST", "/v1/web/user/logout-all").catch(() => {});
+    location.href = "/";
+  }
+
+  // The profile photo in the header. Its menu holds the account items and sign-out.
+  function buildAccountMenu(signedIn, avatarSrc) {
+    const wrap = el("div", "account-menu");
+    const avatar = el("button", "avatar-btn");
+    avatar.type = "button";
+    avatar.setAttribute("aria-haspopup", "menu");
+    avatar.setAttribute("aria-expanded", "false");
+    paintAvatar(avatar, avatarSrc);
+
+    const list = el("div", "account-menu-list");
+    list.setAttribute("role", "menu");
+    list.hidden = true;
+    const close = () => {
+      list.hidden = true;
+      avatar.setAttribute("aria-expanded", "false");
+    };
+    const addItem = (fa, en, action, extraClass) => {
+      const item = labelled("button", extraClass ? `account-item ${extraClass}` : "account-item", null, fa, en);
+      item.type = "button";
+      item.setAttribute("role", "menuitem");
+      item.addEventListener("click", () => {
+        close();
+        action();
+      });
+      list.appendChild(item);
+    };
+    addItem("اطلاعات شخصی", "Personal details", openPersonalDetails);
+    addItem("تغییر رمز عبور", "Change password", () => byId("accPasswordDialog").showModal());
+    list.appendChild(el("div", "account-sep"));
+    addItem("خروج", "Sign out", () => signOut(signedIn));
+    if (signedIn.includes("parent")) {
+      addItem("خروج از همه‌ی دستگاه‌ها", "Sign out of all devices", signOutEverywhere, "danger");
+    }
+
+    avatar.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const open = list.hidden;
+      list.hidden = !open;
+      avatar.setAttribute("aria-expanded", String(open));
+    });
+    document.addEventListener("click", (event) => {
+      if (!wrap.contains(event.target)) close();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") close();
+    });
+    wrap.append(avatar, list);
+    return { wrap, avatar };
+  }
+
   // Shows who is signed in on this browser. A visitor who is signed out keeps the static "ورود" menu.
   // A sign-in that is missing is normal here, so each check only decides which buttons appear.
   async function initSiteHeader() {
@@ -282,24 +507,25 @@ const Z = (() => {
     }
     if (!signedIn.length) return;
 
-    const english = document.documentElement.lang === "en";
-    const labelled = (tag, className, href, fa, en) => {
-      const node = el(tag, className, english ? en : fa);
-      node.dataset.fa = fa;
-      node.dataset.en = en;
-      if (href) node.href = href;
-      return node;
-    };
+    let profile = { avatar: "" };
+    try {
+      profile = await request("GET", "/v1/web/user/profile");
+    } catch (_) { /* the header still works without the photo */ }
+
     box.replaceChildren();
-    // An adult's name opens the profile page. A learner's name stays plain text.
-    const greetingText = `${english ? "Hi" : "سلام"} ${greeting}`;
-    if (signedIn.includes("parent")) {
-      const profileLink = el("a", "site-greeting", greetingText);
-      profileLink.href = "/profile";
-      box.appendChild(profileLink);
-    } else {
-      box.appendChild(el("span", "site-greeting", greetingText));
-    }
+    // Only the name, then the photo. The photo opens the account menu.
+    const nameNode = el("span", "site-greeting", greeting);
+    box.appendChild(nameNode);
+    if (signedIn.includes("parent")) box.appendChild(labelled("a", "pill", "/parent", "پنل والد", "Parent area"));
+    if (signedIn.includes("student")) box.appendChild(labelled("a", "pill", "/student", "یادگیری من", "My learning"));
+    const menu = buildAccountMenu(signedIn, profile.avatar);
+    box.appendChild(menu.wrap);
+    box.dataset.state = "member";
+
+    setupAccountForms((saved) => {
+      if (signedIn.includes("parent")) nameNode.textContent = saved.name;
+      paintAvatar(menu.avatar, saved.avatar);
+    });
 
     // Row two of the header: the signed-in person's own items, after the public menu.
     const nav = document.getElementById("memberNav");
@@ -324,15 +550,6 @@ const Z = (() => {
       });
       nav.hidden = !items.length;
     }
-    if (signedIn.includes("parent")) box.appendChild(labelled("a", "pill", "/parent", "پنل والد", "Parent area"));
-    if (signedIn.includes("student")) box.appendChild(labelled("a", "pill", "/student", "یادگیری من", "My learning"));
-    const logout = labelled("button", "ghost", null, "خروج", "Sign out");
-    logout.addEventListener("click", async () => {
-      await Promise.all(signedIn.map((role) => request("POST", `/v1/web/logout?role=${role}`).catch(() => {})));
-      location.href = "/";
-    });
-    box.appendChild(logout);
-    box.dataset.state = "member";
   }
 
   // Blocks marked .reveal rise in once they reach the screen. Each one animates only once.

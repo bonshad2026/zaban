@@ -304,7 +304,12 @@ ul.plain { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
 .site-header-inner, .site-footer-inner { max-width: 1200px; margin: 0 auto; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; gap: 12px 24px; flex-wrap: wrap; }
 /* Theme and language sit at the start of the line (right in Persian, left in English), then the logo. */
 .site-header-inner { justify-content: flex-start; }
-.site-tools { display: flex; gap: 8px; align-items: center; }
+.site-tools { display: flex; gap: 6px; align-items: center; }
+/* Compact theme and language controls, so the header keeps its room for the menu */
+.site-tools .icon-btn { width: 34px; height: 34px; }
+.site-tools .icon-btn svg { width: 16px; height: 16px; }
+.site-tools .lang-toggle { height: 34px; font-size: 13px; padding: 2px; }
+.site-tools .lang-toggle span { padding: 0 9px; }
 .icon-btn { width: 40px; height: 40px; padding: 0; display: inline-flex; align-items: center; justify-content: center; background: transparent; color: var(--text); border: 1px solid var(--border); border-radius: 50%; }
 .icon-btn:hover:not(:disabled) { background: var(--accent-soft); color: var(--accent); }
 .icon-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -334,7 +339,33 @@ ul.plain { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
 .pill:hover { border-color: var(--accent); color: var(--text); }
 .pill.gold { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
 .pill.gold:hover { background: var(--accent-dark); color: var(--on-accent); }
-.site-greeting { color: var(--muted); font-size: 15px; white-space: nowrap; }
+.site-greeting { color: var(--muted); font-size: 15px; white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+/* Profile photo in the header and the menu that opens from it */
+.account-menu { position: relative; }
+button.avatar-btn { width: 40px; height: 40px; padding: 0; border-radius: 50%; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; background: var(--accent-soft); color: var(--accent); border: 1px solid var(--border); }
+button.avatar-btn:hover:not(:disabled) { background: var(--accent-soft); border-color: var(--accent); }
+button.avatar-btn[aria-expanded="true"] { border-color: var(--accent); }
+.avatar-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.account-menu-list { position: absolute; top: calc(100% + 8px); inset-inline-end: 0; z-index: 30; min-width: 240px; display: grid; gap: 2px; padding: 8px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); }
+.account-menu-list[hidden] { display: none; }
+button.account-item { display: block; width: 100%; text-align: start; background: transparent; color: var(--text); border: 0; border-radius: 10px; padding: 10px 14px; font-size: 15px; font-weight: 400; }
+.account-menu-list button.account-item:hover:not(:disabled) { background: var(--accent-soft); color: var(--accent-dark); }
+button.account-item.danger { color: var(--bad); }
+.account-menu-list .account-item.danger:hover:not(:disabled) { background: var(--bad-soft); color: var(--bad); }
+.account-sep { height: 1px; margin: 6px 4px; background: var(--border); }
+/* Account dialogs: personal details and password */
+dialog.account-dialog { width: min(480px, calc(100% - 32px)); max-height: calc(100vh - 32px); margin: auto; padding: 24px; border: 1px solid var(--border); border-radius: 20px; background: var(--card); color: var(--text); box-shadow: var(--shadow); }
+dialog.account-dialog::backdrop { background: rgba(0, 0, 0, 0.55); }
+dialog.account-dialog form { display: block; }
+dialog.account-dialog h2 { margin-bottom: 4px; }
+.dialog-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-top: 20px; }
+.dialog-actions button { margin: 0; }
+.avatar-edit { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 12px; }
+.avatar-edit-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.avatar-edit-actions button { margin: 0; padding: 8px 14px; }
+.avatar-preview { width: 88px; height: 88px; flex: none; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--accent-soft); color: var(--accent); border: 1px solid var(--border); }
+.avatar-preview svg { width: 40px; height: 40px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .accent-list { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
 .accent-card { border: 1px solid var(--border); background: var(--card-raised); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
 .accent-card.is-selected { border-color: var(--accent); }
@@ -365,7 +396,7 @@ ul.plain { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
   .site-brand svg { height: 34px; }
 }
 @media (max-width: 420px) {
-  .site-greeting { display: none; }
+  .site-greeting { max-width: 110px; }
   .site-actions .pill { padding: 8px 12px; font-size: 14px; }
 }
 

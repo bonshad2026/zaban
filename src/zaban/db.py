@@ -19,6 +19,10 @@ ADDED_COLUMNS = [
     ("consult_requests", "last_name", "VARCHAR(120) NOT NULL DEFAULT ''"),
     ("consult_requests", "subject", "VARCHAR(160) NOT NULL DEFAULT ''"),
     ("consult_requests", "contact_permission", "BOOLEAN NOT NULL DEFAULT FALSE"),
+    ("guardians", "email", "VARCHAR(190)"),
+    ("guardians", "age", "INTEGER"),
+    ("guardians", "gender", "VARCHAR(20)"),
+    ("guardians", "avatar_data", "TEXT"),
 ]
 
 
