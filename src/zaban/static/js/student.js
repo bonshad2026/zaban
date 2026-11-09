@@ -115,6 +115,10 @@
     } else {
       showLesson(false);
     }
+    // A header link can open a tool directly, for example ?tab=progress or ?tab=payments.
+    const wanted = new URLSearchParams(location.search).get("tab");
+    const tool = wanted && wanted !== "lesson" ? document.querySelector(`.tab[data-tab="${wanted}"]`) : null;
+    if (tool) tool.click();
   }
 
   function showLesson(on) {

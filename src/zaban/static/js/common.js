@@ -291,7 +291,39 @@ const Z = (() => {
       return node;
     };
     box.replaceChildren();
-    box.appendChild(el("span", "site-greeting", `${english ? "Hi" : "سلام"} ${greeting}`));
+    // An adult's name opens the profile page. A learner's name stays plain text.
+    const greetingText = `${english ? "Hi" : "سلام"} ${greeting}`;
+    if (signedIn.includes("parent")) {
+      const profileLink = el("a", "site-greeting", greetingText);
+      profileLink.href = "/profile";
+      box.appendChild(profileLink);
+    } else {
+      box.appendChild(el("span", "site-greeting", greetingText));
+    }
+
+    // Row two of the header: the signed-in person's own items, after the public menu.
+    const nav = document.getElementById("memberNav");
+    if (nav) {
+      const items = signedIn.includes("parent")
+        ? [
+            ["/parent#childrenCard", "فرزندان شما", "Your children"],
+            ["/parent#selfCard", "شروع آموزش / شروع جلسه", "Start learning / session"],
+            ["/parent#childrenCard", "تاریخچه‌ی یادگیری / پیشرفت", "Learning history / progress"],
+            ["/requests", "درخواست‌های شما", "Your requests"],
+            ["/parent#billingCard", "پرداخت‌های شما", "Your payments"],
+          ]
+        : [
+            ["/student", "شروع آموزش / شروع جلسه", "Start learning / session"],
+            ["/student?tab=progress", "تاریخچه‌ی یادگیری / پیشرفت", "Learning history / progress"],
+            ["/requests", "درخواست‌های شما", "Your requests"],
+            ["/student?tab=payments", "پرداخت‌های شما", "Your payments"],
+          ];
+      items.forEach(([href, fa, en]) => {
+        const link = labelled("a", "member-link", href, fa, en);
+        nav.appendChild(link);
+      });
+      nav.hidden = !items.length;
+    }
     if (signedIn.includes("parent")) box.appendChild(labelled("a", "pill", "/parent", "پنل والد", "Parent area"));
     if (signedIn.includes("student")) box.appendChild(labelled("a", "pill", "/student", "یادگیری من", "My learning"));
     const logout = labelled("button", "ghost", null, "خروج", "Sign out");

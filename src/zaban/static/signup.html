@@ -3,47 +3,61 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ثبت‌نام | زبان</title>
+  <title>ثبت‌نام | گفتاریار</title>
   <link rel="stylesheet" href="/static/css/app.css">
 </head>
 <body data-bilingual>
   <!--site-header-->
   <main class="hero">
     <div class="auth-wrap">
-      <form id="signupForm" class="auth-card" autocomplete="on" novalidate>
+      <form id="signupForm" class="auth-card auth-wide" autocomplete="on" novalidate>
         <h1 data-fa="ساخت حساب" data-en="Create an account">ساخت حساب</h1>
         <p class="muted" data-fa="ثبت‌نام رایگان است. پس از ورود، برای شروع یک پلن را انتخاب می‌کنید." data-en="Sign-up is free. After you sign in, choose a plan to start.">ثبت‌نام رایگان است. پس از ورود، برای شروع یک پلن را انتخاب می‌کنید.</p>
 
-        <label for="signupPhone" data-fa="شماره‌ی موبایل" data-en="Mobile number">شماره‌ی موبایل</label>
-        <input id="signupPhone" name="phone" type="tel" inputmode="tel" class="ltr-field" autocomplete="tel" placeholder="09121234567" required autofocus>
-        <button type="button" id="sendCodeBtn" class="secondary wide" data-fa="ارسال کد پیامکی" data-en="Send SMS code">ارسال کد پیامکی</button>
+        <div class="field-action">
+          <div>
+            <label for="signupPhone" data-fa="شماره‌ی موبایل" data-en="Mobile number">شماره‌ی موبایل</label>
+            <input id="signupPhone" name="phone" type="tel" inputmode="tel" class="ltr-field" autocomplete="tel" placeholder="09121234567" required autofocus>
+          </div>
+          <button type="button" id="sendCodeBtn" class="secondary" data-fa="ارسال کد پیامکی" data-en="Send SMS code">ارسال کد پیامکی</button>
+        </div>
 
-        <div id="signupStep" hidden>
-          <p class="notice" id="signupDevHint" hidden></p>
-          <label for="signupCode" data-fa="کد پیامکی" data-en="SMS code">کد پیامکی</label>
-          <input id="signupCode" name="code" inputmode="numeric" class="ltr-field" autocomplete="one-time-code" maxlength="8" required>
+        <div id="signupStep" class="auth-grid" hidden>
+          <p class="notice full" id="signupDevHint" hidden></p>
 
-          <label for="signupName" data-fa="نام و نام خانوادگی" data-en="Full name">نام و نام خانوادگی</label>
-          <input id="signupName" name="full_name" maxlength="120" required>
+          <div>
+            <label for="signupCode" data-fa="کد پیامکی" data-en="SMS code">کد پیامکی</label>
+            <input id="signupCode" name="code" inputmode="numeric" class="ltr-field" autocomplete="one-time-code" maxlength="8" required>
+          </div>
 
-          <label for="signupPassword" data-fa="رمز عبور (حداقل ۸ نویسه)" data-en="Password (at least 8 characters)">رمز عبور (حداقل ۸ نویسه)</label>
-          <input id="signupPassword" name="password" type="password" class="ltr-field" minlength="8" autocomplete="new-password" required>
+          <div>
+            <label for="signupName" data-fa="نام و نام خانوادگی" data-en="Full name">نام و نام خانوادگی</label>
+            <input id="signupName" name="full_name" maxlength="120" required>
+          </div>
 
-          <label for="signupGoal" data-fa="هدف شما از یادگیری" data-en="Your goal">هدف شما از یادگیری</label>
-          <select id="signupGoal" name="goal">
-            <option value="" data-fa="انتخاب کنید" data-en="Choose">انتخاب کنید</option>
-            <option value="مکالمه‌ی روزمره" data-fa="مکالمه‌ی روزمره" data-en="Everyday conversation">مکالمه‌ی روزمره</option>
-            <option value="سفر" data-fa="سفر" data-en="Travel">سفر</option>
-            <option value="کار و شغل" data-fa="کار و شغل" data-en="Work">کار و شغل</option>
-            <option value="آزمون" data-fa="آزمون" data-en="Exams">آزمون</option>
-            <option value="مدرسه" data-fa="مدرسه" data-en="School">مدرسه</option>
-          </select>
+          <div>
+            <label for="signupPassword" data-fa="رمز عبور (حداقل ۸ نویسه)" data-en="Password (at least 8 characters)">رمز عبور (حداقل ۸ نویسه)</label>
+            <input id="signupPassword" name="password" type="password" class="ltr-field" minlength="8" autocomplete="new-password" required>
+          </div>
 
-          <label class="inline"><input type="checkbox" name="age_confirmed" required> <span data-fa="من بزرگسال هستم (۱۸ سال یا بیشتر)." data-en="I am an adult (18 or older).">من بزرگسال هستم (۱۸ سال یا بیشتر).</span></label>
-          <label class="inline"><input type="checkbox" name="consent" required> <span data-fa="قوانین استفاده و حریم خصوصی را می‌پذیرم." data-en="I accept the terms of use and privacy policy.">قوانین استفاده و حریم خصوصی را می‌پذیرم.</span></label>
+          <div>
+            <label for="signupGoal" data-fa="هدف شما از یادگیری" data-en="Your goal">هدف شما از یادگیری</label>
+            <select id="signupGoal" name="goal">
+              <option value="" data-fa="انتخاب کنید" data-en="Choose">انتخاب کنید</option>
+              <option value="مکالمه‌ی روزمره" data-fa="مکالمه‌ی روزمره" data-en="Everyday conversation">مکالمه‌ی روزمره</option>
+              <option value="سفر" data-fa="سفر" data-en="Travel">سفر</option>
+              <option value="کار و شغل" data-fa="کار و شغل" data-en="Work">کار و شغل</option>
+              <option value="آزمون" data-fa="آزمون" data-en="Exams">آزمون</option>
+              <option value="مدرسه" data-fa="مدرسه" data-en="School">مدرسه</option>
+            </select>
+          </div>
 
-          <p></p>
-          <button type="submit" class="wide" data-fa="ساخت حساب" data-en="Create account">ساخت حساب</button>
+          <div class="full">
+            <label class="inline"><input type="checkbox" name="age_confirmed" required> <span data-fa="من بزرگسال هستم (۱۸ سال یا بیشتر)." data-en="I am an adult (18 or older).">من بزرگسال هستم (۱۸ سال یا بیشتر).</span></label>
+            <label class="inline"><input type="checkbox" name="consent" required> <span data-fa="قوانین استفاده و حریم خصوصی را می‌پذیرم." data-en="I accept the terms of use and privacy policy.">قوانین استفاده و حریم خصوصی را می‌پذیرم.</span></label>
+          </div>
+
+          <button type="submit" class="wide full" data-fa="ساخت حساب" data-en="Create account">ساخت حساب</button>
         </div>
 
         <p class="error" id="signupError" hidden></p>

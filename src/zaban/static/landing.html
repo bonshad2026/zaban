@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>زبان | یادگیری انگلیسی با معلم شما</title>
+  <title>گفتاریار | یادگیری انگلیسی با معلم شما</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;600;800&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&display=swap">
   <link rel="stylesheet" href="/static/css/app.css">
   <style>
-    .landing { min-height: 100vh; color: var(--text); }
+    .landing { color: var(--text); }
     .wrap-l { max-width: 1200px; margin: 0 auto; padding: 0 40px; }
 
     /* The hero uses the page colours of the current theme, so text and cards read well in dark and light. */
@@ -16,16 +16,42 @@
     .hero-top { padding-top: 72px; }
     .hero-l { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: 64px; align-items: center; padding: 40px 0 96px; }
     .eyebrow { font-family: "Cormorant Garamond", serif; font-style: italic; color: var(--accent); font-size: 18px; letter-spacing: 1px; }
-    .hero-top h1 { font-family: "Cormorant Garamond", "Vazirmatn", serif; font-weight: 500; font-size: clamp(26px, 3vw, 38px); line-height: 1.3; white-space: nowrap; margin: 12px 0 0; }
+    .hero-top h1 { font-family: "Cormorant Garamond", "Vazirmatn", serif; font-weight: 500; font-size: clamp(28px, 3.4vw, 44px); line-height: 1.25; margin: 12px 0 0; max-width: 980px; }
     .hero-rule { display: block; width: 84px; height: 1px; margin-top: 22px; background: linear-gradient(90deg, var(--accent), transparent); transform-origin: 0 50%; animation: rule-grow 1.4s ease 0.4s both; }
     .lead-l { font-size: 17px; line-height: 1.95; color: var(--muted); max-width: 540px; margin: 0; }
     .note-l { margin-top: 20px; font-size: 14px; color: var(--muted); }
-    .preview { background: var(--card); border: 1px solid var(--border); border-radius: 28px; padding: 28px; display: flex; flex-direction: column; gap: 16px; box-shadow: var(--shadow); }
+
+    /* Sample session: messages appear one after another, once */
+    .preview { background: var(--card); border: 1px solid var(--border); border-radius: 28px; padding: 28px; display: flex; flex-direction: column; gap: 14px; box-shadow: var(--shadow); }
     .preview-head, .preview-foot { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
-    .preview-foot { border-top: 1px solid var(--border); padding-top: 16px; }
+    .preview-foot { border-top: 1px solid var(--border); padding-top: 16px; margin-top: 4px; }
     .bubble-l { max-width: 82%; padding: 14px 18px; font-size: 16px; line-height: 1.7; border-radius: 18px; }
-    .bubble-l.niko { background: var(--card-raised); border: 1px solid var(--border); align-self: flex-start; border-bottom-left-radius: 6px; }
+    .bubble-l.teacher { background: var(--card-raised); border: 1px solid var(--border); align-self: flex-start; border-bottom-left-radius: 6px; }
     .bubble-l.you { background: var(--accent); color: var(--on-accent); align-self: flex-end; border-bottom-right-radius: 6px; }
+    .bubble-l em { font-style: italic; }
+
+    /* One message per line. A slot holds two items in the same place, so one can replace the other */
+    .swap { display: grid; }
+    .swap > * { grid-area: 1 / 1; }
+    .swap > .you { justify-self: end; }
+    .swap > .teacher { justify-self: start; }
+    .anim { opacity: 0; animation: fade-up 0.5s ease var(--t) forwards; }
+    .swap > .text-in { opacity: 0; animation: fade-up 0.4s ease var(--t) forwards; }
+    .voice { justify-self: end; opacity: 0; animation: fade-up 0.4s ease var(--t) forwards, fade-out 0.4s ease var(--t2) forwards; display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--accent-soft); color: var(--accent); border-radius: 18px; border-bottom-right-radius: 6px; font-size: 14px; }
+    .voice .rec { width: 9px; height: 9px; border-radius: 50%; background: var(--bad); animation: blink 1s ease-in-out infinite; }
+    .wave { display: flex; align-items: center; gap: 3px; height: 22px; }
+    .wave i { width: 3px; height: 100%; border-radius: 2px; background: currentColor; animation: wave 0.9s ease-in-out infinite; }
+    .wave i:nth-child(2n) { animation-delay: 0.2s; }
+    .wave i:nth-child(3n) { animation-delay: 0.4s; }
+    .typing { justify-self: start; opacity: 0; animation: fade-up 0.3s ease var(--t) forwards, fade-out 0.3s ease var(--t2) forwards; display: inline-flex; gap: 5px; padding: 16px 18px; background: var(--card-raised); border: 1px solid var(--border); border-radius: 18px; border-bottom-left-radius: 6px; align-self: flex-start; }
+    .typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); animation: dot 1.2s ease-in-out infinite; }
+    .typing i:nth-child(2) { animation-delay: 0.15s; }
+    .typing i:nth-child(3) { animation-delay: 0.3s; }
+    @keyframes fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    @keyframes fade-out { from { opacity: 1; } to { opacity: 0; } }
+    @keyframes wave { 0%, 100% { transform: scaleY(0.3); } 50% { transform: scaleY(1); } }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+    @keyframes dot { 0%, 80%, 100% { opacity: 0.3; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-4px); } }
 
     /* Below the hero */
     .below { padding-top: 96px; }
@@ -47,7 +73,7 @@
     @media (max-width: 820px) {
       .wrap-l { padding: 0 16px; }
       .hero-top { padding-top: 40px; }
-      .hero-top h1 { white-space: normal; font-size: 30px; }
+      .hero-top h1 { font-size: 28px; }
       .hero-l { grid-template-columns: 1fr; gap: 40px; padding: 32px 0 64px; }
       .section-head h2 { font-size: 32px; }
       .video-l { margin-bottom: 64px; }
@@ -58,6 +84,8 @@
     @media (prefers-reduced-motion: reduce) {
       .hero-rule { animation: none; }
       .video-l { transition: none; }
+      .anim, .swap > .text-in { opacity: 1; animation: none; }
+      .voice, .typing { display: none; }
     }
   </style>
 </head>
@@ -67,22 +95,38 @@
   <section class="hero-stage">
     <div class="wrap-l">
       <div class="hero-top reveal">
-        <span class="eyebrow" data-fa="یادگیری یک‌به‌یک" data-en="One-to-one learning">یادگیری یک‌به‌یک</span>
-        <h1 data-fa="انگلیسی را با یک معلم که واقعاً گوش می‌دهد تمرین کنید." data-en="Practise English with a teacher who really listens.">انگلیسی را با یک معلم که واقعاً گوش می‌دهد تمرین کنید.</h1>
+        <span class="eyebrow" data-fa="یک معلم، فقط برای شما" data-en="One teacher, only for you">یک معلم، فقط برای شما</span>
+        <h1 data-fa="انگلیسی را با حرف زدن یاد بگیرید، نه فقط با حفظ کردن." data-en="Learn English by speaking, not just memorising.">انگلیسی را با حرف زدن یاد بگیرید، نه فقط با حفظ کردن.</h1>
         <span class="hero-rule" aria-hidden="true"></span>
       </div>
       <section class="hero-l">
         <div class="reveal">
-          <p class="lead-l" data-fa="جلسه‌ی یک‌به‌یک با معلم شما، با صدا و متن. هر جلسه بر اساس هدف و سطح شما ساخته می‌شود و گزارش پیشرفت را همیشه در دست دارید." data-en="One-to-one sessions with your teacher, by voice and text. Every session fits your goal and level, and you always see your progress.">جلسه‌ی یک‌به‌یک با معلم شما، با صدا و متن. هر جلسه بر اساس هدف و سطح شما ساخته می‌شود و گزارش پیشرفت را همیشه در دست دارید.</p>
-          <p class="note-l" data-fa="برای شروع، یک پلن را انتخاب کنید." data-en="To start, choose a plan.">ثبت‌نام رایگان است. برای شروع، یک پلن را انتخاب می‌کنید.</p>
+          <p class="lead-l" data-fa="در هر جلسه‌ی یک‌به‌یک، با صدا یا متن، معلم با پرسش‌های کوتاه شما را به حرف زدن می‌اندازد، اشتباه‌هایتان را مهربان اصلاح می‌کند و جمله‌ی بعدی را نشانتان می‌دهد. بعد از هر جلسه می‌بینید چه پیشرفتی کرده‌اید." data-en="In every one-to-one session, by voice or text, your teacher asks short questions to get you talking, corrects mistakes gently and shows you the next sentence to try. After each session you see what you improved.">در هر جلسه‌ی یک‌به‌یک، با صدا یا متن، معلم با پرسش‌های کوتاه شما را به حرف زدن می‌اندازد، اشتباه‌هایتان را مهربان اصلاح می‌کند و جمله‌ی بعدی را نشانتان می‌دهد. بعد از هر جلسه می‌بینید چه پیشرفتی کرده‌اید.</p>
+          <p class="note-l" data-fa="ثبت‌نام رایگان است. بعد از ورود، یک پلن را انتخاب می‌کنید." data-en="Sign-up is free. After you sign in, choose a plan.">ثبت‌نام رایگان است. بعد از ورود، یک پلن را انتخاب می‌کنید.</p>
         </div>
 
         <div class="reveal">
           <div class="preview" aria-label="نمونه‌ی یک جلسه">
             <div class="preview-head"><span data-fa="جلسه‌ی امروز · ۱۰ دقیقه" data-en="Today's session · 10 min">جلسه‌ی امروز · ۱۰ دقیقه</span><span style="color:#8fbf9a">● <span data-fa="در حال گفتگو" data-en="Talking">در حال گفتگو</span></span></div>
-            <div class="bubble-l niko" dir="ltr">Hi! What did you do this weekend?</div>
-            <div class="bubble-l you" dir="ltr">I went to the park with my friends.</div>
-            <div class="bubble-l niko" dir="ltr">Nice! Try: <em>"I went to the park, and we played football."</em></div>
+
+            <div class="bubble-l teacher anim" dir="ltr" style="--t: 0.4s">What did you do this weekend?</div>
+            <div class="bubble-l you anim" dir="ltr" style="--t: 1.8s">I visited my grandma with my sister.</div>
+            <div class="bubble-l teacher anim" dir="ltr" style="--t: 3.4s">How lovely! What did you cook together?</div>
+
+            <div class="swap">
+              <div class="voice" style="--t: 4.6s; --t2: 6.6s">
+                <span class="rec" aria-hidden="true"></span>
+                <span class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+                <span data-fa="ضبط صدا…" data-en="Recording…">ضبط صدا…</span>
+              </div>
+              <div class="bubble-l you text-in" dir="ltr" style="--t: 6.6s">We made pancakes, and they were delicious!</div>
+            </div>
+
+            <div class="swap">
+              <div class="typing" style="--t: 8s; --t2: 9.4s" aria-hidden="true"><i></i><i></i><i></i></div>
+              <div class="bubble-l teacher text-in" dir="ltr" style="--t: 9.4s">Great! Add a reason: <em>"It was delicious because …"</em></div>
+            </div>
+
             <div class="preview-foot"><span data-fa="سطح تقریبی: B1" data-en="Level: B1">سطح تقریبی: B1</span><span data-fa="پیشرفت این ماه: ۶۸٪" data-en="Progress this month: 68%">پیشرفت این ماه: ۶۸٪</span></div>
           </div>
         </div>
@@ -104,8 +148,8 @@
 
     <section id="consult" class="band reveal">
       <div>
-        <h2 data-fa="مشاوران ما کنار شما هستند." data-en="Our advisers are with you.">سؤالی دارید؟ با ما صحبت کنید.</h2>
-        <p data-fa="شماره‌ی خود را بگذارید تا مشاور ما در کوتاه‌ترین زمان با شما تماس بگیرد. نیازی به ورود نیست." data-en="Leave your number and an adviser will call you as soon as possible. No sign-in needed.">شماره‌ی خود را بگذارید تا یکی از مشاوران با شما تماس بگیرد و به سؤال‌های شما پاسخ دهد. ورود لازم نیست.</p>
+        <h2 data-fa="مشاوران ما کنار شما هستند." data-en="Our advisers are with you.">مشاوران ما کنار شما هستند.</h2>
+        <p data-fa="شماره‌ی خود را بگذارید تا مشاور ما در کوتاه‌ترین زمان با شما تماس بگیرد. نیازی به ورود نیست." data-en="Leave your number and an adviser will call you as soon as possible. No sign-in needed.">شماره‌ی خود را بگذارید تا مشاور ما در کوتاه‌ترین زمان با شما تماس بگیرد. نیازی به ورود نیست.</p>
       </div>
       <a class="pill gold" href="/consult" style="white-space:nowrap" data-fa="درخواست مشاوره" data-en="Request a call">درخواست مشاوره</a>
     </section>

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>پروفایل من | گفتاریار</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body data-bilingual>
+  <!--site-header-->
+  <main class="page-main">
+    <div class="page-wrap">
+      <div class="page-stack">
+        <h1 class="page-title accent-title" data-fa="پروفایل من" data-en="My profile">پروفایل من</h1>
+
+        <section class="page-card" id="profileBox" hidden>
+          <h2 data-fa="اطلاعات شخصی" data-en="Personal details">اطلاعات شخصی</h2>
+          <form id="profileForm" novalidate>
+            <label for="pfName" data-fa="نام و نام خانوادگی" data-en="Full name">نام و نام خانوادگی</label>
+            <input id="pfName" name="full_name" maxlength="120" required>
+            <label for="pfPhone" data-fa="شماره‌ی موبایل" data-en="Mobile number">شماره‌ی موبایل</label>
+            <input id="pfPhone" class="ltr-field" readonly>
+            <p class="page-actions"><button type="submit" data-fa="ذخیره" data-en="Save">ذخیره</button></p>
+            <p class="ok-msg" id="pfOk" hidden></p>
+            <p class="error" id="pfError" hidden></p>
+          </form>
+        </section>
+
+        <section class="page-card" id="passwordBox" hidden>
+          <h2 data-fa="تغییر رمز عبور" data-en="Change password">تغییر رمز عبور</h2>
+          <form id="passwordForm" novalidate>
+            <label for="pwCurrent" data-fa="رمز فعلی" data-en="Current password">رمز فعلی</label>
+            <input id="pwCurrent" name="current_password" type="password" class="ltr-field" autocomplete="current-password" required>
+            <label for="pwNew" data-fa="رمز تازه (حداقل ۸ نویسه)" data-en="New password (at least 8 characters)">رمز تازه (حداقل ۸ نویسه)</label>
+            <input id="pwNew" name="new_password" type="password" class="ltr-field" autocomplete="new-password" minlength="8" required>
+            <p class="page-actions"><button type="submit" data-fa="ذخیره‌ی رمز تازه" data-en="Save new password">ذخیره‌ی رمز تازه</button></p>
+            <p class="ok-msg" id="pwOk" hidden></p>
+            <p class="error" id="pwError" hidden></p>
+          </form>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/profile.js"></script>
+</body>
+</html>

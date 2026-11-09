@@ -23,6 +23,7 @@ from zaban.admin_ops import router as admin_ops_router
 from zaban.ai_api import router as ai_router
 from zaban.learning_aids import parent_router as learning_parent_router
 from zaban.learning_aids import router as learning_aids_router
+from zaban.account import router as account_router
 from zaban.web import router as web_router
 
 STATIC_DIR = Path(__file__).parent / "static"
@@ -50,6 +51,7 @@ app = FastAPI(title="zaban", version="0.1.0", lifespan=lifespan)
 app.include_router(api_router, prefix="/v1")
 app.include_router(reports_router, prefix="/v1")
 app.include_router(web_router, prefix="/v1")
+app.include_router(account_router, prefix="/v1")
 app.include_router(learning_aids_router, prefix="/v1")
 app.include_router(learning_parent_router, prefix="/v1")
 app.include_router(ai_router, prefix="/v1")
@@ -87,8 +89,9 @@ def _page(name: str, current: str = "") -> HTMLResponse:
     html = html.replace("<!--contact-details-->", _contact_block())
     # The copyright footer goes at the end of every page.
     footer = (PARTIALS_DIR / "footer.html").read_text(encoding="utf-8")
-    html = html.replace("</body>", f"{footer}</body>")
-    return HTMLResponse(html.replace("<!--site-header-->", header))
+    # The page content sits in one block that grows to fill the screen, so the footer stays at the bottom even on short pages.
+    html = html.replace("</body>", f"</div>{footer}</body>")
+    return HTMLResponse(html.replace("<!--site-header-->", f'{header}<div class="site-main">'))
 
 
 @app.get("/", include_in_schema=False)
@@ -109,6 +112,16 @@ def parent_page() -> HTMLResponse:
 @app.get("/signup", include_in_schema=False)
 def signup_page() -> HTMLResponse:
     return _page("signup.html", "/signup")
+
+
+@app.get("/profile", include_in_schema=False)
+def profile_page() -> HTMLResponse:
+    return _page("profile.html", "/profile")
+
+
+@app.get("/requests", include_in_schema=False)
+def requests_page() -> HTMLResponse:
+    return _page("requests.html", "/requests")
 
 
 @app.get("/demo", include_in_schema=False)

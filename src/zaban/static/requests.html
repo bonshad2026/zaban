@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>درخواست‌های شما | گفتاریار</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body data-bilingual>
+  <!--site-header-->
+  <main class="page-main">
+    <div class="page-wrap">
+      <div class="page-stack">
+        <h1 class="page-title accent-title" data-fa="درخواست‌های شما" data-en="Your requests">درخواست‌های شما</h1>
+        <section class="page-card">
+          <p class="muted" id="requestsEmpty" data-fa="هنوز درخواستی با این شماره ثبت نشده است." data-en="No requests have been sent from this number yet." hidden>هنوز درخواستی با این شماره ثبت نشده است.</p>
+          <ul class="plain" id="requestsList"></ul>
+          <p class="error" id="requestsError" hidden></p>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/requests.js"></script>
+</body>
+</html>

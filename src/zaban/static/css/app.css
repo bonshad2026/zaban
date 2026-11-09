@@ -185,8 +185,9 @@ button.secondary:hover:not(:disabled) { background: var(--accent); color: var(--
 .auth-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px; }
 .auth-grid .full { grid-column: 1 / -1; }
 .auth-grid > button.full { margin-top: 28px; padding: 14px 18px; }
-.auth-grid .inline + .inline { margin-top: 14px; }
-.auth-grid .full > label.inline { margin-top: 18px; }
+/* Each consent line takes the full width, with its checkbox at the start */
+.auth-grid .full > label.inline { display: flex; width: 100%; margin-top: 18px; }
+.auth-grid .full > label.inline + label.inline { margin-top: 14px; }
 .auth-card .back { display: inline-block; margin-bottom: 8px; font-size: 14px; color: var(--accent); text-decoration: none; }
 .hero .auth-card .lang-row { display: flex; justify-content: flex-end; }
 .hero .auth-card .lang-toggle { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
@@ -313,9 +314,18 @@ ul.plain { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
 .site-brand { display: inline-flex; align-items: center; direction: ltr; text-decoration: none; color: var(--text); }
 .site-brand svg { display: block; flex: none; height: 40px; width: auto; }
 .brand-mark { fill: var(--accent); }
-.brand-z { fill: var(--on-accent); }
+.brand-z { fill: #1A1A1F; }
 .brand-word { fill: var(--text); }
 .site-nav { display: flex; gap: 4px; flex-wrap: wrap; font-size: 15px; margin-inline: auto; }
+/* Row one: logo, theme and language, the main menu in the middle, and sign-in at the end.
+   Row two (only after sign-in): the signed-in person's own items. */
+.site-header-inner { justify-content: space-between; }
+.site-brand { margin-inline: 0; }
+.site-nav { margin-inline: auto; }
+.member-nav { flex: 0 0 100%; order: 3; display: flex; flex-wrap: wrap; gap: 4px; font-size: 15px; justify-content: flex-start; padding-top: 4px; border-top: 1px solid var(--border); }
+.member-nav[hidden] { display: none; }
+.member-nav a { text-decoration: none; color: var(--accent); padding: 8px 14px; border-radius: 999px; transition: background .2s, color .2s; }
+.member-nav a:hover { background: var(--accent-soft); color: var(--accent-dark); }
 .site-nav a { text-decoration: none; color: var(--muted); padding: 8px 16px; border-radius: 999px; transition: background .2s, color .2s; }
 .site-nav a:hover { color: var(--text); background: var(--accent-soft); }
 .site-nav a[aria-current="page"] { color: var(--accent); background: var(--accent-soft); }
@@ -350,6 +360,7 @@ ul.plain { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
   .site-header-inner { padding: 12px 16px; gap: 12px; }
   .site-actions { margin-inline-start: auto; }
   .site-nav { order: 3; width: 100%; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-inline: 0; }
+  .member-nav { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
   .site-nav::-webkit-scrollbar { display: none; }
   .site-brand svg { height: 34px; }
 }
@@ -493,6 +504,11 @@ html[dir="ltr"] .home-link .arrow { transform: scaleX(-1); }
 .accent-title { color: var(--accent); }
 .page-card select option { background: var(--card); color: var(--text); }
 .page-card select option:checked { background: var(--accent-soft); color: var(--accent); }
+/* Dropdown lists use the theme too: the hovered and focused option gets the soft accent, not the system blue */
+select { color-scheme: dark; }
+:root[data-theme="light"] select { color-scheme: light; }
+select option, select optgroup { background: var(--card); color: var(--text); }
+select option:hover, select option:focus, select option:checked { background: var(--accent-soft); color: var(--accent); }
 /* More space between the consent line and the submit button, and between the button and the field above */
 .form-grid .inline { margin-bottom: 8px; }
 .form-grid .page-submit { margin-top: 28px; }

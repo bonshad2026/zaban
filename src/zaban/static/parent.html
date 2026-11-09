@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ورود والدین و بزرگسالان | زبان</title>
+  <title>ورود والدین و بزرگسالان | گفتاریار</title>
   <link rel="stylesheet" href="/static/css/app.css">
 </head>
 <body>
@@ -27,9 +27,13 @@
       <form id="resetForm" class="auth-card" hidden novalidate>
         <a class="back" href="#" id="backToLogin" data-fa="بازگشت به ورود" data-en="Back to sign in">بازگشت به ورود</a>
         <h1 data-fa="بازیابی رمز عبور" data-en="Reset password">بازیابی رمز عبور</h1>
-        <label for="resetPhone" data-fa="شماره‌ی موبایل" data-en="Mobile number">شماره‌ی موبایل</label>
-        <input id="resetPhone" name="phone" type="tel" inputmode="tel" class="ltr-field" placeholder="09121234567" required>
-        <button type="button" id="resetSendBtn" class="secondary wide" data-fa="ارسال کد" data-en="Send code">ارسال کد</button>
+        <div class="field-action">
+          <div>
+            <label for="resetPhone" data-fa="شماره‌ی موبایل" data-en="Mobile number">شماره‌ی موبایل</label>
+            <input id="resetPhone" name="phone" type="tel" inputmode="tel" class="ltr-field" placeholder="09121234567" required>
+          </div>
+          <button type="button" id="resetSendBtn" class="secondary" data-fa="ارسال کد" data-en="Send code">ارسال کد</button>
+        </div>
         <div id="resetStep" hidden>
           <p class="notice" id="resetDevHint" hidden></p>
           <label for="resetCode" data-fa="کد پیامکی" data-en="SMS code">کد پیامکی</label>
