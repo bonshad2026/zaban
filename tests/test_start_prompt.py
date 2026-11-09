@@ -48,5 +48,5 @@ def test_admin_preview_builds_the_prompt_for_a_learner(client):
         student_id = db.query(Student).filter(Student.username == STUDENT_USERNAME).one().id
     data = client.get(f"/v1/admin/api/students/{student_id}/start-prompt").json()
     assert set(data["parts"]) >= {"intro", "admin", "database", "learner", "rules"}
-    assert data["prompt"].startswith("You are Niko")
+    assert data["prompt"].startswith("You are a friendly")
     assert "Rules:" in data["prompt"]

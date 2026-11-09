@@ -33,9 +33,10 @@ def _parent(client) -> None:
 
 # ----- Pages -----
 
-def test_landing_offers_learner_and_admin_sign_in(client):
+def test_landing_offers_learner_sign_in_from_header(client):
     html = client.get("/").text
-    assert 'href="/student"' in html and 'href="/admin"' in html
+    # The sign-in menu in the header links to the learner page. The admin page is not linked publicly.
+    assert 'href="/student"' in html
 
 
 def test_student_page_has_the_learner_tools(client):

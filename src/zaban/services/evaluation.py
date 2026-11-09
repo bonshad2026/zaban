@@ -11,7 +11,7 @@ EVALUATION_INSTRUCTIONS = (
 
 
 def _transcript(session: TutorSession) -> str:
-    lines = [f"{'Student' if m.role == 'user' else 'Niko'}: {m.content}" for m in session.messages[-40:]]
+    lines = [f"{'Student' if m.role == 'user' else 'Teacher'}: {m.content}" for m in session.messages[-40:]]
     return "\n".join(lines)
 
 

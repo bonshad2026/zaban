@@ -48,9 +48,9 @@
   <!-- App view -->
   <div id="appView" hidden>
     <main class="wrap">
-      <p class="page-actions"><button id="logoutAllBtn" class="ghost" type="button">خروج از همه‌ی دستگاه‌ها</button></p>
+      <p class="page-actions"><button id="logoutAllBtn" class="ghost" type="button" data-fa="خروج از همه‌ی دستگاه‌ها" data-en="Sign out of all devices">خروج از همه‌ی دستگاه‌ها</button></p>
       <section class="card" id="billingCard">
-        <h2>پلن و پرداخت</h2>
+        <h2 data-fa="پلن و پرداخت" data-en="Plan and payment">پلن و پرداخت</h2>
         <p id="planStatus" class="muted"></p>
         <p class="ok-msg" id="paymentNotice" hidden></p>
         <div class="row" id="planList"></div>
@@ -58,39 +58,39 @@
       </section>
 
       <section class="card" id="selfCard">
-        <h2>یادگیری خودم</h2>
-        <p class="muted">اگر خودتان می‌خواهید انگلیسی یاد بگیرید، وارد بخش یادگیری خود شوید. گزارش‌های این بخش فقط برای خودتان است.</p>
-        <button id="selfBtn" type="button">ورود به یادگیری خودم</button>
+        <h2 data-fa="یادگیری خودم" data-en="My own learning">یادگیری خودم</h2>
+        <p class="muted" data-fa="اگر خودتان می‌خواهید انگلیسی یاد بگیرید، وارد بخش یادگیری خود شوید. گزارش‌های این بخش فقط برای خودتان است." data-en="If you want to learn English yourself, open your own learning area. Its reports are only for you.">اگر خودتان می‌خواهید انگلیسی یاد بگیرید، وارد بخش یادگیری خود شوید. گزارش‌های این بخش فقط برای خودتان است.</p>
+        <button id="selfBtn" type="button" data-fa="ورود به یادگیری خودم" data-en="Open my own learning">ورود به یادگیری خودم</button>
         <p class="error" id="selfError" hidden></p>
       </section>
 
       <section class="card" id="childrenCard">
-        <h2>فرزندان من</h2>
+        <h2 data-fa="فرزندان من" data-en="My children">فرزندان من</h2>
         <div class="student-list" id="studentList"></div>
       </section>
 
       <section class="card" id="addChildCard">
-        <h2>افزودن فرزند</h2>
-        <p class="muted">برای فرزندتان یک حساب بسازید. او با همین نام کاربری و PIN وارد می‌شود. فقط برای کودکان و نوجوانان زیر ۱۸ سال است؛ بزرگسالان خودشان حساب می‌سازند.</p>
+        <h2 data-fa="افزودن فرزند" data-en="Add a child">افزودن فرزند</h2>
+        <p class="muted" data-fa="برای فرزندتان یک حساب بسازید. او با همین نام کاربری و PIN وارد می‌شود. فقط برای کودکان و نوجوانان زیر ۱۸ سال است؛ بزرگسالان خودشان حساب می‌سازند." data-en="Create an account for your child. They sign in with this username and PIN. This is only for children and teenagers under 18; adults create their own account.">برای فرزندتان یک حساب بسازید. او با همین نام کاربری و PIN وارد می‌شود. فقط برای کودکان و نوجوانان زیر ۱۸ سال است؛ بزرگسالان خودشان حساب می‌سازند.</p>
         <form id="addForm">
           <div class="row">
             <div>
-              <label for="newName">نام فرزند (برای نمایش)</label>
+              <label for="newName" data-fa="نام فرزند (برای نمایش)" data-en="Child's name (for display)">نام فرزند (برای نمایش)</label>
               <input id="newName" name="display_name" maxlength="120" required>
             </div>
             <div>
-              <label for="newAge">بازه‌ی سنی</label>
+              <label for="newAge" data-fa="بازه‌ی سنی" data-en="Age range">بازه‌ی سنی</label>
               <select id="newAge" name="age_band">
-                <option value="4-6">۴ تا ۶ سال</option>
-                <option value="7-10">۷ تا ۱۰ سال</option>
-                <option value="11-14" selected>۱۱ تا ۱۴ سال</option>
-                <option value="15-18">۱۵ تا ۱۸ سال</option>
+                <option value="4-6" data-fa="۴ تا ۶ سال" data-en="4 to 6 years">۴ تا ۶ سال</option>
+                <option value="7-10" data-fa="۷ تا ۱۰ سال" data-en="7 to 10 years">۷ تا ۱۰ سال</option>
+                <option value="11-14" selected data-fa="۱۱ تا ۱۴ سال" data-en="11 to 14 years">۱۱ تا ۱۴ سال</option>
+                <option value="15-18" data-fa="۱۵ تا ۱۸ سال" data-en="15 to 18 years">۱۵ تا ۱۸ سال</option>
               </select>
             </div>
           </div>
           <div class="row">
             <div>
-              <label for="newUsername">نام کاربری ورود (حروف کوچک انگلیسی، عدد یا . _ -)</label>
+              <label for="newUsername" data-fa="نام کاربری ورود (حروف کوچک انگلیسی، عدد یا . _ -)" data-en="Sign-in username (small English letters, numbers or . _ -)">نام کاربری ورود (حروف کوچک انگلیسی، عدد یا . _ -)</label>
               <input id="newUsername" name="username" class="ltr-field" pattern="[a-zA-Z0-9_.\-]{3,30}" required>
             </div>
             <div>
@@ -100,25 +100,25 @@
           </div>
           <div class="row">
             <div>
-              <label for="newInterests">علاقه‌های فرزند (مثلاً فوتبال، نقاشی، حیوانات)</label>
+              <label for="newInterests" data-fa="علاقه‌های فرزند (مثلاً فوتبال، نقاشی، حیوانات)" data-en="Child's interests (for example football, drawing, animals)">علاقه‌های فرزند (مثلاً فوتبال، نقاشی، حیوانات)</label>
               <textarea id="newInterests" name="interests" rows="2" maxlength="300"></textarea>
             </div>
             <div>
-              <label for="newMotivation">هدف فرزند از یادگیری</label>
+              <label for="newMotivation" data-fa="هدف فرزند از یادگیری" data-en="Child's learning goal">هدف فرزند از یادگیری</label>
               <select id="newMotivation" name="motivation">
-                <option value="">انتخاب کنید</option>
-                <option value="daily_conversation">مکالمه‌ی روزمره</option>
-                <option value="school">مدرسه و آزمون مدرسه</option>
-                <option value="travel">سفر</option>
-                <option value="work">کار و حرفه‌ای</option>
-                <option value="hobbies">سرگرمی (فیلم، کتاب، بازی)</option>
+                <option value="" data-fa="انتخاب کنید" data-en="Choose">انتخاب کنید</option>
+                <option value="daily_conversation" data-fa="مکالمه‌ی روزمره" data-en="Everyday conversation">مکالمه‌ی روزمره</option>
+                <option value="school" data-fa="مدرسه و آزمون مدرسه" data-en="School and school exams">مدرسه و آزمون مدرسه</option>
+                <option value="travel" data-fa="سفر" data-en="Travel">سفر</option>
+                <option value="work" data-fa="کار و حرفه‌ای" data-en="Work and career">کار و حرفه‌ای</option>
+                <option value="hobbies" data-fa="سرگرمی (فیلم، کتاب، بازی)" data-en="Hobbies (films, books, games)">سرگرمی (فیلم، کتاب، بازی)</option>
               </select>
             </div>
           </div>
           <label class="inline" style="margin-top:14px">
             <input type="checkbox" name="consent" required> من به عنوان والد، با استفاده‌ی فرزندم از این سرویس آموزشی موافقم.
           </label>
-          <p><button type="submit">ساخت حساب فرزند</button></p>
+          <p><button type="submit" data-fa="ساخت حساب فرزند" data-en="Create child account">ساخت حساب فرزند</button></p>
           <p class="error" id="addError" hidden></p>
           <p class="ok-msg" id="addOk" hidden></p>
         </form>
@@ -129,18 +129,18 @@
 
         <div class="detail-grid">
           <div>
-            <h2>اطلاعات</h2>
+            <h2 data-fa="اطلاعات" data-en="Details">اطلاعات</h2>
             <form id="infoForm">
-              <label for="infoName">نام نمایشی</label>
+              <label for="infoName" data-fa="نام نمایشی" data-en="Display name">نام نمایشی</label>
               <input id="infoName" maxlength="120">
-              <label for="infoAge">بازه‌ی سنی</label>
+              <label for="infoAge" data-fa="بازه‌ی سنی" data-en="Age range">بازه‌ی سنی</label>
               <select id="infoAge">
-                <option value="4-6">۴ تا ۶ سال</option>
-                <option value="7-10">۷ تا ۱۰ سال</option>
-                <option value="11-14">۱۱ تا ۱۴ سال</option>
-                <option value="15-18">۱۵ تا ۱۸ سال</option>
+                <option value="4-6" data-fa="۴ تا ۶ سال" data-en="4 to 6 years">۴ تا ۶ سال</option>
+                <option value="7-10" data-fa="۷ تا ۱۰ سال" data-en="7 to 10 years">۷ تا ۱۰ سال</option>
+                <option value="11-14" data-fa="۱۱ تا ۱۴ سال" data-en="11 to 14 years">۱۱ تا ۱۴ سال</option>
+                <option value="15-18" data-fa="۱۵ تا ۱۸ سال" data-en="15 to 18 years">۱۵ تا ۱۸ سال</option>
               </select>
-              <p><button type="submit" class="secondary">ذخیره‌ی اطلاعات</button></p>
+              <p><button type="submit" class="secondary" data-fa="ذخیره‌ی اطلاعات" data-en="Save details">ذخیره‌ی اطلاعات</button></p>
               <p class="error" id="infoError" hidden></p>
               <p class="ok-msg" id="infoOk" hidden></p>
             </form>
@@ -148,127 +148,127 @@
           </div>
 
           <div>
-            <h2>سطح و برنامه</h2>
+            <h2 data-fa="سطح و برنامه" data-en="Level and plan">سطح و برنامه</h2>
             <p>سطح فعلی: <strong id="levelNow"></strong></p>
             <p class="muted">برنامه‌ی فعال: <span id="planNow"></span></p>
 
             <div id="consentBox" hidden>
-              <p class="notice">برای شروع جلسه، رضایت والد لازم است.</p>
-              <button id="consentBtn" type="button">ثبت رضایت والد</button>
+              <p class="notice" data-fa="برای شروع جلسه، رضایت والد لازم است." data-en="A parent's consent is needed before a lesson starts.">برای شروع جلسه، رضایت والد لازم است.</p>
+              <button id="consentBtn" type="button" data-fa="ثبت رضایت والد" data-en="Give parent consent">ثبت رضایت والد</button>
             </div>
 
             <form id="placementForm" hidden>
-              <label for="placementLevel">سطح انگلیسی فرزند</label>
+              <label for="placementLevel" data-fa="سطح انگلیسی فرزند" data-en="Child's English level">سطح انگلیسی فرزند</label>
               <select id="placementLevel" required>
-                <option value="A1">A1 — مبتدی (چند کلمه‌ی ساده)</option>
-                <option value="A2" selected>A2 — مقدماتی (جمله‌های کوتاه روزمره)</option>
-                <option value="B1">B1 — متوسط (گفت‌وگوی روزمره)</option>
-                <option value="B2">B2 — متوسط بالا (بحث درباره‌ی موضوع‌های مختلف)</option>
-                <option value="C1">C1 — پیشرفته (صحبت روان و دقیق)</option>
-                <option value="C2">C2 — تسلط کامل (تقریباً مثل بومی)</option>
+                <option value="A1" data-fa="A1 — مبتدی (چند کلمه‌ی ساده)" data-en="A1 — Beginner (a few simple words)">A1 — مبتدی (چند کلمه‌ی ساده)</option>
+                <option value="A2" selected data-fa="A2 — مقدماتی (جمله‌های کوتاه روزمره)" data-en="A2 — Elementary (short everyday sentences)">A2 — مقدماتی (جمله‌های کوتاه روزمره)</option>
+                <option value="B1" data-fa="B1 — متوسط (گفت‌وگوی روزمره)" data-en="B1 — Intermediate (everyday conversation)">B1 — متوسط (گفت‌وگوی روزمره)</option>
+                <option value="B2" data-fa="B2 — متوسط بالا (بحث درباره‌ی موضوع‌های مختلف)" data-en="B2 — Upper intermediate (discussing different topics)">B2 — متوسط بالا (بحث درباره‌ی موضوع‌های مختلف)</option>
+                <option value="C1" data-fa="C1 — پیشرفته (صحبت روان و دقیق)" data-en="C1 — Advanced (fluent and precise speech)">C1 — پیشرفته (صحبت روان و دقیق)</option>
+                <option value="C2" data-fa="C2 — تسلط کامل (تقریباً مثل بومی)" data-en="C2 — Mastery (close to a native speaker)">C2 — تسلط کامل (تقریباً مثل بومی)</option>
               </select>
-              <p class="muted">اگر مطمئن نیستید، A2 را انتخاب کنید. سطح بعداً قابل تغییر است.</p>
-              <p><button type="submit">ثبت سطح</button></p>
+              <p class="muted" data-fa="اگر مطمئن نیستید، A2 را انتخاب کنید. سطح بعداً قابل تغییر است." data-en="If you are not sure, choose A2. The level can be changed later.">اگر مطمئن نیستید، A2 را انتخاب کنید. سطح بعداً قابل تغییر است.</p>
+              <p><button type="submit" data-fa="ثبت سطح" data-en="Save level">ثبت سطح</button></p>
               <p class="error" id="placementError" hidden></p>
               <p class="ok-msg" id="placementOk" hidden></p>
             </form>
 
             <form id="planForm" hidden>
-              <h2 style="margin-top:18px">ساخت برنامه‌ی تازه</h2>
-              <label for="planGoal">هدف (مثلاً: صحبت راحت درباره‌ی مدرسه و دوستان)</label>
+              <h2 style="margin-top:18px" data-fa="ساخت برنامه‌ی تازه" data-en="Create a new plan">ساخت برنامه‌ی تازه</h2>
+              <label for="planGoal" data-fa="هدف (مثلاً: صحبت راحت درباره‌ی مدرسه و دوستان)" data-en="Goal (for example: talking easily about school and friends)">هدف (مثلاً: صحبت راحت درباره‌ی مدرسه و دوستان)</label>
               <textarea id="planGoal" rows="2" maxlength="300" required></textarea>
               <div class="row">
                 <div>
-                  <label for="planMonths">مدت (ماه)</label>
+                  <label for="planMonths" data-fa="مدت (ماه)" data-en="Months">مدت (ماه)</label>
                   <input id="planMonths" type="number" min="1" max="12" value="5" required>
                 </div>
                 <div>
-                  <label for="planPerWeek">جلسه در هفته</label>
+                  <label for="planPerWeek" data-fa="جلسه در هفته" data-en="Sessions per week">جلسه در هفته</label>
                   <input id="planPerWeek" type="number" min="1" max="7" value="3" required>
                 </div>
                 <div>
-                  <label for="planMinutes">مدت هر جلسه</label>
+                  <label for="planMinutes" data-fa="مدت هر جلسه" data-en="Length of each session">مدت هر جلسه</label>
                   <select id="planMinutes">
-                    <option value="5">۵ دقیقه</option>
-                    <option value="10" selected>۱۰ دقیقه</option>
-                    <option value="15">۱۵ دقیقه</option>
-                    <option value="20">۲۰ دقیقه</option>
-                    <option value="30">۳۰ دقیقه</option>
+                    <option value="5" data-fa="۵ دقیقه" data-en="5 minutes">۵ دقیقه</option>
+                    <option value="10" selected data-fa="۱۰ دقیقه" data-en="10 minutes">۱۰ دقیقه</option>
+                    <option value="15" data-fa="۱۵ دقیقه" data-en="15 minutes">۱۵ دقیقه</option>
+                    <option value="20" data-fa="۲۰ دقیقه" data-en="20 minutes">۲۰ دقیقه</option>
+                    <option value="30" data-fa="۳۰ دقیقه" data-en="30 minutes">۳۰ دقیقه</option>
                   </select>
                 </div>
               </div>
-              <p><button type="submit">ساخت برنامه</button></p>
+              <p><button type="submit" data-fa="ساخت برنامه" data-en="Create plan">ساخت برنامه</button></p>
               <p class="error" id="planError" hidden></p>
               <p class="ok-msg" id="planOk" hidden></p>
             </form>
 
             <form id="passwordForm" hidden>
-              <h2 style="margin-top:18px">تغییر رمز ورود</h2>
-              <label for="newPasswordForChild">PIN تازه (۴ تا ۶ رقم)</label>
+              <h2 style="margin-top:18px" data-fa="تغییر رمز ورود" data-en="Change sign-in PIN">تغییر رمز ورود</h2>
+              <label for="newPasswordForChild" data-fa="PIN تازه (۴ تا ۶ رقم)" data-en="New PIN (4 to 6 digits)">PIN تازه (۴ تا ۶ رقم)</label>
               <input id="newPasswordForChild" type="password" inputmode="numeric" class="ltr-field" pattern="\d{4,6}" required>
-              <p><button type="submit" class="secondary">ذخیره‌ی رمز</button></p>
+              <p><button type="submit" class="secondary" data-fa="ذخیره‌ی رمز" data-en="Save PIN">ذخیره‌ی رمز</button></p>
               <p class="error" id="passwordError" hidden></p>
               <p class="ok-msg" id="passwordOk" hidden></p>
             </form>
           </div>
         </div>
 
-        <h2 style="margin-top:24px">اطلاعات و پیشرفت فرزند</h2>
+        <h2 style="margin-top:24px" data-fa="اطلاعات و پیشرفت فرزند" data-en="Child's details and progress">اطلاعات و پیشرفت فرزند</h2>
         <p class="notice" id="cdNotice" hidden></p>
         <form id="cdForm" class="detail-grid">
           <div>
-            <label for="cdAge">سن</label>
+            <label for="cdAge" data-fa="سن" data-en="Age">سن</label>
             <input id="cdAge" type="number" min="3" max="99" class="ltr-field">
-            <label for="cdGender">جنسیت</label>
+            <label for="cdGender" data-fa="جنسیت" data-en="Gender">جنسیت</label>
             <select id="cdGender">
-              <option value="">انتخاب نشده</option>
-              <option value="female">دختر</option>
-              <option value="male">پسر</option>
-              <option value="other">دیگر</option>
+              <option value="" data-fa="انتخاب نشده" data-en="Not selected">انتخاب نشده</option>
+              <option value="female" data-fa="دختر" data-en="Girl">دختر</option>
+              <option value="male" data-fa="پسر" data-en="Boy">پسر</option>
+              <option value="other" data-fa="دیگر" data-en="Other">دیگر</option>
             </select>
-            <label for="cdGrade">مقطع تحصیلی</label>
+            <label for="cdGrade" data-fa="مقطع تحصیلی" data-en="School grade">مقطع تحصیلی</label>
             <input id="cdGrade" maxlength="40">
-            <label for="cdAttributes">ویژگی‌ها و علایق کودک</label>
+            <label for="cdAttributes" data-fa="ویژگی‌ها و علایق کودک" data-en="Child's traits and interests">ویژگی‌ها و علایق کودک</label>
             <textarea id="cdAttributes" rows="2" maxlength="1000"></textarea>
           </div>
           <div>
-            <label for="cdConversation">سبک مکالمه</label>
+            <label for="cdConversation" data-fa="سبک مکالمه" data-en="Conversation style">سبک مکالمه</label>
             <select id="cdConversation">
-              <option value="">انتخاب نشده</option>
-              <option value="chat">گفتگوی آزاد</option>
-              <option value="story">داستان ساختن با هم</option>
-              <option value="role_play">نقش‌بازی</option>
-              <option value="quiz">سؤال و جواب</option>
-              <option value="mixed">ترکیبی</option>
+              <option value="" data-fa="انتخاب نشده" data-en="Not selected">انتخاب نشده</option>
+              <option value="chat" data-fa="گفتگوی آزاد" data-en="Free talk">گفتگوی آزاد</option>
+              <option value="story" data-fa="داستان ساختن با هم" data-en="Building a story together">داستان ساختن با هم</option>
+              <option value="role_play" data-fa="نقش‌بازی" data-en="Role play">نقش‌بازی</option>
+              <option value="quiz" data-fa="سؤال و جواب" data-en="Questions and answers">سؤال و جواب</option>
+              <option value="mixed" data-fa="ترکیبی" data-en="Mixed">ترکیبی</option>
             </select>
-            <label for="cdResponse">سبک پاسخ معلم</label>
+            <label for="cdResponse" data-fa="سبک پاسخ معلم" data-en="Teacher's reply style">سبک پاسخ معلم</label>
             <select id="cdResponse">
-              <option value="">انتخاب نشده</option>
-              <option value="gentle">ملایم</option>
-              <option value="direct">مستقیم</option>
-              <option value="playful">بازیگوش</option>
-              <option value="strict">سخت‌گیر</option>
+              <option value="" data-fa="انتخاب نشده" data-en="Not selected">انتخاب نشده</option>
+              <option value="gentle" data-fa="ملایم" data-en="Gentle">ملایم</option>
+              <option value="direct" data-fa="مستقیم" data-en="Direct">مستقیم</option>
+              <option value="playful" data-fa="بازیگوش" data-en="Playful">بازیگوش</option>
+              <option value="strict" data-fa="سخت‌گیر" data-en="Strict">سخت‌گیر</option>
             </select>
-            <label for="cdSample">نمونه‌ی انگلیسی یا کد سطح</label>
+            <label for="cdSample" data-fa="نمونه‌ی انگلیسی یا کد سطح" data-en="English sample or level code">نمونه‌ی انگلیسی یا کد سطح</label>
             <textarea id="cdSample" rows="2" maxlength="1000" class="ltr-field"></textarea>
-            <label for="cdFree">توضیح تکمیلی</label>
+            <label for="cdFree" data-fa="توضیح تکمیلی" data-en="More details">توضیح تکمیلی</label>
             <textarea id="cdFree" rows="2" maxlength="1000"></textarea>
           </div>
-          <p><button type="submit">ذخیره‌ی اطلاعات کودک</button></p>
+          <p><button type="submit" data-fa="ذخیره‌ی اطلاعات کودک" data-en="Save child's details">ذخیره‌ی اطلاعات کودک</button></p>
         </form>
-        <h3>پیشرفت دوره</h3>
+        <h3 data-fa="پیشرفت دوره" data-en="Course progress">پیشرفت دوره</h3>
         <p id="cdProgress" class="muted"></p>
         <div id="cdStages"></div>
-        <h3>ارزیابی جلسه‌ها</h3>
+        <h3 data-fa="ارزیابی جلسه‌ها" data-en="Session reviews">ارزیابی جلسه‌ها</h3>
         <div id="cdSessions"></div>
 
-        <h2 style="margin-top:24px">گزارش‌ها و مصرف</h2>
+        <h2 style="margin-top:24px" data-fa="گزارش‌ها و مصرف" data-en="Reports and usage">گزارش‌ها و مصرف</h2>
         <div id="reportBox"></div>
 
         <div class="card danger-zone" style="margin-top:24px">
-          <h2>حذف فرزند</h2>
-          <p class="muted">همه‌ی اطلاعات و جلسه‌های این فرزند پاک می‌شود. این کار برگشت ندارد.</p>
-          <button id="deleteBtn" class="danger" type="button">حذف این فرزند</button>
+          <h2 data-fa="حذف فرزند" data-en="Remove child">حذف فرزند</h2>
+          <p class="muted" data-fa="همه‌ی اطلاعات و جلسه‌های این فرزند پاک می‌شود. این کار برگشت ندارد." data-en="All of this child's information and sessions will be deleted. This cannot be undone.">همه‌ی اطلاعات و جلسه‌های این فرزند پاک می‌شود. این کار برگشت ندارد.</p>
+          <button id="deleteBtn" class="danger" type="button" data-fa="حذف این فرزند" data-en="Remove this child">حذف این فرزند</button>
         </div>
       </section>
     </main>

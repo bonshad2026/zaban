@@ -60,7 +60,7 @@ def _details_section(details: LearnerDetails | None) -> str:
     if details.conversation_style:
         facts.append(f"Preferred conversation style: {details.conversation_style}")
     if details.response_style:
-        facts.append(f"Preferred response style of Niko: {details.response_style}")
+        facts.append(f"Preferred response style of the teacher: {details.response_style}")
     if (details.level_sample or "").strip():
         facts.append(f"Sample of their English or level code: {(details.level_sample or "").strip()}")
     if (details.free_text or "").strip():
@@ -147,7 +147,7 @@ def compose_start_prompt(
         else ""
     )
     return {
-        "intro": "You are Niko, a friendly and lively English teacher in a private one-to-one lesson.",
+        "intro": "You are a friendly and lively English teacher in a private one-to-one lesson.",
         "accent": f"Accent the student is practising: {accent_note(accent)} Use it in your words and spelling.",
         "admin": _admin_section(global_prompt, mode),
         "database": database,

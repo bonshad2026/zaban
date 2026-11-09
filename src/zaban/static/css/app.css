@@ -423,7 +423,7 @@ html[dir="ltr"] .home-link .arrow { transform: scaleX(-1); }
 .page-card { background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 36px; box-shadow: var(--shadow); }
 .page-card h2 { font-size: 24px; margin: 0 0 8px; }
 .page-card input, .page-card select, .page-card textarea { width: 100%; }
-.video-frame { position: relative; aspect-ratio: 16 / 9; border-radius: 24px; border: 1px solid var(--border); background: linear-gradient(90deg, rgba(8, 8, 10, 0.92) 0%, rgba(8, 8, 10, 0.6) 55%, rgba(8, 8, 10, 0.85) 100%), url("/static/img/demo-photo.webp") center / cover no-repeat; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-decoration: none; color: var(--text); overflow: hidden; box-shadow: var(--shadow); transition: border-color 0.3s ease; }
+.video-frame { position: relative; aspect-ratio: 16 / 9; border-radius: 24px; border: 1px solid var(--border); background: var(--card) url("/static/img/demo-poster.svg") center / cover no-repeat; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-decoration: none; color: var(--text); overflow: hidden; box-shadow: var(--shadow); transition: border-color 0.3s ease; }
 .video-frame:hover { border-color: var(--accent); }
 .video-frame .play { width: 84px; height: 84px; border-radius: 50%; border: 1px solid var(--accent); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 26px; background: rgba(8, 8, 10, 0.35); }
 .video-frame .label { background: rgba(8, 8, 10, 0.6); color: #f4efe6; padding: 6px 16px; border-radius: 999px; font-size: 14px; }
