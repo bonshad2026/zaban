@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Response
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session as DBSession
 
@@ -20,6 +20,7 @@ from zaban.models import (
 from zaban.schemas import DetailsUpdate, LevelUpdate, SelfTestAnswer, SelfTestCreate
 from zaban.services.learner_details import details_out, save_details
 from zaban.services.curriculum import band_code
+from zaban.services.help_content import GENDERS, LEVELS, facet_tree, tags_by_content
 from zaban.services.self_test import answer_test, finish_test, owned_test, start_test
 from zaban.web import _guardian_from_cookie, _student_from_cookie
 
@@ -36,32 +37,56 @@ def _matches(item: HelpContent, student: Student) -> bool:
     return student.cefr_level is None or item.level == student.cefr_level
 
 
-@router.get("/help-content")
-def list_help_content(
-    category: str | None = None,
-    q: str | None = None,
-    zaban_student: str | None = Cookie(default=None),
-    db: DBSession = Depends(get_db),
-) -> list[dict]:
-    student = _student_from_cookie(db, zaban_student)
+def _visible_query(db: DBSession, student: Student, category: str | None):
+    # What the learner may see: their age band, their level once they have one, and the chosen category.
     query = db.query(HelpContent).filter(HelpContent.age_band == band_code(student.age_band))
     if student.cefr_level:
         query = query.filter(HelpContent.level == student.cefr_level)
     if category:
         query = query.filter(HelpContent.category == category)
-    rows = query.order_by(HelpContent.created_at.desc()).limit(200).all()
+    return query
+
+
+def _filtered(items: list[HelpContent], tags: dict[str, list], level: str | None, gender: str | None, tag_ids: list[str], needle: str) -> list[HelpContent]:
+    # Each chosen filter must match. Content for everyone (no gender) matches every gender filter.
+    out = []
+    for item in items:
+        item_tag_ids = {t.id for t in tags.get(item.id, [])}
+        if level and item.level != level:
+            continue
+        if gender and item.gender not in (None, gender):
+            continue
+        if any(tag_id not in item_tag_ids for tag_id in tag_ids):
+            continue
+        if needle and needle not in item.title.lower() and not any(needle in t.label.lower() for t in tags.get(item.id, [])):
+            continue
+        out.append(item)
+    return out
+
+
+@router.get("/help-content")
+def list_help_content(
+    category: str | None = None,
+    q: str | None = None,
+    level: str | None = None,
+    gender: str | None = None,
+    tag: list[str] = Query(default=[]),
+    zaban_student: str | None = Cookie(default=None),
+    db: DBSession = Depends(get_db),
+) -> list[dict]:
+    student = _student_from_cookie(db, zaban_student)
+    rows = _visible_query(db, student, category).order_by(HelpContent.created_at.desc()).limit(200).all()
+    tags = tags_by_content(db, [item.id for item in rows])
     needle = (q or "").strip().lower()
     out = []
-    for item in rows:
-        if needle and needle not in item.title.lower() and needle not in item.interests.lower():
-            continue
+    for item in _filtered(rows, tags, level, gender, tag, needle):
         out.append(
             {
                 "id": item.id,
                 "title": item.title,
                 "category": item.category,
                 "level": item.level,
-                "interests": item.interests,
+                "tags": [t.label for t in tags.get(item.id, [])],
                 "stage": item.stage,
                 "url": item.url,
                 "mime": item.mime,
@@ -69,6 +94,37 @@ def list_help_content(
             }
         )
     return out
+
+
+@router.get("/help-content/filters")
+def help_content_filters(
+    category: str | None = None,
+    zaban_student: str | None = Cookie(default=None),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    # The choices for the learner's filter dialog. Only values that some visible item has are listed, with the count.
+    student = _student_from_cookie(db, zaban_student)
+    rows = _visible_query(db, student, category).all()
+    tags = tags_by_content(db, [item.id for item in rows])
+
+    def options(pairs: list[tuple[str, str, int]]) -> list[dict]:
+        return [{"value": v, "label": label, "count": n} for v, label, n in pairs if n]
+
+    levels = [(lv, lv, sum(1 for i in rows if i.level == lv)) for lv in LEVELS]
+    genders = [(g, label, sum(1 for i in rows if i.gender == g)) for g, label in GENDERS.items()]
+    counts = {}
+    for item_tags in tags.values():
+        for t in item_tags:
+            counts[t.id] = counts.get(t.id, 0) + 1
+    facets = []
+    for facet in facet_tree(db):
+        pairs = [(t["id"], t["label"], counts.get(t["id"], 0)) for t in facet["tags"]]
+        facets.append({"key": f"tag:{facet['id']}", "label": facet["name"], "options": options(pairs)})
+    return {
+        "level": {"label": "سطح", "options": options(levels)},
+        "gender": {"label": "جنسیت", "options": options(genders)},
+        "facets": [f for f in facets if f["options"]],
+    }
 
 
 @router.get("/help-content/{item_id}/file")

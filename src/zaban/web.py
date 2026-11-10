@@ -12,7 +12,7 @@ from zaban.security import WEB_COOKIE_NAMES, read_web_session, session_is_curren
 from zaban.services.web_sessions import start_web_session
 from zaban.services.learner import get_accent, set_accent, set_learner_profile
 from zaban.services.placement import level_for_score, public_questions, score_answers
-from zaban.services.programs import advance_if_done, ensure_progress
+from zaban.services.programs import advance_if_done, current_item, ensure_progress, item_stats, ordered_items
 from zaban.services.otp import check_code, development_code, normalize_phone, request_code
 from zaban.services.passwords import hash_password, verify_password
 from zaban.services.payments import has_active_plan, require_plan
@@ -347,29 +347,34 @@ def student_program(zaban_student: str | None = Cookie(default=None), db: DBSess
     advance_if_done(db, student.id)
     db.commit()
     program = db.get(LearningProgram, progress.program_id)
-    items = db.query(ProgramItem).filter(ProgramItem.program_id == program.id).order_by(ProgramItem.position).all()
-    current = next((i for i in items if i.position == progress.position), None)
+    stats = item_stats(db, student.id, program.id)
+    items = ordered_items(db, program.id)
+    done_count = sum(1 for row in stats if row["done"])
+    # The lesson for the next session: the item asked to repeat, otherwise the first item not yet covered.
+    current_row = current_item(db, progress) if progress.status == "active" else None
+    current_id = current_row.id if current_row is not None else None
     return {
         "program": {
             "name": program.name,
             "goal": program.goal,
             "total": len(items),
-            "done": min(progress.position, len(items)),
+            "done": done_count,
             "status": progress.status,
-            "block_size": program.block_size,
         },
         "current": (
-            {"number": current.position + 1, "title": current.title, "title_en": current.title_en, "activity": current.activity, "phrases": current.phrases}
-            if current is not None and progress.status == "active"
+            {"number": current_row.position + 1, "title": current_row.title, "title_en": current_row.title_en, "activity": current_row.activity, "phrases": current_row.phrases}
+            if current_row is not None
             else None
         ),
         "items": [
             {
-                "number": i.position + 1,
-                "title": i.title,
-                "title_en": i.title_en,
-                "state": "done" if i.position < progress.position else ("current" if i.position == progress.position else "next"),
+                "number": row["position"] + 1,
+                "title": row["title"],
+                "title_en": row["title_en"],
+                "state": "current" if row["item_id"] == current_id else ("done" if row["done"] else "next"),
+                "visits": row["visits"],
+                "average": row["average"],
             }
-            for i in items
+            for row in stats
         ],
     }

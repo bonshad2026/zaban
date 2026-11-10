@@ -191,17 +191,9 @@ def build_system_prompt(
     return join_prompt(parts) + "\n\n" + block_line(block, duration_minutes)
 
 
-def score_session(session: TutorSession) -> float:
-    # MVP placeholder: rewards the number of student turns and the amount of English written.
-    student_turns = [m.content for m in session.messages if m.role == "user"]
-    words = sum(len(text.split()) for text in student_turns)
-    return round(min(100.0, min(60.0, 8.0 * len(student_turns)) + min(40.0, words / 4)), 1)
-
-
 def finish_session(session: TutorSession, at: datetime) -> None:
     session.status = "completed"
     session.ended_at = at
-    session.score = score_session(session)
 
 
 def finish_if_due(session: TutorSession, now: datetime) -> None:

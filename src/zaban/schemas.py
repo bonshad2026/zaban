@@ -138,6 +138,8 @@ class HelpContentCreate(BaseModel):
     url: str | None = Field(default=None, max_length=500, pattern=r"^https?://\S+$")
     mime: Literal["audio/mpeg", "audio/wav", "audio/mp4", "video/mp4", "application/pdf", "image/png"] | None = None
     data_base64: str | None = Field(default=None, max_length=7_000_000)
+    # The tags chosen by the administrator. Each id is a tag from the facets list.
+    tag_ids: list[str] = Field(default_factory=list, max_length=50)
 
     @model_validator(mode="after")
     def one_source(self) -> "HelpContentCreate":

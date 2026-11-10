@@ -14,7 +14,11 @@ from zaban.models import (
     BillingPlan,
     ConsultRequest,
     CooperationRequest,
+    CurriculumPoint,
+    CurriculumTopic,
     CurriculumVariant,
+    HelpFacet,
+    HelpTag,
     Guardian,
     HelpContent,
     LearnerDetails,
@@ -28,15 +32,25 @@ from zaban.models import (
     VoiceSample,
 )
 from zaban.services.evaluation import course_note, past_evaluations
+from zaban.services.help_content import delete_facet, delete_tag, facet_tree, set_content_tags, tags_by_content
 from zaban.services.learner import get_accent, get_global_prompt, set_global_prompt, set_learner_profile
-from zaban.services.settings_store import EXPECTED_OUTPUT_KEY, PROMPT_MODE_DEFAULT, PROMPT_MODE_KEY, get_setting
+from zaban.services.settings_store import EXPECTED_OUTPUT_KEY, PROMPT_MODE_DEFAULT, PROMPT_MODE_KEY, get_setting, set_setting
 from zaban.services.programs import current_item, program_note, total_items
 from zaban.services.sessions import compose_start_prompt, join_prompt
 from zaban.schemas import HelpContentCreate, VoiceSampleCreate
-from zaban.services.self_test import DEFAULT_SELF_TEST_PROMPT, SELF_TEST_PROMPT_KEY
+from zaban.services.self_test_prompt import (
+    DEFAULT_RULES,
+    RULE_KEY,
+    build_prompt,
+    get_template,
+    placeholders,
+    save_rules,
+    save_template,
+    stored_rules,
+    DEFAULT_TEMPLATE as DEFAULT_SELF_TEST_TEMPLATE,
+)
 from zaban.services.payments import confirm_payment
 from zaban.program_data import GOALS
-from zaban.services.programs import approve_block
 from zaban.services.curriculum import (
     bump_catalog_version,
     catalog_version,
@@ -53,12 +67,27 @@ ADMIN_TTL_SECONDS = 12 * 60 * 60
 _admin_serializer = URLSafeTimedSerializer(settings.secret_key, salt="admin-session")
 
 
-def require_admin(token: str | None = Cookie(default=None, alias=ADMIN_COOKIE)) -> None:
+# Every admin sign-in carries the version that was current when it started. «Sign out everywhere» raises the version,
+# so every older sign-in stops working at once, on every device.
+ADMIN_VERSION_KEY = "admin_session_version"
+
+
+def _admin_version(db: DBSession) -> int:
+    value = get_setting(db, ADMIN_VERSION_KEY)
+    return int(value) if value else 1
+
+
+def require_admin(
+    token: str | None = Cookie(default=None, alias=ADMIN_COOKIE),
+    db: DBSession = Depends(get_db),
+) -> None:
     if not token:
         raise HTTPException(status_code=401, detail="Please sign in")
     try:
-        _admin_serializer.loads(token, max_age=ADMIN_TTL_SECONDS)
+        payload = _admin_serializer.loads(token, max_age=ADMIN_TTL_SECONDS)
     except (BadSignature, SignatureExpired):
+        raise HTTPException(status_code=401, detail="Please sign in")
+    if payload.get("v", 1) != _admin_version(db):
         raise HTTPException(status_code=401, detail="Please sign in")
 
 
@@ -98,12 +127,12 @@ class GlobalPromptUpdate(BaseModel):
 
 
 @router.post("/login")
-def admin_login(body: AdminLogin, response: Response) -> dict:
+def admin_login(body: AdminLogin, response: Response, db: DBSession = Depends(get_db)) -> dict:
     if not settings.admin_password:
         raise HTTPException(status_code=503, detail="The admin page is not configured")
     if not hmac.compare_digest(body.password, settings.admin_password):
         raise HTTPException(status_code=401, detail="Wrong password")
-    token = _admin_serializer.dumps({"adm": True})
+    token = _admin_serializer.dumps({"adm": True, "v": _admin_version(db)})
     response.set_cookie(
         ADMIN_COOKIE,
         token,
@@ -118,6 +147,15 @@ def admin_login(body: AdminLogin, response: Response) -> dict:
 
 @router.post("/logout")
 def admin_logout(response: Response) -> dict:
+    response.delete_cookie(ADMIN_COOKIE, path="/")
+    return {"ok": True}
+
+
+@router.post("/logout-all", dependencies=[Depends(require_admin)])
+def admin_logout_everywhere(response: Response, db: DBSession = Depends(get_db)) -> dict:
+    # Ends the admin sign-in on every device, this one included.
+    set_setting(db, ADMIN_VERSION_KEY, str(_admin_version(db) + 1))
+    db.commit()
     response.delete_cookie(ADMIN_COOKIE, path="/")
     return {"ok": True}
 
@@ -246,6 +284,19 @@ def set_plan_active(plan_id: str, body: PlanUpdate, db: DBSession = Depends(get_
     if plan is None:
         raise HTTPException(status_code=404, detail="Not found")
     plan.active = body.active
+    db.commit()
+    return {"ok": True}
+
+
+@router.delete("/plans/{plan_id}", dependencies=[Depends(require_admin)])
+def delete_plan(plan_id: str, db: DBSession = Depends(get_db)) -> dict:
+    # A plan that payments refer to stays, so the history reads correctly. It can be switched off instead.
+    plan = db.get(BillingPlan, plan_id)
+    if plan is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    if db.query(Payment).filter(Payment.plan_id == plan.id).first() is not None:
+        raise HTTPException(status_code=409, detail="این پلن پرداخت ثبت‌شده دارد و حذف نمی‌شود. به‌جای آن غیرفعالش کنید.")
+    db.delete(plan)
     db.commit()
     return {"ok": True}
 
@@ -425,6 +476,62 @@ def add_variant(body: VariantCreate, db: DBSession = Depends(get_db)) -> dict:
     return {"id": variant.id, "version": catalog_version(db)}
 
 
+class TopicSave(BaseModel):
+    title: str = Field(min_length=1, max_length=120)
+    goal: str = Field(default="", max_length=3000)
+
+
+class PointCreate(BaseModel):
+    text: str = Field(min_length=1, max_length=300)
+
+
+@router.get("/curriculum/topics", dependencies=[Depends(require_admin)])
+def list_curriculum_topics(db: DBSession = Depends(get_db)) -> list[dict]:
+    # The topic, its conversation goal and the points to talk about. Bands, levels and versions are not shown here.
+    topics = db.query(CurriculumTopic).order_by(CurriculumTopic.id).all()
+    points = db.query(CurriculumPoint).order_by(CurriculumPoint.sort_order, CurriculumPoint.created_at).all()
+    by_topic: dict[str, list[dict]] = {}
+    for point in points:
+        by_topic.setdefault(point.topic_id, []).append({"id": point.id, "text": point.text})
+    return [
+        {"id": t.id, "title": t.title, "goal": t.goal, "points": by_topic.get(t.id, [])}
+        for t in topics
+    ]
+
+
+@router.put("/curriculum/topics/{topic_id}", dependencies=[Depends(require_admin)])
+def save_curriculum_topic(topic_id: str, body: TopicSave, db: DBSession = Depends(get_db)) -> dict:
+    topic = db.get(CurriculumTopic, topic_id)
+    if topic is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    topic.title = body.title.strip()
+    topic.goal = body.goal.strip()
+    bump_catalog_version(db)
+    db.commit()
+    return {"ok": True, "version": catalog_version(db)}
+
+
+@router.post("/curriculum/topics/{topic_id}/points", status_code=201, dependencies=[Depends(require_admin)])
+def add_curriculum_point(topic_id: str, body: PointCreate, db: DBSession = Depends(get_db)) -> dict:
+    if db.get(CurriculumTopic, topic_id) is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    order = db.query(CurriculumPoint).filter(CurriculumPoint.topic_id == topic_id).count()
+    point = CurriculumPoint(topic_id=topic_id, text=body.text.strip(), sort_order=order)
+    db.add(point)
+    db.commit()
+    return {"id": point.id}
+
+
+@router.delete("/curriculum/points/{point_id}", dependencies=[Depends(require_admin)])
+def remove_curriculum_point(point_id: str, db: DBSession = Depends(get_db)) -> dict:
+    point = db.get(CurriculumPoint, point_id)
+    if point is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    db.delete(point)
+    db.commit()
+    return {"ok": True}
+
+
 # ----- Learning programs: the lessons in order, with their text. Edits are saved in the database. -----
 
 class ProgramItemSave(BaseModel):
@@ -454,11 +561,10 @@ def list_programs(db: DBSession = Depends(get_db)) -> dict:
                 "band": program.band,
                 "level": program.level,
                 "goal": program.goal,
-                "block_size": program.block_size,
                 "duration_months": program.duration_months,
                 "version": program.version,
                 "items": [
-                    {"position": i.position + 1, "title": i.title, "title_en": i.title_en or "", "stage": i.stage, "concepts": i.concepts or [], "activity": i.activity, "phrases": i.phrases}
+                    {"id": i.id, "position": i.position + 1, "title": i.title, "title_en": i.title_en or "", "stage": i.stage, "concepts": i.concepts or [], "activity": i.activity, "phrases": i.phrases}
                     for i in items
                 ],
             }
@@ -486,36 +592,6 @@ def save_program_item(program_id: str, number: int, body: ProgramItemSave, db: D
     program.version += 1
     db.commit()
     return {"ok": True, "version": program.version}
-
-
-@router.post("/students/{student_id}/resume-program", dependencies=[Depends(require_admin)])
-def resume_program(student_id: str, db: DBSession = Depends(get_db)) -> dict:
-    # Approves the next block of lessons after a block has finished.
-    progress = db.get(StudentProgress, student_id)
-    if progress is None:
-        raise HTTPException(status_code=404, detail="Not found")
-    approve_block(progress)
-    db.commit()
-    return {"status": progress.status}
-
-
-@router.get("/program-approvals", dependencies=[Depends(require_admin)])
-def list_program_approvals(db: DBSession = Depends(get_db)) -> list[dict]:
-    # Learners whose block of lessons is finished and waits for approval to continue.
-    rows = db.query(StudentProgress).filter(StudentProgress.status == "waiting_approval").all()
-    out = []
-    for progress in rows:
-        student = db.get(Student, progress.student_id)
-        program = db.get(LearningProgram, progress.program_id)
-        out.append(
-            {
-                "student_id": progress.student_id,
-                "name": student.display_name if student else "",
-                "program": program.name if program else "",
-                "done": progress.position,
-            }
-        )
-    return out
 
 
 # ----- Cooperation requests (people who want to work with the company, not learners) -----
@@ -559,6 +635,7 @@ def update_cooperation(item_id: int, body: CooperationStatus, db: DBSession = De
 @router.get("/help-content", dependencies=[Depends(require_admin)])
 def list_help_content(db: DBSession = Depends(get_db)) -> list[dict]:
     rows = db.query(HelpContent).order_by(HelpContent.created_at.desc()).all()
+    tags = tags_by_content(db, [h.id for h in rows])
     return [
         {
             "id": h.id,
@@ -568,6 +645,7 @@ def list_help_content(db: DBSession = Depends(get_db)) -> list[dict]:
             "level": h.level,
             "gender": h.gender,
             "interests": h.interests,
+            "tags": [{"id": t.id, "label": t.label} for t in tags.get(h.id, [])],
             "topic_id": h.topic_id,
             "stage": h.stage,
             "url": h.url,
@@ -604,8 +682,78 @@ def add_help_content(body: HelpContentCreate, db: DBSession = Depends(get_db)) -
         data=data,
     )
     db.add(item)
+    set_content_tags(db, item, body.tag_ids)
     db.commit()
     return {"id": item.id}
+
+
+class HelpClassification(BaseModel):
+    # The learner rules use the age band and the level, so they are required. Gender empty means for everyone.
+    age_band: Literal["K", "J", "T", "S", "A"]
+    level: Literal["A1", "A2", "B1", "B2", "C1", "C2"]
+    gender: Literal["female", "male"] | None = None
+    tag_ids: list[str] = Field(default_factory=list, max_length=50)
+
+
+@router.put("/help-content/{item_id}/classification", dependencies=[Depends(require_admin)])
+def update_help_classification(item_id: str, body: HelpClassification, db: DBSession = Depends(get_db)) -> dict:
+    item = db.get(HelpContent, item_id)
+    if item is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    item.age_band = body.age_band
+    item.level = body.level
+    item.gender = body.gender
+    set_content_tags(db, item, body.tag_ids)
+    db.commit()
+    return {"ok": True}
+
+
+class FacetCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=60)
+
+
+class TagCreate(BaseModel):
+    label: str = Field(min_length=1, max_length=60)
+
+
+@router.get("/help-facets", dependencies=[Depends(require_admin)])
+def list_help_facets(db: DBSession = Depends(get_db)) -> list[dict]:
+    return facet_tree(db)
+
+
+@router.post("/help-facets", status_code=201, dependencies=[Depends(require_admin)])
+def add_help_facet(body: FacetCreate, db: DBSession = Depends(get_db)) -> dict:
+    facet = HelpFacet(name=body.name.strip(), sort_order=db.query(HelpFacet).count())
+    db.add(facet)
+    db.commit()
+    return {"id": facet.id}
+
+
+@router.delete("/help-facets/{facet_id}", dependencies=[Depends(require_admin)])
+def remove_help_facet(facet_id: str, db: DBSession = Depends(get_db)) -> dict:
+    if not delete_facet(db, facet_id):
+        raise HTTPException(status_code=404, detail="Not found")
+    db.commit()
+    return {"ok": True}
+
+
+@router.post("/help-facets/{facet_id}/tags", status_code=201, dependencies=[Depends(require_admin)])
+def add_help_tag(facet_id: str, body: TagCreate, db: DBSession = Depends(get_db)) -> dict:
+    facet = db.get(HelpFacet, facet_id)
+    if facet is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    tag = HelpTag(facet_id=facet.id, label=body.label.strip(), sort_order=len(facet.tags))
+    db.add(tag)
+    db.commit()
+    return {"id": tag.id}
+
+
+@router.delete("/help-tags/{tag_id}", dependencies=[Depends(require_admin)])
+def remove_help_tag(tag_id: str, db: DBSession = Depends(get_db)) -> dict:
+    if not delete_tag(db, tag_id):
+        raise HTTPException(status_code=404, detail="Not found")
+    db.commit()
+    return {"ok": True}
 
 
 @router.delete("/help-content/{item_id}", dependencies=[Depends(require_admin)])
@@ -620,25 +768,81 @@ def delete_help_content(item_id: str, db: DBSession = Depends(get_db)) -> dict:
 
 # ----- Self-test prompt: the admin can replace the base text used for every test -----
 
-class SelfTestPrompt(BaseModel):
-    text: str = Field(min_length=1, max_length=4000)
+class SelfTestTemplate(BaseModel):
+    template: str = Field(min_length=1, max_length=8000)
 
 
-@router.get("/self-test-prompt", dependencies=[Depends(require_admin)])
-def read_self_test_prompt(db: DBSession = Depends(get_db)) -> dict:
-    row = db.get(AppSetting, SELF_TEST_PROMPT_KEY)
-    return {"text": row.value if row else DEFAULT_SELF_TEST_PROMPT}
+class SelfTestRule(BaseModel):
+    key: str = Field(min_length=1, max_length=40)
+    text: str = Field(min_length=1, max_length=1500)
 
 
-@router.post("/self-test-prompt", dependencies=[Depends(require_admin)])
-def save_self_test_prompt(body: SelfTestPrompt, db: DBSession = Depends(get_db)) -> dict:
-    row = db.get(AppSetting, SELF_TEST_PROMPT_KEY)
-    if row is None:
-        db.add(AppSetting(key=SELF_TEST_PROMPT_KEY, value=body.text))
-    else:
-        row.value = body.text
-    db.commit()
+class SelfTestPreview(BaseModel):
+    student_id: str = Field(min_length=1, max_length=32)
+    kind: Literal["qa", "conversation", "mixed", "suggested"]
+    skill: Literal["writing", "listening", "speaking", "mixed"]
+    minutes: Literal[5, 10, 15, 20, 30]
+
+
+def _rules_out(db: DBSession) -> list[dict]:
+    current = stored_rules(db)
+    return [{"key": k, "text": v, "default": k in DEFAULT_RULES} for k, v in current.items()]
+
+
+@router.get("/self-test/template", dependencies=[Depends(require_admin)])
+def read_self_test_template(db: DBSession = Depends(get_db)) -> dict:
+    return {
+        "template": get_template(db),
+        "default_template": DEFAULT_SELF_TEST_TEMPLATE,
+        "placeholders": placeholders(db),
+        "rules": _rules_out(db),
+    }
+
+
+@router.post("/self-test/template", dependencies=[Depends(require_admin)])
+def write_self_test_template(body: SelfTestTemplate, db: DBSession = Depends(get_db)) -> dict:
+    save_template(db, body.template)
     return {"ok": True}
+
+
+@router.post("/self-test/rules", dependencies=[Depends(require_admin)])
+def write_self_test_rule(body: SelfTestRule, db: DBSession = Depends(get_db)) -> dict:
+    # A rule can be added under any key that matches the pattern. Its placeholder is {{rule.<key>}}.
+    key = body.key.strip()
+    if not RULE_KEY.match(key):
+        raise HTTPException(status_code=422, detail="Use lowercase letters, digits and one dot, such as kind.quiz")
+    rules = stored_rules(db)
+    rules[key] = body.text.strip()
+    save_rules(db, rules)
+    return {"ok": True}
+
+
+@router.delete("/self-test/rules/{key}", dependencies=[Depends(require_admin)])
+def remove_self_test_rule(key: str, db: DBSession = Depends(get_db)) -> dict:
+    # A default rule goes back to its default text. A rule the administrator added is removed.
+    rules = stored_rules(db)
+    if key not in rules:
+        raise HTTPException(status_code=404, detail="Not found")
+    if key in DEFAULT_RULES:
+        rules[key] = DEFAULT_RULES[key]
+    else:
+        del rules[key]
+    save_rules(db, rules)
+    return {"ok": True}
+
+
+@router.post("/self-test/preview", dependencies=[Depends(require_admin)])
+def preview_self_test_prompt(body: SelfTestPreview, db: DBSession = Depends(get_db)) -> dict:
+    # The prompt a self-test would start with for this learner. Nothing is saved.
+    student = db.get(Student, body.student_id)
+    if student is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    from zaban.services.curriculum import DEFAULT_LEVEL
+    from zaban.services.self_test import choose_kind
+
+    level = student.cefr_level or DEFAULT_LEVEL
+    text, unknown = build_prompt(db, student, body.kind, choose_kind(body.kind, level), body.skill, body.minutes, level)
+    return {"prompt": text, "unknown_placeholders": unknown}
 
 
 class SuspensionUpdate(BaseModel):

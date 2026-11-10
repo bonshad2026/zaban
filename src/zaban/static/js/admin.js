@@ -61,20 +61,21 @@
   // ----- Tabs -----
 
   const loaders = {
-    consults: loadConsults,
-    cooperations: loadCooperations,
+    consults: () => loadRequests("consult"),
+    cooperations: () => loadRequests("cooperation"),
     overview: loadOverview,
-    helpcontent: loadHelpContent,
+    helpcontent: loadHelpSection,
     settings: loadSettings,
-    connections: loadConnections,
+    connections: loadSms,
+    payment: loadPayment,
     sessions: loadSessions,
     promptgen: loadPromptGen,
+    promptview: loadPromptView,
+    selftest: loadSelfTest,
     placementbank: loadBank,
-    build: async () => {},
     adults: loadAdults,
     payments: loadPayments,
     plans: loadPlans,
-    students: loadStudents,
     global: loadGlobalPrompt,
     voices: loadVoices,
     curriculum: loadCurriculum,
@@ -83,69 +84,176 @@
 
   function openTab(name) {
     document.querySelectorAll(".admin-tabs .tab").forEach((t) => t.classList.toggle("is-active", t.dataset.tab === name));
-    ["overview", "consults", "cooperations", "helpcontent", "settings", "connections", "sessions", "promptgen", "placementbank", "build", "adults", "payments", "plans", "students", "curriculum", "programs", "global", "voices"]
+    revealGroupOf(name);
+    ["overview", "consults", "cooperations", "helpcontent", "settings", "connections", "payment", "sessions", "promptgen", "promptview", "selftest", "placementbank", "adults", "payments", "plans", "curriculum", "programs", "global", "voices"]
       .forEach((n) => show(`tab-${n}`, n === name));
     return run(loaders[name]);
   }
 
-  // ----- Consultation requests -----
+  // ----- Consultation and cooperation requests -----
 
-  async function loadConsults() {
-    const rows = await Z.request("GET", `${API}/consults`);
-    fill($("consultTable"), ["زمان", "نام", "موضوع", "شماره", "اجازه‌ی تماس", "زمان ترجیحی", "پیام", "وضعیت", "عملیات"],
+  // Each kind lists its statuses in the order the team works through them. The status is chosen, not clicked.
+  const REQUEST_KINDS = {
+    consult: {
+      path: "consults",
+      table: "consultTable",
+      filter: "consultFilter",
+      title: "درخواست مشاوره",
+      statuses: [
+        ["new", "جدید"],
+        ["reviewed", "بررسی شد"],
+        ["called", "تماس گرفته شد"],
+        ["recall", "تماس مجدد"],
+        ["awaiting_reply", "منتظر پاسخ"],
+        ["closed", "بسته شد"],
+      ],
+      headers: ["زمان", "نام", "موضوع", "شماره", "پیام", "وضعیت", "عملیات"],
+      list: (r) => [Z.fmtDateTime(r.created_at), fullName(r), r.subject, r.phone, r.message],
+      details: (r) => [
+        ["زمان ثبت", Z.fmtDateTime(r.created_at)],
+        ["نام", fullName(r)],
+        ["موضوع", r.subject || "—"],
+        ["شماره", r.phone],
+        ["اجازه‌ی تماس", r.contact_permission ? "بله" : "نه"],
+        ["زمان ترجیحی", r.preferred_time || "—"],
+      ],
+    },
+    cooperation: {
+      path: "cooperations",
+      table: "cooperationTable",
+      filter: "cooperationFilter",
+      title: "درخواست همکاری",
+      statuses: [
+        ["new", "جدید"],
+        ["contacted", "تماس گرفته شد"],
+        ["closed", "بسته شد"],
+      ],
+      headers: ["زمان", "موضوع", "شماره", "ایمیل", "پیام", "وضعیت", "عملیات"],
+      list: (r) => [Z.fmtDateTime(r.created_at), r.subject, r.phone, r.email, r.message],
+      details: (r) => [
+        ["زمان ثبت", Z.fmtDateTime(r.created_at)],
+        ["موضوع", r.subject],
+        ["شماره", r.phone],
+        ["ایمیل", r.email || "—"],
+      ],
+    },
+  };
+
+  // Rows as the server last returned them. A status change updates the row here too, so the list and the dialog agree.
+  const requestRows = { consult: [], cooperation: [] };
+
+  // Status labels for a status that is no longer in the list (for example «contacted» on old consultation requests).
+  const LEGACY_STATUS = { contacted: "تماس گرفته شد" };
+
+  function fullName(r) {
+    return `${r.name} ${r.last_name || ""}`.trim();
+  }
+
+  function option(value, label) {
+    const o = Z.el("option", "", label);
+    o.value = value;
+    return o;
+  }
+
+  function statusLabel(cfg, status) {
+    const hit = cfg.statuses.find(([value]) => value === status);
+    return hit ? hit[1] : LEGACY_STATUS[status] || status;
+  }
+
+  function statusClass(status) {
+    if (status === "new") return "is-new";
+    if (status === "closed") return "is-closed";
+    return "";
+  }
+
+  // A long text is cut in the list. The full text shows on hover and in the details dialog.
+  function textCell(value, max = 50) {
+    const text = value == null || value === "" ? "—" : String(value);
+    if (text.length <= max) return text;
+    const clip = Z.el("span", "clip", `${text.slice(0, max)}…`);
+    clip.title = text;
+    return clip;
+  }
+
+  // The status is picked from a list, and «اعمال» saves it. «اعمال» stays off until the choice differs from the saved status.
+  function statusControl(kind, row, errorId, onSaved) {
+    const cfg = REQUEST_KINDS[kind];
+    const select = Z.el("select", "");
+    select.setAttribute("aria-label", "وضعیت");
+    cfg.statuses.forEach(([value, label]) => select.appendChild(option(value, label)));
+    if (!cfg.statuses.some(([value]) => value === row.status)) select.appendChild(option(row.status, statusLabel(cfg, row.status)));
+    select.value = row.status;
+    const apply = Z.el("button", "", "اعمال");
+    apply.type = "button";
+    apply.disabled = true;
+    select.addEventListener("change", () => { apply.disabled = select.value === row.status; });
+    apply.addEventListener("click", async () => {
+      apply.disabled = true;
+      setError(errorId, "");
+      try {
+        await Z.request("POST", `${API}/${cfg.path}/${row.id}/status`, { status: select.value });
+        row.status = select.value;
+        renderRequests(kind);
+        if (onSaved) onSaved();
+      } catch (err) {
+        setError(errorId, err.message);
+        apply.disabled = select.value === row.status;
+      }
+    });
+    const box = Z.el("div", "status-control");
+    box.append(select, apply);
+    return box;
+  }
+
+  async function loadRequests(kind) {
+    requestRows[kind] = await Z.request("GET", `${API}/${REQUEST_KINDS[kind].path}`);
+    renderRequests(kind);
+  }
+
+  function renderRequests(kind) {
+    const cfg = REQUEST_KINDS[kind];
+    const filter = $(cfg.filter).value;
+    const rows = requestRows[kind].filter((r) => !filter || r.status === filter);
+    fill($(cfg.table), cfg.headers,
       rows.map((r) => [
-        Z.fmtDateTime(r.created_at),
-        `${r.name} ${r.last_name || ""}`.trim(),
-        r.subject || "—",
-        r.phone,
-        r.contact_permission ? "بله" : "نه",
-        r.preferred_time,
-        r.message,
-        r.status,
-        actions(
-          button("بررسی شد", () => setConsultStatus(r.id, "reviewed")),
-          button("تماس گرفته شد", () => setConsultStatus(r.id, "called")),
-          button("تماس مجدد", () => setConsultStatus(r.id, "recall")),
-          button("منتظر پاسخ", () => setConsultStatus(r.id, "awaiting_reply")),
-          button("بسته شد", () => setConsultStatus(r.id, "closed")),
-        ),
+        ...cfg.list(r).map((value) => textCell(value)),
+        statusControl(kind, r, "adminError"),
+        actions(button("مشاهده", () => showRequest(kind, r.id))),
       ]));
   }
 
-  function setConsultStatus(id, status) {
-    return run(async () => {
-      await Z.request("POST", `${API}/consults/${id}/status`, { status });
-      await loadConsults();
-    });
+  function fillRequestFilter(kind) {
+    const cfg = REQUEST_KINDS[kind];
+    $(cfg.filter).replaceChildren(option("", "همه"), ...cfg.statuses.map(([value, label]) => option(value, label)));
+    $(cfg.filter).addEventListener("change", () => renderRequests(kind));
   }
 
-  // ----- Cooperation requests -----
-
-  async function loadCooperations() {
-    const rows = await Z.request("GET", `${API}/cooperations`);
-    fill($("cooperationTable"), ["زمان", "موضوع", "شماره", "ایمیل", "توضیحات", "وضعیت", "عملیات"],
-      rows.map((r) => [
-        Z.fmtDateTime(r.created_at),
-        r.subject,
-        r.phone,
-        r.email,
-        r.message,
-        r.status,
-        actions(
-          button("تماس گرفته شد", () => setCooperationStatus(r.id, "contacted")),
-          button("بسته شد", () => setCooperationStatus(r.id, "closed")),
-        ),
-      ]));
+  // The details dialog shows every field, the full message and the status control.
+  function showRequest(kind, id) {
+    const cfg = REQUEST_KINDS[kind];
+    const row = requestRows[kind].find((r) => r.id === id);
+    if (!row) return;
+    $("requestTitle").textContent = cfg.title;
+    $("requestDetails").replaceChildren(...cfg.details(row).flatMap(([label, value]) => [Z.el("dt", "", label), Z.el("dd", "", value)]));
+    $("requestMessage").textContent = row.message || "—";
+    showRequestStatus(kind, row);
+    setError("requestError", "");
+    $("requestDialog").showModal();
   }
 
-  function setCooperationStatus(id, status) {
-    return run(async () => {
-      await Z.request("POST", `${API}/cooperations/${id}/status`, { status });
-      await loadCooperations();
-    });
+  function showRequestStatus(kind, row) {
+    const cfg = REQUEST_KINDS[kind];
+    const badge = $("requestCurrent");
+    badge.textContent = statusLabel(cfg, row.status);
+    badge.className = `status-badge ${statusClass(row.status)}`;
+    $("requestStatusSlot").replaceChildren(statusControl(kind, row, "requestError", () => showRequestStatus(kind, row)));
   }
 
-  // ----- Overview, learner detail, help content, settings and build -----
+  function closeRequestDialog() {
+    $("requestDialog").close();
+  }
+
+  // ----- Overview, learner detail, help content and settings -----
 
   function kv(label, value) {
     return Z.el("div", "kv", `${label}: ${value}`);
@@ -189,17 +297,166 @@
     }
   }
 
+  // ----- Help content tags: facets (groups) and their tags, defined by the administrator -----
+
+  let helpFacets = [];
+
+  async function loadFacets() {
+    helpFacets = await Z.request("GET", `${API}/help-facets`);
+    renderFacets();
+    renderTagPicker($("hcTags"), []);
+  }
+
+  // Checkboxes for every tag, grouped by facet. Returns nothing; the picked ids are read with pickedTags.
+  function renderTagPicker(picker, selected) {
+    const chosen = new Set(selected);
+    if (!helpFacets.length) {
+      picker.replaceChildren(Z.el("p", "muted", "هنوز برچسبی تعریف نشده است."));
+      return;
+    }
+    picker.replaceChildren(...helpFacets.map((facet) => {
+      const group = Z.el("div", "tag-group");
+      group.appendChild(Z.el("strong", "", facet.name));
+      facet.tags.forEach((tag) => {
+        const choice = Z.el("label", "tag-choice");
+        const check = document.createElement("input");
+        check.type = "checkbox";
+        check.value = tag.id;
+        check.checked = chosen.has(tag.id);
+        choice.append(check, ` ${tag.label}`);
+        group.appendChild(choice);
+      });
+      return group;
+    }));
+  }
+
+  function pickedTags(picker) {
+    return [...picker.querySelectorAll("input[type=checkbox]:checked")].map((check) => check.value);
+  }
+
+  function renderFacets() {
+    const list = $("facetList");
+    if (!helpFacets.length) {
+      list.replaceChildren(Z.el("p", "muted", "موردی وجود ندارد."));
+      return;
+    }
+    list.replaceChildren(...helpFacets.map(facetCard));
+  }
+
+  function facetCard(facet) {
+    const card = Z.el("div", "card facet-card");
+    const head = Z.el("div", "row");
+    head.append(Z.el("strong", "", facet.name), button("حذف گروه", () => removeFacet(facet)));
+    const chips = Z.el("div", "tag-chips");
+    facet.tags.forEach((tag) => {
+      const chip = Z.el("span", "tag-chip", tag.label);
+      chip.appendChild(button("×", () => removeTag(tag)));
+      chips.appendChild(chip);
+    });
+    const form = document.createElement("form");
+    form.className = "row";
+    const input = document.createElement("input");
+    input.placeholder = "برچسب تازه";
+    input.maxLength = 60;
+    input.required = true;
+    const add = Z.el("button", "", "افزودن برچسب");
+    add.type = "submit";
+    form.append(input, add);
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      addTag(facet.id, input.value.trim());
+    });
+    card.append(head, chips, form);
+    return card;
+  }
+
+  function addFacet(event) {
+    event.preventDefault();
+    return run(async () => {
+      await Z.request("POST", `${API}/help-facets`, { name: $("facetName").value.trim() });
+      event.target.reset();
+      await loadFacets();
+    });
+  }
+
+  function removeFacet(facet) {
+    return run(async () => {
+      if (!confirm(`گروه «${facet.name}» و همه‌ی برچسب‌هایش حذف شود؟ این کار روی محتواها هم اثر می‌گذارد.`)) return;
+      await Z.request("DELETE", `${API}/help-facets/${facet.id}`);
+      await loadFacets();
+      await loadHelpContent();
+    });
+  }
+
+  function addTag(facetId, label) {
+    return run(async () => {
+      await Z.request("POST", `${API}/help-facets/${facetId}/tags`, { label });
+      await loadFacets();
+    });
+  }
+
+  function removeTag(tag) {
+    return run(async () => {
+      if (!confirm(`برچسب «${tag.label}» از همه‌ی محتواها برداشته و حذف شود؟`)) return;
+      await Z.request("DELETE", `${API}/help-tags/${tag.id}`);
+      await loadFacets();
+      await loadHelpContent();
+    });
+  }
+
+  // ----- Help content list and edit -----
+
+  async function loadHelpSection() {
+    await loadFacets();
+    await loadHelpContent();
+  }
+
   async function loadHelpContent() {
     const rows = await Z.request("GET", `${API}/help-content`);
-    fill($("helpTable"), ["عنوان", "دسته", "گروه سنی", "سطح", "منبع", "عملیات"],
+    fill($("helpTable"), ["عنوان", "دسته", "گروه سنی", "سطح", "جنسیت", "برچسب‌ها", "منبع", "عملیات"],
       rows.map((r) => [
-        r.title,
+        textCell(r.title, 60),
         r.category,
         r.age_band,
         r.level,
-        r.url || `فایل (${Math.round(r.size_bytes / 1024)} کیلوبایت)`,
-        actions(button("حذف", () => deleteHelpContent(r.id))),
+        r.gender === "female" ? "دختر" : r.gender === "male" ? "پسر" : "برای همه",
+        textCell(r.tags.map((t) => t.label).join("، ") || "—", 40),
+        r.url ? textCell(r.url, 40) : `فایل (${Math.round(r.size_bytes / 1024)} کیلوبایت)`,
+        actions(
+          button("ویرایش", () => editHelpContent(r)),
+          button("حذف", () => deleteHelpContent(r.id)),
+        ),
       ]));
+  }
+
+  let editingHelpId = null;
+
+  function editHelpContent(row) {
+    editingHelpId = row.id;
+    $("helpEditName").textContent = row.title;
+    $("hbBand").value = row.age_band;
+    $("hbLevel").value = row.level;
+    $("hbGender").value = row.gender || "";
+    renderTagPicker($("hbTags"), row.tags.map((t) => t.id));
+    Z.showError($("helpEditError"), "");
+    $("helpEditDialog").showModal();
+  }
+
+  async function saveHelpClassification(event) {
+    event.preventDefault();
+    Z.showError($("helpEditError"), "");
+    try {
+      await Z.request("PUT", `${API}/help-content/${editingHelpId}/classification`, {
+        age_band: $("hbBand").value,
+        level: $("hbLevel").value,
+        gender: $("hbGender").value || null,
+        tag_ids: pickedTags($("hbTags")),
+      });
+      $("helpEditDialog").close();
+      await loadHelpContent();
+    } catch (err) {
+      Z.showError($("helpEditError"), err.message);
+    }
   }
 
   function deleteHelpContent(id) {
@@ -230,7 +487,7 @@
       age_band: $("hcBand").value,
       level: $("hcLevel").value,
       gender: $("hcGender").value || null,
-      interests: $("hcInterests").value.trim(),
+      tag_ids: pickedTags($("hcTags")),
       stage: $("hcStage").value.trim() || null,
     };
     if (file) {
@@ -252,12 +509,12 @@
     const data = await Z.request("GET", `${API}/settings`);
     $("setMode").value = data.prompt_mode;
     $("setExpected").value = data.expected_output || "";
-    $("setProvider").value = data.payment_provider;
+    // Only the AI key belongs to the prompt settings. The SMS and payment keys are shown in their own sections.
     $("secretsList").replaceChildren(
-      ...Object.entries(data.secrets).map(([k, v]) => Z.el("li", "", `${k}: ${v === true ? "تنظیم شده" : v === false ? "تنظیم نشده" : v}`)),
+      ...Object.entries(data.secrets)
+        .filter(([k]) => k.startsWith("anthropic"))
+        .map(([k, v]) => Z.el("li", "", `${k}: ${v === true ? "تنظیم شده" : "تنظیم نشده"}`)),
     );
-    const prompt = await Z.request("GET", `${API}/self-test-prompt`);
-    $("stPrompt").value = prompt.text;
   }
 
   function saveSettings() {
@@ -265,38 +522,107 @@
       await Z.request("POST", `${API}/settings`, {
         prompt_mode: $("setMode").value,
         expected_output: $("setExpected").value,
-        payment_provider: $("setProvider").value,
       });
       $("settingsNotice").hidden = false;
       $("settingsNotice").textContent = "تنظیمات ذخیره شد.";
     });
   }
 
-  function saveSelfTestPrompt() {
+  // ----- Self-test prompt: template, rules and a preview for one learner -----
+
+  let stDefaultTemplate = "";
+
+  async function loadSelfTest() {
+    const data = await Z.request("GET", `${API}/self-test/template`);
+    stDefaultTemplate = data.default_template;
+    $("stTemplate").value = data.template;
+    $("stPlaceholders").replaceChildren(
+      ...data.placeholders.map((p) => Z.el("li", "", `{{${p.key}}}  ${p.label}`)),
+    );
+    renderSelfTestRules(data.rules);
+    const students = await Z.request("GET", `${API}/students`);
+    $("stLearner").replaceChildren(
+      ...students.map((s) => {
+        const option = Z.el("option", "", `${s.name || "—"}${s.kind === "self" ? " (یادگیری خود)" : ""}`);
+        option.value = s.id;
+        return option;
+      }),
+    );
+  }
+
+  function saveSelfTestTemplate(text) {
     return run(async () => {
-      await Z.request("POST", `${API}/self-test-prompt`, { text: $("stPrompt").value });
-      $("settingsNotice").hidden = false;
-      $("settingsNotice").textContent = "پرامپت آزمون ذخیره شد.";
+      await Z.request("POST", `${API}/self-test/template`, { template: text });
+      Z.show($("stNotice"), true);
+      $("stNotice").textContent = "قالب پرامپت آزمون ذخیره شد.";
     });
   }
 
-  async function downloadBuild(event) {
-    event.preventDefault();
-    Z.showError($("buildError"), "");
-    const since = $("buildSince").value.trim();
-    const query = since ? `?since=${encodeURIComponent(since)}` : "";
-    const response = await fetch(`${API}/build${query}`, { method: "POST", credentials: "same-origin" });
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      Z.showError($("buildError"), typeof data.detail === "string" ? data.detail : "خروجی ساخته نشد.");
+  function renderSelfTestRules(rules) {
+    const box = $("stRules");
+    if (!rules.length) {
+      box.replaceChildren(Z.el("p", "muted", "هنوز قاعده‌ای ثبت نشده است."));
       return;
     }
-    const blob = await response.blob();
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "zaban-build.zip";
-    link.click();
-    URL.revokeObjectURL(link.href);
+    box.replaceChildren(...rules.map((rule) => {
+      const card = Z.el("div", "card facet-card");
+      const title = Z.el("strong", "", `{{rule.${rule.key}}}`);
+      const hint = Z.el("span", "muted", rule.default ? "  (قاعده‌ی پیش‌فرض)" : "  (قاعده‌ی تازه)");
+      const text = document.createElement("textarea");
+      text.rows = 3;
+      text.maxLength = 1500;
+      text.value = rule.text;
+      const save = button("ذخیره", () => saveSelfTestRule(rule.key, text.value));
+      const reset = button(rule.default ? "برگشت به پیش‌فرض" : "حذف", () => removeSelfTestRule(rule));
+      card.append(title, hint, text, actions(save, reset));
+      return card;
+    }));
+  }
+
+  function saveSelfTestRule(key, text) {
+    return run(async () => {
+      await Z.request("POST", `${API}/self-test/rules`, { key, text });
+      await loadSelfTest();
+    });
+  }
+
+  function removeSelfTestRule(rule) {
+    return run(async () => {
+      const question = rule.default ? `قاعده‌ی ${rule.key} به پیش‌فرض برگردد؟` : `قاعده‌ی ${rule.key} حذف شود؟`;
+      if (!confirm(question)) return;
+      await Z.request("DELETE", `${API}/self-test/rules/${encodeURIComponent(rule.key)}`);
+      await loadSelfTest();
+    });
+  }
+
+  async function addSelfTestRule(event) {
+    event.preventDefault();
+    await run(async () => {
+      await Z.request("POST", `${API}/self-test/rules`, { key: $("stRuleKey").value.trim(), text: $("stRuleText").value.trim() });
+      event.target.reset();
+      await loadSelfTest();
+    });
+  }
+
+  async function previewSelfTest(event) {
+    event.preventDefault();
+    Z.showError($("stError"), "");
+    Z.show($("stUnknown"), false);
+    try {
+      const result = await Z.request("POST", `${API}/self-test/preview`, {
+        student_id: $("stLearner").value,
+        kind: $("stKind").value,
+        skill: $("stSkill").value,
+        minutes: Number($("stMinutes").value),
+      });
+      $("stOutput").value = result.prompt;
+      if (result.unknown_placeholders.length) {
+        $("stUnknown").hidden = false;
+        $("stUnknown").textContent = `این کلیدها در سامانه نیستند و خالی ماندند: ${result.unknown_placeholders.join("، ")}`;
+      }
+    } catch (err) {
+      Z.showError($("stError"), err.message);
+    }
   }
 
   // ----- Sign-ups -----
@@ -357,57 +683,42 @@
     });
   }
 
-  // ----- Plans -----
+  // ----- Plans: the list shows the plans; adding and editing happen in a dialog -----
 
-  let plansCache = [];
+  let editingPlanId = null;
 
-  // The edit form shows the chosen plan. Saving changes only the fields that were filled in.
-  function fillPlanEdit(plan) {
-    $("planEditName").value = plan.name || "";
-    $("planEditNameEn").value = plan.name_en || "";
-    $("planEditPrice").value = plan.price_toman;
-    $("planEditDays").value = plan.days;
-    $("planEditTokens").value = plan.token_allowance;
-    $("planEditDescription").value = plan.description || "";
-  }
+  const ICON_EDIT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>';
+  const ICON_TRASH = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6.5 7l1 13h9l1-13"/><path d="M10 11v5M14 11v5"/></svg>';
 
-  function savePlanEdit(event) {
-    event.preventDefault();
-    const id = $("planEditSelect").value;
-    if (!id) return;
-    return run(async () => {
-      show("planEditError", false);
-      await Z.request("POST", `${API}/plans/${id}/update`, {
-        name: $("planEditName").value.trim(),
-        name_en: $("planEditNameEn").value.trim(),
-        price_toman: Number($("planEditPrice").value),
-        days: Number($("planEditDays").value),
-        token_allowance: Number($("planEditTokens").value),
-        description: $("planEditDescription").value.trim(),
-      });
-      $("planEditNotice").hidden = false;
-      $("planEditNotice").textContent = "پلن ذخیره شد.";
-      await loadPlans();
-    });
+  function iconButton(icon, label, onClick, danger = false) {
+    const b = Z.el("button", danger ? "icon-btn danger" : "icon-btn ghost");
+    b.type = "button";
+    b.title = label;
+    b.setAttribute("aria-label", label);
+    b.insertAdjacentHTML("beforeend", icon);
+    b.addEventListener("click", onClick);
+    return b;
   }
 
   async function loadPlans() {
     const rows = await Z.request("GET", `${API}/plans`);
-    plansCache = rows;
-    $("planEditSelect").replaceChildren(...rows.map((p) => {
-      const option = Z.el("option", "", p.name);
-      option.value = p.id;
-      return option;
-    }));
-    if (rows.length) fillPlanEdit(rows[0]);
-    fill($("planTable"), ["پلن", "قیمت (تومان)", "مدت (روز)", "وضعیت", "عملیات"],
-      rows.map((p) => [
-        p.name,
-        p.price_toman.toLocaleString("fa-IR"),
-        p.days,
-        p.active ? "فعال" : "غیرفعال",
-        actions(button(p.active ? "غیرفعال کردن" : "فعال کردن", () => setPlanActive(p.id, !p.active))),
-      ]));
+    fill($("planTable"), ["پلن", "قیمت (تومان)", "مدت (روز)", "سقف توکن", "وضعیت", "عملیات"],
+      rows.map((p) => {
+        const status = Z.el("span", `status-badge ${p.active ? "" : "is-off"}`, p.active ? "فعال" : "غیرفعال");
+        const toggle = button(p.active ? "غیرفعال کردن" : "فعال کردن", () => setPlanActive(p.id, !p.active));
+        return [
+          p.name,
+          p.price_toman.toLocaleString("fa-IR"),
+          p.days,
+          p.token_allowance.toLocaleString("fa-IR"),
+          status,
+          actions(
+            toggle,
+            iconButton(ICON_EDIT, "ویرایش پلن", () => openPlanDialog(p)),
+            iconButton(ICON_TRASH, "حذف پلن", () => removePlan(p), true),
+          ),
+        ];
+      }));
   }
 
   function setPlanActive(id, active) {
@@ -417,101 +728,52 @@
     });
   }
 
-  async function addPlan(event) {
+  function removePlan(plan) {
+    return run(async () => {
+      if (!confirm(`پلن «${plan.name}» حذف شود؟ اگر پرداختی با آن ثبت شده باشد، حذف نمی‌شود.`)) return;
+      await Z.request("DELETE", `${API}/plans/${plan.id}`);
+      $("planNotice").hidden = false;
+      $("planNotice").textContent = "پلن حذف شد.";
+      await loadPlans();
+    });
+  }
+
+  // One dialog for adding and editing. editingPlanId is null when adding.
+  function openPlanDialog(plan) {
+    editingPlanId = plan ? plan.id : null;
+    $("planDialogTitle").textContent = plan ? "ویرایش پلن" : "افزودن پلن";
+    $("planName").value = plan ? plan.name : "";
+    $("planNameEn").value = plan ? plan.name_en || "" : "";
+    $("planPrice").value = plan ? plan.price_toman : "";
+    $("planDays").value = plan ? plan.days : "";
+    $("planTokens").value = plan ? plan.token_allowance : 1000000;
+    $("planDescription").value = plan ? plan.description || "" : "";
+    Z.showError($("planFormError"), "");
+    $("planDialog").showModal();
+  }
+
+  async function savePlan(event) {
     event.preventDefault();
-    const form = event.target;
-    setError("planError", "");
+    Z.showError($("planFormError"), "");
+    const body = {
+      name: $("planName").value.trim(),
+      name_en: $("planNameEn").value.trim(),
+      price_toman: Number($("planPrice").value),
+      days: Number($("planDays").value),
+      token_allowance: Number($("planTokens").value),
+      description: $("planDescription").value.trim(),
+    };
     try {
-      await Z.request("POST", `${API}/plans`, {
-        name: $("planName").value.trim(),
-        name_en: $("planNameEn").value.trim(),
-        price_toman: Number($("planPrice").value),
-        days: Number($("planDays").value),
-        description: "",
-      });
-      form.reset();
+      if (editingPlanId) await Z.request("POST", `${API}/plans/${editingPlanId}/update`, body);
+      else await Z.request("POST", `${API}/plans`, body);
+      $("planDialog").close();
+      $("planNotice").hidden = false;
+      $("planNotice").textContent = editingPlanId ? "پلن ذخیره شد." : "پلن اضافه شد.";
       await loadPlans();
     } catch (err) {
-      setError("planError", err.message);
+      Z.showError($("planFormError"), err.message);
     }
   }
-
-  // ----- Students and their lesson notes -----
-
-  const PROFILE_LIMIT = 2000;
-  let editingStudent = null;
-
-  async function loadStudents() {
-    const rows = await Z.request("GET", `${API}/students`);
-    fill($("studentTable"), ["نام", "نوع", "نام کاربری", "سطح", "پرامپت", "عملیات"],
-      rows.map((s) => [
-        s.name || "—",
-        s.kind === "self" ? "بزرگسال" : "کودک",
-        s.username,
-        s.cefr_level,
-        s.instructions ? `${s.instructions.slice(0, 60)}…` : "بدون پرامپت",
-        actions(button("ویرایش پرامپت", () => openProfile(s))),
-      ]));
-  }
-
-  function openProfile(student) {
-    editingStudent = student;
-    setError("profileError", "");
-    Z.show($("profileOk"), false);
-    $("profileTitle").textContent = `پرامپت: ${student.name || student.username || "دانش‌آموز"}`;
-    $("profileInterests").value = student.interests;
-    $("profileMotivation").value = student.motivation;
-    $("profileText").value = student.instructions;
-    updateProfileCount();
-    Z.show($("promptPreview"), false);
-    show("profileForm", true);
-    $("profileInterests").focus();
-  }
-
-  // The prompt a lesson for this learner starts with. Each part is shown with the source it comes from.
-  const PROMPT_PARTS = [
-    ["intro", "معرفی معلم"],
-    ["accent", "لهجه‌ی تمرین"],
-    ["admin", "۱. دستورهای کلی ادمین"],
-    ["database", "۲. اطلاعات از دیتابیس"],
-    ["learner", "۳. پرامپت اختصاصی این دانش‌آموز"],
-    ["lesson", "۴. جلسه‌ی برنامه"],
-    ["expected", "۵. انتظار ادمین از جلسه"],
-    ["rules", "قوانین ایمنی"],
-  ];
-
-  async function previewPrompt() {
-    setError("profileError", "");
-    const data = await Z.request("GET", `${API}/students/${editingStudent.id}/start-prompt`);
-    const box = $("promptPreview");
-    box.replaceChildren();
-    PROMPT_PARTS.forEach(([key, title]) => {
-      const section = document.createElement("details");
-      section.open = true;
-      const heading = document.createElement("summary");
-      heading.textContent = title;
-      const body = document.createElement("pre");
-      body.className = "prompt-part";
-      body.textContent = data.parts[key] || "— این بخش در این دانش‌آموز خالی است —";
-      section.append(heading, body);
-      box.appendChild(section);
-    });
-    const final = document.createElement("details");
-    const finalHeading = document.createElement("summary");
-    finalHeading.textContent = "پرامپت نهایی؛ این متن اولین ورودی API در شروع جلسه است";
-    const finalBody = document.createElement("pre");
-    finalBody.className = "prompt-part";
-    finalBody.textContent = data.prompt;
-    final.append(finalHeading, finalBody);
-    box.appendChild(final);
-    Z.show(box, true);
-  }
-
-  // ----- Voice samples -----
-
-  const VOICE_TYPES = { "audio/mpeg": "audio/mpeg", "audio/mp3": "audio/mpeg", "audio/wav": "audio/wav", "audio/x-wav": "audio/wav", "audio/wave": "audio/wav", "audio/ogg": "audio/ogg", "audio/mp4": "audio/mp4", "audio/x-m4a": "audio/mp4", "audio/m4a": "audio/mp4" };
-  const VOICE_EXT = { mp3: "audio/mpeg", wav: "audio/wav", ogg: "audio/ogg", m4a: "audio/mp4", mp4: "audio/mp4" };
-  const VOICE_LIMIT = 3 * 1024 * 1024;
 
   async function loadVoices() {
     const rows = await Z.request("GET", `${API}/voice-samples`);
@@ -604,34 +866,9 @@
     }
   }
 
-  function updateProfileCount() {
-    $("profileCount").textContent = `${$("profileText").value.length} / ${PROFILE_LIMIT}`;
-  }
+  // ----- Curriculum: topic, conversation goal and the points to talk about -----
 
-  async function saveProfile(event) {
-    event.preventDefault();
-    setError("profileError", "");
-    Z.show($("profileOk"), false);
-    try {
-      await Z.request("POST", `${API}/students/${editingStudent.id}/profile`, {
-        interests: $("profileInterests").value,
-        motivation: $("profileMotivation").value,
-        instructions: $("profileText").value,
-      });
-      editingStudent = null;
-      show("profileForm", false);
-      await loadStudents();
-      $("profileOk").textContent = "پرامپت ذخیره شد. از جلسه‌ی بعدی این دانش‌آموز استفاده می‌شود.";
-      Z.show($("profileOk"), true);
-    } catch (err) {
-      setError("profileError", err.message);
-    }
-  }
-
-  // ----- Curriculum -----
-
-  let curriculum = null;
-
+  // Used by the programs tab as well: keeps the current choice when it still exists.
   function fillSelect(select, pairs) {
     const current = select.value;
     select.innerHTML = "";
@@ -644,87 +881,83 @@
     if (pairs.some(([value]) => value === current)) select.value = current;
   }
 
-  function selectedVariantId() {
-    return `${$("curTopic").value}.${$("curBand").value}.${$("curLevel").value}`;
-  }
+  let curTopics = [];
+  let curOpenId = null;
 
-  function editVariant(id) {
-    const [topic, band, level] = id.split(".");
-    $("curTopic").value = topic;
-    $("curBand").value = band;
-    $("curLevel").value = level;
-    showSelectedVariant();
-  }
-
-  function renderTopics() {
-    fill($("topicTable"), ["شناسه", "موضوع", "هدف گفتگو", "سطح‌ها", "بازه‌ها", "نسخه‌های نوشته‌شده"],
-      curriculum.topics.map((t) => {
-        const written = t.slots.filter((s) => s.written).length;
-        const levels = t.levels.length > 1 ? `${t.levels[0]} تا ${t.levels[t.levels.length - 1]}` : t.levels[0];
-        return [t.id, t.title, t.goal, levels, t.bands.join(" "), `${written} از ${t.slots.length}`];
-      }));
-  }
-
-  function renderVariants() {
-    fill($("variantTable"), ["شناسه", "شروع جمله", "عبارت‌ها", "سبک", "عملیات"],
-      curriculum.variants.map((v) => [
-        v.id,
-        v.opener,
-        v.phrases.join(" · "),
-        v.style,
-        actions(button("ویرایش", () => editVariant(v.id))),
+  function renderTopicTable() {
+    fill($("topicTable"), ["شناسه", "موضوع", "هدف گفتگو", "موارد آموزشی", "عملیات"],
+      curTopics.map((t) => [
+        t.id,
+        t.title,
+        textCell(t.goal, 60),
+        String(t.points.length),
+        actions(button("مشاهده", () => openTopic(t.id))),
       ]));
   }
 
-  function showSelectedVariant() {
-    const id = selectedVariantId();
-    const variant = curriculum.variants.find((v) => v.id === id);
-    $("variantTitle").textContent = variant
-      ? `نسخه‌ی ${id} — نوشته شده`
-      : `نسخه‌ی ${id} — هنوز نوشته نشده؛ با ذخیره، ساخته می‌شود.`;
-    $("variantOpener").value = variant ? variant.opener : "";
-    $("variantPhrases").value = variant ? variant.phrases.join("\n") : "";
-    $("variantStyle").value = variant ? variant.style : "";
-    setError("variantError", "");
-    Z.show($("variantOk"), false);
-  }
-
   async function loadCurriculum() {
-    curriculum = await Z.request("GET", `${API}/curriculum`);
-    $("curriculumVersion").textContent = `نسخه‌ی کاتالوگ: ${curriculum.version}`;
-    // fillSelect keeps the current choice when it still exists, so a reload stays on the same version.
-    fillSelect($("curTopic"), curriculum.topics.map((t) => [t.id, `${t.title} (${t.id})`]));
-    fillSelect($("curBand"), curriculum.bands.map((b) => [b.code, `${b.code} — ${b.label}`]));
-    fillSelect($("curLevel"), curriculum.levels.map((l) => [l, l]));
-    showSelectedVariant();
-    renderTopics();
-    renderVariants();
+    curTopics = await Z.request("GET", `${API}/curriculum/topics`);
+    renderTopicTable();
   }
 
-  async function saveVariant(event) {
-    event.preventDefault();
-    setError("variantError", "");
-    const id = selectedVariantId();
-    const body = {
-      opener: $("variantOpener").value,
-      phrases: $("variantPhrases").value.split("\n").map((p) => p.trim()).filter(Boolean),
-      style: $("variantStyle").value,
-    };
-    try {
-      const exists = curriculum.variants.some((v) => v.id === id);
-      if (exists) {
-        await Z.request("PUT", `${API}/curriculum/variants/${id}`, body);
-      } else {
-        const [topic_id, band, level] = id.split(".");
-        await Z.request("POST", `${API}/curriculum/variants`, { topic_id, band, level, ...body });
-      }
-      await loadCurriculum();
-      editVariant(id);
-      $("variantOk").textContent = "نسخه ذخیره شد. نسخه‌ی کاتالوگ بالا رفت و از جلسه‌ی بعدی استفاده می‌شود.";
-      Z.show($("variantOk"), true);
-    } catch (err) {
-      setError("variantError", err.message);
+  function renderPoints(topic) {
+    const list = $("curPoints");
+    if (!topic.points.length) {
+      list.replaceChildren(Z.el("li", "muted", "هنوز موردی ثبت نشده است."));
+      return;
     }
+    list.replaceChildren(...topic.points.map((point) => {
+      const li = Z.el("li", "point-row");
+      li.append(Z.el("span", "", point.text), button("حذف", () => removePoint(point)));
+      return li;
+    }));
+  }
+
+  // The dialog holds the full goal and every point, so the list stays short.
+  function openTopic(id) {
+    const topic = curTopics.find((t) => t.id === id);
+    if (!topic) return;
+    curOpenId = id;
+    $("curDialogTitle").textContent = `${topic.title} (${topic.id})`;
+    $("curTitle").value = topic.title;
+    $("curGoal").value = topic.goal;
+    Z.showError($("curFormError"), "");
+    renderPoints(topic);
+    $("curDialog").showModal();
+  }
+
+  async function saveTopic(event) {
+    event.preventDefault();
+    Z.showError($("curFormError"), "");
+    try {
+      await Z.request("PUT", `${API}/curriculum/topics/${curOpenId}`, {
+        title: $("curTitle").value.trim(),
+        goal: $("curGoal").value.trim(),
+      });
+      await loadCurriculum();
+      openTopic(curOpenId);
+    } catch (err) {
+      Z.showError($("curFormError"), err.message);
+    }
+  }
+
+  async function addPoint(event) {
+    event.preventDefault();
+    await run(async () => {
+      await Z.request("POST", `${API}/curriculum/topics/${curOpenId}/points`, { text: $("curPointText").value.trim() });
+      $("curPointForm").reset();
+      await loadCurriculum();
+      openTopic(curOpenId);
+    });
+  }
+
+  function removePoint(point) {
+    return run(async () => {
+      if (!confirm(`«${point.text}» حذف شود؟`)) return;
+      await Z.request("DELETE", `${API}/curriculum/points/${point.id}`);
+      await loadCurriculum();
+      openTopic(curOpenId);
+    });
   }
 
   // ----- Learning programs -----
@@ -762,6 +995,72 @@
         i.phrases.join(" · "),
         actions(button("ویرایش", () => showProgramItem(i.position))),
       ]) : []);
+    if (program) enableLessonDrag(program);
+  }
+
+  // Dragging a lesson row to another place saves the new order. The rows are in the same order as program.items.
+  function enableLessonDrag(program) {
+    let from = null;
+    [...$("progItemsTable").querySelectorAll("tr")].slice(1).forEach((row, index) => {
+      row.draggable = true;
+      row.classList.add("drag-row");
+      row.addEventListener("dragstart", (event) => {
+        from = index;
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", String(index));
+      });
+      row.addEventListener("dragover", (event) => event.preventDefault());
+      row.addEventListener("drop", (event) => {
+        event.preventDefault();
+        if (from === null || from === index) return;
+        saveLessonOrder(program, from, index);
+        from = null;
+      });
+    });
+  }
+
+  function saveLessonOrder(program, from, to) {
+    const ids = program.items.map((item) => item.id);
+    const [moved] = ids.splice(from, 1);
+    ids.splice(to, 0, moved);
+    return run(async () => {
+      await Z.request("POST", `${API}/programs/${program.id}/order`, { item_ids: ids });
+      await loadPrograms();
+    });
+  }
+
+  // ----- Learner progress in the program: plays and averages, and a request to repeat one lesson -----
+
+  async function loadLearnerProgress() {
+    const studentId = $("progLearner").value;
+    if (!studentId) return;
+    try {
+      const data = await Z.request("GET", `${API}/students/${studentId}/program-progress`);
+      const pending = data.items.find((row) => row.item_id === data.revisit_item_id);
+      Z.show($("progressNotice"), Boolean(pending));
+      if (pending) $("progressNotice").textContent = `برای جلسه‌ی بعد درخواست گفتگوی مجدد دارد: ${pending.position + 1} — ${pending.title}`;
+      fill($("progressTable"), ["جلسه", "عنوان", "دفعات", "میانگین امتیاز", "وضعیت", "عملیات"],
+        data.items.map((row) => [
+          row.position + 1,
+          row.title,
+          row.visits,
+          row.average == null ? "—" : String(row.average),
+          row.item_id === data.revisit_item_id ? "گفتگوی مجدد در جلسه‌ی بعد" : row.done ? "انجام شده" : "انجام نشده",
+          actions(
+            button("گفتگوی مجدد در جلسه‌ی بعد", () => requestRevisit(studentId, row.item_id)),
+            ...(data.revisit_item_id === row.item_id ? [button("لغو", () => requestRevisit(studentId, null))] : []),
+          ),
+        ]));
+    } catch (err) {
+      setError("progError", err.message);
+    }
+  }
+
+  function requestRevisit(studentId, itemId) {
+    return run(async () => {
+      await Z.request("POST", `${API}/students/${studentId}/revisit`, { item_id: itemId });
+      await loadLearnerProgress();
+    });
   }
 
   async function loadPrograms() {
@@ -769,23 +1068,13 @@
     const current = $("progSelect").value;
     fillSelect($("progSelect"), programs.programs.map((p) => [p.id, p.name]));
     if (current) $("progSelect").value = current;
+    const learners = await Z.request("GET", `${API}/students`);
+    const learner = $("progLearner").value;
+    fillSelect($("progLearner"), learners.map((l) => [l.id, `${l.name || "—"}${l.kind === "self" ? " (یادگیری خود)" : ""}`]));
+    if (learner) $("progLearner").value = learner;
+    await loadLearnerProgress();
     renderProgramItems();
     if (programs.programs.length) showProgramItem(1);
-    const approvals = await Z.request("GET", `${API}/program-approvals`);
-    fill($("approvalTable"), ["دانش‌آموز", "برنامه", "جلسه‌های انجام‌شده", "عملیات"],
-      approvals.map((a) => [
-        a.name || "—",
-        a.program,
-        a.done,
-        actions(button("تأیید ادامه", () => approveProgram(a.student_id))),
-      ]));
-  }
-
-  async function approveProgram(studentId) {
-    await run(async () => {
-      await Z.request("POST", `${API}/students/${studentId}/resume-program`);
-      await loadPrograms();
-    });
   }
 
   async function saveProgramDuration(event) {
@@ -860,9 +1149,13 @@
     list.setAttribute("role", "menu");
     const item = Z.el("button", "account-item danger", "خروج");
     item.type = "button";
+    const everywhere = Z.el("button", "account-item danger", "خروج از همه‌ی دستگاه‌ها");
+    everywhere.type = "button";
+    everywhere.setAttribute("role", "menuitem");
+    everywhere.addEventListener("click", signOutEverywhere);
     item.setAttribute("role", "menuitem");
     item.addEventListener("click", signOut);
-    list.appendChild(item);
+    list.append(item, everywhere);
     const close = () => {
       list.classList.remove("is-open");
       avatar.setAttribute("aria-expanded", "false");
@@ -890,16 +1183,37 @@
     if (!side || !tabs || !window.matchMedia("(min-width: 761px)").matches) return;
     side.appendChild(tabs);
     side.hidden = false;
+    // Each group folds away under its title. A folded group opens again when one of its tabs is chosen.
+    tabs.querySelectorAll(".admin-group-title").forEach((title) => {
+      title.addEventListener("click", () => {
+        const group = title.parentElement;
+        const closed = group.classList.toggle("is-closed");
+        title.setAttribute("aria-expanded", String(!closed));
+      });
+    });
+  }
+
+  function revealGroupOf(name) {
+    const tab = document.querySelector(`.admin-tabs .tab[data-tab="${name}"]`);
+    const group = tab && tab.closest(".admin-group");
+    if (!group) return;
+    group.classList.remove("is-closed");
+    group.querySelector(".admin-group-title").setAttribute("aria-expanded", "true");
   }
 
   // ----- Prompt generator -----
 
+  // «ساختار پرامپت»: the template only.
   async function loadPromptGen() {
     const data = await Z.request("GET", `${API}/prompt-template`);
     $("genTemplate").value = data.template;
     $("genPlaceholders").replaceChildren(
       ...data.placeholders.map((p) => Z.el("li", "", `{{${p.key}}}  ${p.label}`)),
     );
+  }
+
+  // «مشاهده پرامپت»: pick a learner and see the finished prompt for them.
+  async function loadPromptView() {
     const students = await Z.request("GET", `${API}/students`);
     $("genLearner").replaceChildren(
       ...students.map((s) => {
@@ -908,6 +1222,9 @@
         return option;
       }),
     );
+    if (students.length) return generatePrompt();
+    $("genOutput").value = "";
+    return null;
   }
 
   function saveGenTemplate(text) {
@@ -1094,31 +1411,49 @@
     });
   }
 
+  // The SMS and payment sections read the same endpoint, but each one saves only its own fields.
   async function loadConnections() {
-    const data = await Z.request("GET", `${API}/connections`);
+    return Z.request("GET", `${API}/connections`);
+  }
+
+  async function loadSms() {
+    const data = await loadConnections();
     $("connSmsProvider").value = data.sms_provider;
     $("connSmsKeyHint").textContent = data.sms_api_key_set ? `کلید فعلی: ${data.sms_api_key_masked}` : "کلیدی ثبت نشده است.";
     $("connSmsTemplate").value = data.sms_otp_template || "";
+    $("connSmsKey").value = "";
+  }
+
+  async function loadPayment() {
+    const data = await loadConnections();
     $("connPayProvider").value = data.payment_provider;
     $("connMerchantHint").textContent = data.zarinpal_merchant_set ? `کد فعلی: ${data.zarinpal_merchant_masked}` : "کدی ثبت نشده است.";
     $("connCallback").textContent = data.callback_url;
-    $("connSmsKey").value = "";
     $("connMerchant").value = "";
   }
 
-  function saveConnections() {
+  function saveSms() {
     return run(async () => {
       const body = {
         sms_provider: $("connSmsProvider").value,
         sms_otp_template: $("connSmsTemplate").value,
-        payment_provider: $("connPayProvider").value,
       };
       if ($("connSmsKey").value.trim()) body.sms_api_key = $("connSmsKey").value.trim();
+      await Z.request("POST", `${API}/connections`, body);
+      $("smsNotice").hidden = false;
+      $("smsNotice").textContent = "تنظیمات پیامک ذخیره شد.";
+      await loadSms();
+    });
+  }
+
+  function savePayment() {
+    return run(async () => {
+      const body = { payment_provider: $("connPayProvider").value };
       if ($("connMerchant").value.trim()) body.zarinpal_merchant_id = $("connMerchant").value.trim();
       await Z.request("POST", `${API}/connections`, body);
-      $("connNotice").hidden = false;
-      $("connNotice").textContent = "اتصال‌ها ذخیره شد.";
-      await loadConnections();
+      $("payNotice").hidden = false;
+      $("payNotice").textContent = "درگاه پرداخت ذخیره شد.";
+      await loadPayment();
     });
   }
 
@@ -1127,17 +1462,26 @@
     location.reload();
   }
 
+  async function signOutEverywhere() {
+    if (!confirm("از همه‌ی دستگاه‌ها خارج شوید؟ همین دستگاه هم خارج می‌شود.")) return;
+    await Z.request("POST", `${API}/logout-all`).catch(() => {});
+    location.reload();
+  }
+
   document.addEventListener("DOMContentLoaded", async () => {
     Z.initLang();
+    window.AdminI18n.refresh();
+    fillRequestFilter("consult");
+    fillRequestFilter("cooperation");
+    $("requestClose").addEventListener("click", closeRequestDialog);
     $("adminLoginForm").addEventListener("submit", signIn);
-    $("connSave").addEventListener("click", saveConnections);
-    $("planEditForm").addEventListener("submit", savePlanEdit);
+    $("smsSave").addEventListener("click", saveSms);
+    $("paySave").addEventListener("click", savePayment);
+    $("planForm").addEventListener("submit", savePlan);
+    $("planAddOpen").addEventListener("click", () => openPlanDialog(null));
+    $("planClose").addEventListener("click", () => $("planDialog").close());
     $("bankForm").addEventListener("submit", saveBank);
     $("bankReset").addEventListener("click", resetBank);
-    $("planEditSelect").addEventListener("change", () => {
-      const plan = plansCache.find((p) => p.id === $("planEditSelect").value);
-      if (plan) fillPlanEdit(plan);
-    });
     $("sesAll").addEventListener("change", () => {
       sessionGroups.forEach((g) => g.sessions.forEach((s) => ($("sesAll").checked ? selectedSessions.add(s.id) : selectedSessions.delete(s.id))));
       renderSessions();
@@ -1149,28 +1493,32 @@
       $("genTemplate").value = data.default_template;
     });
     $("genRun").addEventListener("click", generatePrompt);
+    $("genLearner").addEventListener("change", () => run(generatePrompt));
     $("genCopy").addEventListener("click", () => navigator.clipboard.writeText($("genOutput").value));
-    $("planForm").addEventListener("submit", addPlan);
-    $("profileForm").addEventListener("submit", saveProfile);
     $("globalForm").addEventListener("submit", saveGlobalPrompt);
     $("voiceForm").addEventListener("submit", addVoice);
-    $("variantForm").addEventListener("submit", saveVariant);
     $("progItemForm").addEventListener("submit", saveProgramItem);
     $("progDurationForm").addEventListener("submit", saveProgramDuration);
     $("progSelect").addEventListener("change", () => { renderProgramItems(); showProgramItem(1); });
-    ["curTopic", "curBand", "curLevel"].forEach((id) => $(id).addEventListener("change", showSelectedVariant));
+    $("progLearner").addEventListener("change", loadLearnerProgress);
     $("globalText").addEventListener("input", updateGlobalCount);
-    $("profileText").addEventListener("input", updateProfileCount);
     $("learnerForm").addEventListener("submit", loadLearner);
     $("helpForm").addEventListener("submit", addHelpContent);
+    $("curForm").addEventListener("submit", saveTopic);
+    $("curPointForm").addEventListener("submit", addPoint);
+    $("curClose").addEventListener("click", () => $("curDialog").close());
+    $("facetForm").addEventListener("submit", addFacet);
+    $("helpEditForm").addEventListener("submit", saveHelpClassification);
+    $("helpEditClose").addEventListener("click", () => $("helpEditDialog").close());
     $("setSave").addEventListener("click", saveSettings);
-    $("stPromptSave").addEventListener("click", saveSelfTestPrompt);
-    $("buildForm").addEventListener("submit", downloadBuild);
-    $("previewPrompt").addEventListener("click", () => run(previewPrompt));
-    $("profileCancel").addEventListener("click", () => {
-      editingStudent = null;
-      show("profileForm", false);
+    $("stTemplateSave").addEventListener("click", () => saveSelfTestTemplate($("stTemplate").value));
+    $("stTemplateReset").addEventListener("click", async () => {
+      if (!confirm("قالب به پیش‌فرض برگردد؟")) return;
+      $("stTemplate").value = stDefaultTemplate;
+      await saveSelfTestTemplate(stDefaultTemplate);
     });
+    $("stRuleForm").addEventListener("submit", addSelfTestRule);
+    $("stPreviewForm").addEventListener("submit", previewSelfTest);
     document.querySelectorAll(".admin-tabs .tab").forEach((t) =>
       t.addEventListener("click", () => openTab(t.dataset.tab)));
 

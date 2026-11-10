@@ -138,9 +138,7 @@
     Z.show($("programBox"), true);
     $("programName").textContent = Z.pick(`${program.name}: ${program.done} از ${program.total} جلسه انجام شده`, `${program.name}: ${program.done} of ${program.total} lessons done`);
     const notice = $("programNotice");
-    if (program.status === "waiting_approval") {
-      notice.textContent = Z.tr("این بخش از برنامه تمام شد. برنامه‌ی بعدی بعد از تأیید والدین یا معلم ادامه پیدا می‌کند.");
-    } else if (program.status === "finished") {
+    if (program.status === "finished") {
       notice.textContent = Z.tr("برنامه‌ی شما تمام شد. آفرین!");
     }
     Z.show(notice, Boolean(notice.textContent));
@@ -166,7 +164,14 @@
   function programRow(item) {
     const mark = item.state === "done" ? "✓ " : item.state === "current" ? "➜ " : "";
     const title = Z.pick(item.title, item.title_en || item.title);
-    return Z.el("li", `plan-item is-${item.state}`, `${mark}${Z.pick("جلسه", "Lesson")} ${item.number}: ${title}`);
+    const row = Z.el("li", `plan-item is-${item.state}`, `${mark}${Z.pick("جلسه", "Lesson")} ${item.number}: ${title}`);
+    // How many times this lesson was played, and its average score when the AI has scored it.
+    if (item.visits) {
+      const times = Z.pick(`${item.visits} بار`, `${item.visits} time${item.visits === 1 ? "" : "s"}`);
+      const score = item.average == null ? "" : Z.pick(` — میانگین ${item.average}`, ` — average ${item.average}`);
+      row.appendChild(Z.el("span", "plan-meta muted", ` (${times}${score})`));
+    }
+    return row;
   }
 
   function renderProgramWindow() {

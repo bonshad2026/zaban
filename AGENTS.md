@@ -7,6 +7,7 @@ This file is for any coding agent (Claude, Codex, or others). It states the proj
 - Python 3.13+ FastAPI app with SQLAlchemy. PostgreSQL in Docker, SQLite for local runs.
 - Source is in `src/zaban/`. The public website is static HTML, CSS and JavaScript in `src/zaban/static/`.
 - Notes by topic live in `docs/`. The website header and adult account menu are described in `docs/account-menu.md`.
+- `docs/site-map.md` is the overview of every page, admin menu group, backend module and main table. Read it before changing the site.
 
 ## Commands
 
@@ -32,3 +33,6 @@ This file is for any coding agent (Claude, Codex, or others). It states the proj
 | Curriculum and learning programs | `docs/curriculum.md`, `src/zaban/curriculum_data.py`, `src/zaban/program_data.py` |
 | Database columns added after first release | `ADDED_COLUMNS` in `src/zaban/db.py` |
 | Port usage on this computer | `docs/ports.md` |
+| Pages, admin menu, data and open items | `docs/site-map.md` |
+| Prompts (lesson and self-test) | `src/zaban/services/prompt_template.py`, `src/zaban/services/self_test_prompt.py` |
+| Help content tags and filters | `src/zaban/services/help_content.py`, `src/zaban/learning_aids.py` |

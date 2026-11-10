@@ -19,6 +19,7 @@ from zaban.placement_web import router as placement_router
 from zaban.services.placement_test import ensure_bank as ensure_placement_bank
 from zaban.public import router as public_router
 from zaban.services.curriculum import seed_curriculum
+from zaban.services.help_content import seed_help_facets, seed_help_samples
 from zaban.services.programs import seed_programs
 from zaban.services.sms import dev_outbox
 from zaban.admin_ops import router as admin_ops_router
@@ -41,6 +42,8 @@ async def lifespan(_: FastAPI):
     with SessionLocal() as db:
         seed_curriculum(db)
         seed_programs(db)
+        seed_help_facets(db)
+        seed_help_samples(db)
     if settings.environment == "development":
         with SessionLocal() as db:
             tenant = seed_demo_tenant(db, settings.demo_api_key)

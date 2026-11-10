@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نقشه‌ی سایت گفتاریار</title>
+<style>
+  :root { --bg:#fbf8f1; --card:#ffffff; --text:#1d1a14; --muted:#6b6558; --accent:#a8781f; --border:#e3dccb; --code:#f4efe3; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#0b0b0e; --card:#15151b; --text:#f4efe6; --muted:#a9a4b2; --accent:#c9a46a; --border:#2a2a33; --code:#1d1d25; } }
+  :root[data-theme="dark"] { --bg:#0b0b0e; --card:#15151b; --text:#f4efe6; --muted:#a9a4b2; --accent:#c9a46a; --border:#2a2a33; --code:#1d1d25; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family: Tahoma, "Segoe UI", sans-serif; line-height:1.9; }
+  main { max-width: 980px; margin: 0 auto; padding: 24px 16px 60px; }
+  h1 { color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+  h2 { color: var(--accent); margin-top: 32px; }
+  h3 { margin-top: 24px; }
+  table { width: 100%; border-collapse: collapse; background: var(--card); font-size: 14px; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: start; vertical-align: top; }
+  th { background: var(--code); }
+  code { background: var(--code); padding: 1px 5px; border-radius: 6px; direction: ltr; unicode-bidi: isolate; font-size: 13px; }
+  pre { background: var(--code); padding: 12px; border-radius: 10px; overflow-x: auto; direction: ltr; }
+  a { color: var(--accent); }
+  li { margin: 4px 0; }
+  hr { border: 0; border-top: 1px solid var(--border); margin: 28px 0; }
+  @media (max-width: 640px) { main { padding: 16px 12px 40px; } th, td { font-size: 13px; padding: 6px; } }
+</style>
+</head>
+<body>
+<main>
+<h1>نقشه‌ی سایت گفتاریار: صفحات، پنل ادمین و داده‌ها</h1>
+<p>این مستند برای توسعه‌دهندگان و هر ایجنت کدنویسی (Claude، Codex یا دیگران) نوشته شده است. کمک می‌کند بدون پرسیدن از کسی بفهمید سایت چه کاری می‌کند، هر بخش کجاست و چه کارهایی باز مانده است.</p>
+<p>قوانین کاری پروژه در <code>AGENTS.md</code> و راه‌اندازی در <code>README.md</code> آمده است.</p>
+<hr />
+<h2>۱. صفحات عمومی (ایستا و دوزبانه)</h2>
+<p>این صفحات از <code>src/zaban/main.py</code> و فایل‌های <code>src/zaban/static/*.html</code> سرو می‌شوند. هر صفحه با ویژگی‌های <code>data-fa</code> و <code>data-en</code> دوزبانه است و پیام‌های خطا در جدول <code>ERROR_TEXT</code> فایل <code>static/js/common.js</code> آمده‌اند.</p>
+<table>
+<thead>
+<tr>
+<th>مسیر</th>
+<th>فایل</th>
+<th>کاربرد</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/</code></td>
+<td><code>landing.html</code></td>
+<td>صفحه‌ی اصلی</td>
+</tr>
+<tr>
+<td><code>/about</code>، <code>/contact</code></td>
+<td><code>about.html</code>، <code>contact.html</code></td>
+<td>اطلاعات ثابت</td>
+</tr>
+<tr>
+<td><code>/consult</code></td>
+<td><code>consult.html</code></td>
+<td>فرم درخواست مشاوره (نام، نام خانوادگی، شماره، موضوع، پیام، زمان ترجیحی و اجازه‌ی تماس)</td>
+</tr>
+<tr>
+<td><code>/cooperation</code></td>
+<td><code>cooperation.html</code></td>
+<td>فرم درخواست همکاری (موضوع، شماره، ایمیل، پیام)</td>
+</tr>
+<tr>
+<td><code>/signup</code></td>
+<td><code>signup.html</code></td>
+<td>ثبت‌نام بزرگسال با شماره‌ی موبایل و کد پیامکی</td>
+</tr>
+<tr>
+<td><code>/demo</code></td>
+<td><code>demo.html</code></td>
+<td>صفحه‌ی نمایشی</td>
+</tr>
+<tr>
+<td><code>/dev/pay/{id}</code>، <code>/dev/sms-outbox</code></td>
+<td><code>dev-pay.html</code></td>
+<td>فقط برای توسعه؛ در محیط واقعی نباید باز باشد</td>
+</tr>
+<tr>
+<td><code>/admin</code></td>
+<td><code>admin.html</code></td>
+<td>پنل مدیریت (فقط با رمز مدیریت)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>۲. بخش‌های ورود کرده</h2>
+<ul>
+<li><strong>حساب بزرگسال:</strong> منوی پروفایل در هدر (<code>docs/account-menu.md</code>). شامل نام، ایمیل، سن، جنسیت، عکس، رمز عبور، «خروج» و «خروج از همه‌ی دستگاه‌ها».</li>
+<li><strong>صفحه‌ی دانش‌آموز <code>/student</code></strong> (<code>student.html</code>، <code>student.js</code>، <code>student-tools.js</code>): تب‌های درس، پیشرفت، کمک‌آموزشی، «خودت رو محک بزن» و پرداخت.</li>
+<li>برای شروع درس باید طرح فعال، رضایت والد و مشخصات کامل (سطح، سن و جنسیت) باشد. سن و جنسیتی که بزرگسال در حسابش وارد کرده، در اولین شروع درس به مشخصات دانش‌آموز کپی می‌شود.</li>
+<li>محتوای کمک‌آموزشی تب‌های دسته‌بندی و یک پنجره‌ی فیلتر دارد. در پنجره، برای هر گروه برچسب یک فهرست انتخابی است.</li>
+<li>برنامه‌ی یادگیری: هر سرفصل تعداد دفعات تمرین و میانگین امتیاز خودش را نشان می‌دهد.</li>
+<li><strong>صفحه‌ی والد <code>/parent</code></strong> (<code>parent.html</code>)، <strong>طرح <code>/plan</code></strong> (<code>plan.html</code>)، <strong>تعیین سطح <code>/level</code></strong> (<code>level.html</code>)، <strong>پرداخت‌ها <code>/payments</code></strong> (<code>payments.html</code>)، <strong>پروفایل <code>/profile</code></strong> (<code>profile.html</code>)، و <strong>درخواست‌ها <code>/requests</code></strong> (<code>requests.html</code>؛ درخواست‌های مشاوره و همکاری خود کاربر).</li>
+</ul>
+<hr />
+<h2>۳. پنل مدیریت <code>/admin</code></h2>
+<p>فایل‌ها: <code>admin.html</code>، <code>static/js/admin.js</code>، <code>static/js/admin-i18n.js</code> و <code>static/css/app.css</code>. ورود با یک رمز مشترک (<code>ADMIN_PASSWORD</code>) انجام می‌شود. هر ورود یک شماره‌ی نسخه دارد. با «خروج از همه‌ی دستگاه‌ها» (<code>POST /v1/admin/api/logout-all</code>) شماره‌ی نسخه بالا می‌رود و همه‌ی ورودهای قدیمی بسته می‌شوند.</p>
+<p>منوی کناری گروه‌بندی شده است. روی کامپیوتر هر گروه با کلیک جمع یا باز می‌شود. در موبایل گروه‌ها به‌صورت یک ردیف از تب‌ها نشان داده می‌شوند.</p>
+<p>زبان پنل با دکمه‌ی <code>EN</code> در هدر عوض می‌شود. برچسب‌های ثابت از فایل <code>admin-i18n.js</code> ترجمه می‌شوند. متن‌هایی که از داده‌ی کاربران یا متغیرها ساخته می‌شوند (مثل بعضی پیام‌ها) فارسی می‌مانند.</p>
+<table>
+<thead>
+<tr>
+<th>گروه</th>
+<th>تب‌ها (<code>data-tab</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>درخواست‌ها</td>
+<td><code>consults</code> (مشاوره)، <code>cooperations</code> (همکاری). هر ردیف یک انتخابگر وضعیت با دکمه‌ی «اعمال» دارد. «مشاهده» جزئیات و متن کامل را در یک دیالوگ باز می‌کند. بالای هر فهرست فیلتر وضعیت هست.</td>
+</tr>
+<tr>
+<td>نمای کلی</td>
+<td><code>overview</code></td>
+</tr>
+<tr>
+<td>کاربران</td>
+<td><code>adults</code> (ثبت‌نام‌ها و تعلیق)، <code>sessions</code> (ورودهای فعال و بستن گروهی)</td>
+</tr>
+<tr>
+<td>مالی</td>
+<td><code>payments</code> (تأیید یا رد پرداخت)، <code>plans</code> (افزودن، ویرایش، فعال/غیرفعال و حذف؛ حذف پلنی که پرداخت دارد انجام نمی‌شود)، <code>payment</code> (درگاه پرداخت)</td>
+</tr>
+<tr>
+<td>آموزش</td>
+<td><code>curriculum</code> (شناسه، موضوع، هدف گفتگو و موارد آموزشی؛ با «مشاهده» در دیالوگ باز می‌شود)، <code>programs</code> (برنامه‌های یادگیری: ویرایش جلسه‌ها، جابه‌جایی با کشیدن ردیف، و پیشرفت دانش‌آموز با دکمه‌ی گفتگوی مجدد)، <code>placementbank</code> (بانک سؤال تعیین سطح)، <code>helpcontent</code> (محتوای کمک‌آموزشی با برچسب‌ها و گروه‌های برچسب)، <code>voices</code> (نمونه‌صدای لهجه‌ها)</td>
+</tr>
+<tr>
+<td>مجموعه پرامپت</td>
+<td><code>promptgen</code> (ساختار پرامپت: قالب پرامپت درس با کلیدهای <code>{{…}}</code>)، <code>promptview</code> (مشاهده پرامپت: انتخاب دانش‌آموز و نمایش پرامپت نهایی)، <code>selftest</code> (پرامپت آزمون: قالب، قاعده‌ها و پیش‌نمایش)، <code>global</code> (پرامپت کلی)، <code>settings</code> (تنظیمات پرامپت: ترکیب پرامپت کلاس و خروجی‌های مورد انتظار)</td>
+</tr>
+<tr>
+<td>تنظیمات</td>
+<td><code>connections</code> (پیامک)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>حذف‌شده‌ها:</strong> تب «دانش‌آموزان و پرامپت» (کارش را «مشاهده پرامپت» انجام می‌دهد)، خروجی Build (کل قابلیت حذف شده)، بازه‌ها و نسخه‌ها و سطح‌ها در برنامه‌ی آموزشی پنل (داده‌ها برای ساخت درس هنوز هستند)، و تأیید بلوک ۲۴تایی برنامه‌ها. حالا برنامه بعد از هر جلسه‌ی تمام‌شده ادامه می‌دهد.</p>
+<hr />
+<h2>۴. بخش بک‌اند</h2>
+<table>
+<thead>
+<tr>
+<th>بخش</th>
+<th>فایل‌ها</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>راه‌اندازی برنامه، داده‌ی اولیه و مسیرهای صفحه</td>
+<td><code>src/zaban/main.py</code></td>
+</tr>
+<tr>
+<td>فرم‌های عمومی (مشاوره و همکاری)</td>
+<td><code>src/zaban/public.py</code></td>
+</tr>
+<tr>
+<td>API پنل مدیریت</td>
+<td><code>src/zaban/admin.py</code> (ورود، درخواست‌ها، محتوای کمک‌آموزشی و برچسب‌ها، پرامپت‌ها، قالب پرامپت آزمون، پلن‌ها، پرداخت‌ها، ورودهای فعال، تنظیمات)، <code>src/zaban/admin_ops.py</code> (تنظیمات، اتصال‌ها، پلن‌ها، برنامه‌ها و ترتیب آن‌ها، پیشرفت دانش‌آموز، قالب پرامپت و تولید آن، بانک سؤال، نشست‌ها)</td>
+</tr>
+<tr>
+<td>API دانش‌آموز و والد</td>
+<td><code>src/zaban/learning_aids.py</code> (کمک‌آموزشی، فیلترها، آزمون، مشخصات)، <code>src/zaban/api.py</code> (درس‌ها، نشست‌ها، بررسی‌های شروع درس)، <code>src/zaban/web.py</code> (ورود و ثبت‌نام سایت، برنامه‌ی دانش‌آموز)، <code>src/zaban/account.py</code> (حساب بزرگسال)</td>
+</tr>
+<tr>
+<td>پرداخت و طرح</td>
+<td><code>src/zaban/billing.py</code>؛ آزمون تعیین سطح <code>src/zaban/placement_web.py</code>؛ پاسخ هوش مصنوعی <code>src/zaban/ai_api.py</code></td>
+</tr>
+<tr>
+<td>سرویس‌ها</td>
+<td><code>src/zaban/services/</code> — <code>prompt_template.py</code> (قالب پرامپت درس)، <code>self_test_prompt.py</code> (قالب و قاعده‌های پرامپت آزمون)، <code>self_test.py</code> (جلسه‌های آزمون)، <code>help_content.py</code> (گروه‌های برچسب و نمونه‌ها)، <code>programs.py</code> (پیشرفت برنامه)، <code>evaluation.py</code> (ارزیابی و امتیاز جلسه)، <code>curriculum.py</code>، <code>learner_details.py</code>، <code>settings_store.py</code></td>
+</tr>
+<tr>
+<td>داده‌ی اولیه</td>
+<td><code>src/zaban/curriculum_data.py</code>، <code>src/zaban/program_data.py</code>، <code>src/zaban/seed_media/help/</code> (فایل‌های نمونه‌ی کمک‌آموزشی)</td>
+</tr>
+<tr>
+<td>ساختار دیتابیس</td>
+<td><code>src/zaban/models.py</code>. ستون‌هایی که بعد از نسخه‌ی اول اضافه شده‌اند در <code>ADDED_COLUMNS</code> در <code>src/zaban/db.py</code> هستند. جدول‌های جدید با <code>Base.metadata.create_all</code> ساخته می‌شوند.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>۵. داده‌های اصلی</h2>
+<ul>
+<li><strong>درخواست‌ها:</strong> <code>ConsultRequest</code> (جدول <code>consult_requests</code>) و <code>CooperationRequest</code> (جدول <code>cooperation_requests</code>).</li>
+<li>وضعیت مشاوره: <code>new</code> (جدید)، <code>reviewed</code> (بررسی شد)، <code>called</code> (تماس گرفته شد)، <code>recall</code> (تماس مجدد)، <code>awaiting_reply</code> (منتظر پاسخ)، <code>closed</code> (بسته شد). وضعیت قدیمی <code>contacted</code> هنوز نمایش داده می‌شود.</li>
+<li>وضعیت همکاری: <code>new</code>، <code>contacted</code>، <code>closed</code>.</li>
+<li><strong>محتوای کمک‌آموزشی:</strong> <code>HelpContent</code> (جدول <code>help_content</code>) به‌همراه <code>HelpFacet</code> (گروه برچسب، جدول <code>help_facets</code>)، <code>HelpTag</code> (برچسب، جدول <code>help_tags</code>) و جدول واسط <code>help_content_tags</code>. گروه سنی، سطح و جنسیت روی خود محتوا هستند و قاعده‌های دانش‌آموز از آن‌ها استفاده می‌کنند. برچسب‌ها گروه‌هایی هستند که ادمین تعریف می‌کند.</li>
+<li><strong>پرامپت‌ها</strong> (کلیدهای <code>AppSetting</code>): <code>prompt_template</code> (پرامپت درس)، <code>self_test_template</code> (قالب آزمون)، <code>self_test_rules</code> (قاعده‌های آزمون)، <code>global_prompt</code> (پرامپت کلی)، <code>prompt_mode</code> و <code>expected_output</code> (تنظیمات پرامپت کلاس). کلید قدیمی <code>self_test_prompt</code> فقط وقتی متن نقش معلم را می‌دهد که قاعده‌ی نقش ذخیره نشده باشد.</li>
+<li><strong>برنامه‌ی آموزشی:</strong> <code>CurriculumTopic</code> (جدول <code>curriculum_topics</code>)، <code>CurriculumPoint</code> (جدول <code>curriculum_points</code>، همان موارد آموزشی)، <code>CurriculumVariant</code> (متن درس برای هر بازه و سطح که هنوز برای ساخت درس استفاده می‌شود).</li>
+<li><strong>برنامه‌ی یادگیری و پیشرفت:</strong></li>
+<li><code>LearningProgram</code> و <code>ProgramItem</code>: برنامه و جلسه‌های آن. هر جلسه یک <code>id</code> ثابت دارد و <code>position</code> ترتیب فعلی آن است.</li>
+<li><code>StudentProgress</code>: جایگاه دانش‌آموز. <code>position</code> شماره‌ی جلسه‌ی بعدی است و <code>revisit_item_id</code> جلسه‌ای است که ادمین خواسته یک بار دوباره گرفته شود.</li>
+<li><code>LessonItem</code>: هر جلسه به کدام سرفصل وصل است (<code>item_id</code>) و آیا شمارش شده است.</li>
+<li>ستون <code>block_size</code> هنوز در جدول هست ولی دیگر استفاده نمی‌شود.</li>
+<li><strong>طرح و پرداخت:</strong> <code>BillingPlan</code> (قیمت، مدت، سقف توکن، فعال یا نه) و <code>Payment</code>.</li>
+</ul>
+<hr />
+<h2>۶. امتیاز جلسه و پیشرفت هر سرفصل</h2>
+<ul>
+<li>پایان هر جلسه از هوش مصنوعی خواسته می‌شود یک ارزیابی کوتاه بنویسد و در خط آخر <code>SCORE: n</code> (عدد ۰ تا ۱۰۰) بدهد. تابع <code>evaluate_session</code> در <code>services/evaluation.py</code> این خط را با <code>split_score</code> می‌خواند. عدد در <code>sessions.score</code> و متن بدون آن خط در <code>sessions.evaluation</code> ذخیره می‌شود.</li>
+<li>جلسه‌هایی که امتیاز ندارند (مثلاً وقتی کلید هوش مصنوعی نیست) از میانگین کنار گذاشته می‌شوند.</li>
+<li>امتیازهای مانده قبل از شروع درس بعدی (<code>score_pending_sessions</code>) و هنگام خواندن جلسه (<code>get_session</code>) پر می‌شوند.</li>
+<li>شمارش هر سرفصل با <code>item_stats</code> در <code>services/programs.py</code> انجام می‌شود:</li>
+<li><strong>انجام شده:</strong> حداقل یک جلسه‌ی کامل روی آن سرفصل.</li>
+<li><strong>دفعات:</strong> تعداد جلسه‌های کامل روی آن سرفصل.</li>
+<li><strong>میانگین:</strong> میانگین امتیاز همه‌ی جلسه‌های کامل همان سرفصل.</li>
+<li><strong>قاعده‌ی جلسه‌ی بعدی:</strong> اولین سرفصل خوانده‌نشده در ترتیب فعلی (<code>first_undone_position</code>). سرفصل‌های انجام‌شده رد می‌شوند و دانش‌آموز مجبور نیست دوباره بخواندشان.</li>
+<li><strong>گفتگوی مجدد:</strong> ادمین می‌تواند یک سرفصل را برای جلسه‌ی بعد دوباره بگذارد (<code>revisit_item_id</code>). جایگاه اصلی دانش‌آموز تغییر نمی‌کند. وقتی آن جلسه‌ی تکرار تمام شد، درخواست پاک می‌شود.</li>
+<li><strong>جابه‌جایی ترتیب:</strong> <code>reorder_items</code> ابتدا جلسه‌های قدیمی را به سرفصل‌ها وصل می‌کند و بعد ترتیب جدید را می‌نویسد. API ادمین: <code>POST /v1/admin/api/programs/{id}/order</code>. نسخه‌ی برنامه بالا می‌رود.</li>
+<li><strong>صفحه‌ی دانش‌آموز:</strong> فهرست سرفصل‌ها را با تعداد دفعات و میانگین نشان می‌دهد (<code>GET /v1/web/student/program</code>).</li>
+</ul>
+<hr />
+<h2>۷. آزمون‌ها</h2>
+<p>دستور: <code>pytest</code> از پوشه‌ی پروژه (در ویندوز: <code>.venv\Scripts\python.exe -m pytest</code>). حدود ۱۵۵ آزمون وجود دارد. فایل‌های مهم:</p>
+<ul>
+<li><code>tests/test_admin_menu_and_help.py</code>: ساختار منوی ادمین، دیالوگ‌های درخواست، برچسب‌ها و فیلترهای کمک‌آموزشی، پلن‌ها، موارد آموزشی، پرامپت آزمون، خروج ادمین و امتیاز از خط SCORE.</li>
+<li><code>tests/test_progress_order.py</code>: جلسه‌ی بعدی بعد از جابه‌جایی، گفتگوی مجدد که جایگاه را تغییر نمی‌دهد، و میانگین.</li>
+<li><code>tests/test_start_lesson_profile.py</code>: شروع درس با سن و جنسیت حساب بزرگسال.</li>
+<li><code>tests/test_missing_items.py</code>، <code>tests/test_full_scope.py</code>، <code>tests/test_programs.py</code>، <code>tests/test_api.py</code>: آزمون‌های قدیمی‌تر.</li>
+<li><code>tests/helpers_learner.py</code>: تابع <code>learner_login(client)</code> حساب بزرگسال نمونه را می‌سازد و کوکی دانش‌آموز را تنظیم می‌کند. <code>self_student(db)</code> بعد از آن پروفایل دانش‌آموز را می‌خواند.</li>
+</ul>
+<hr />
+<h2>۸. کارهای باز</h2>
+<ul>
+<li><strong>زبان:</strong> صفحات عمومی با <code>data-en</code> دوزبانه‌اند. پنل ادمین واژه‌نامه‌ی انگلیسی دارد؛ متن‌هایی که از متغیر ساخته می‌شوند هنوز فارسی‌اند.</li>
+<li><strong>ریسپانسیو:</strong> صفحات عمومی، پنل ادمین و صفحه‌ی دانش‌آموز در عرض ۳۷۵ پیکسل بررسی شده‌اند و اسکرول افقی ندارند.</li>
+<li><strong>امتیاز:</strong> فقط با کلید هوش مصنوعی ثبت می‌شود. بدون کلید، جلسه‌ها امتیاز ندارند.</li>
+<li><strong>برنامه‌های یادگیری:</strong> به تصمیم صاحب پروژه نگه داشته شده‌اند.</li>
+<li><strong>امنیت:</strong> رمز مشترک ادمین و جدول نشست‌ها (<code>web_sessions</code>) داده‌ی حساس هستند و نباید خارج از سیستم منتقل شوند.</li>
+<li><strong>وضعیت Git:</strong> تغییرات در شاخه‌ی <code>feature/zaban-next-2026-11-10</code> هستند. هر push به شاخه‌ی مشترک فقط با اجازه‌ی صاحب پروژه انجام می‌شود.</li>
+</ul>
+</main>
+</body>
+</html>

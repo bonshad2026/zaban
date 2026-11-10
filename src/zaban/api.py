@@ -23,8 +23,8 @@ from zaban.schemas import (
 from zaban.security import Auth, get_auth, get_student_for_auth, issue_student_token, require_manager
 from zaban.services.ai import tutor_reply
 from zaban.models import LearnerDetails
-from zaban.services.evaluation import course_note, evaluate_session, past_evaluations
-from zaban.services.learner_details import details_out
+from zaban.services.evaluation import course_note, evaluate_session, past_evaluations, score_pending_sessions
+from zaban.services.learner_details import details_out, save_details
 from zaban.services.settings_store import EXPECTED_OUTPUT_KEY, PROMPT_MODE_DEFAULT, PROMPT_MODE_KEY, get_setting
 from zaban.services.curriculum import choose_topic, record_lesson_topic, session_topic, topic_note
 from zaban.services.programs import (
@@ -72,6 +72,18 @@ def _require_student_plan(db: DBSession, student: Student) -> None:
 def _require_complete_profile(db: DBSession, student: Student) -> None:
     # A lesson needs the level and the basic facts (age and gender) first, so the prompt is never built from guesses.
     details = db.get(LearnerDetails, student.id)
+    if student.self_owner_id and (details is None or not details.age or not details.gender):
+        # An adult who learns for themself enters age and gender in the account. Copy them to the learner details once,
+        # so the lesson prompt sees them too. Without this, a complete account still could not start a lesson.
+        adult = db.get(Guardian, student.self_owner_id)
+        values = {}
+        if adult and adult.age and (details is None or not details.age):
+            values["age"] = adult.age
+        if adult and adult.gender and (details is None or not details.gender):
+            values["gender"] = adult.gender
+        if values:
+            details = save_details(db, student.id, values)
+            db.commit()
     missing = []
     if not student.cefr_level:
         missing.append("level")
@@ -439,12 +451,11 @@ def start_session(
         if old.status == "active":
             raise HTTPException(status_code=409, detail="A lesson is already running")
 
+    score_pending_sessions(db, student.id)
     progress = ensure_progress(db, student)
     if progress is not None:
         advance_if_done(db, student.id)
         db.commit()
-        if progress.status == "waiting_approval":
-            raise HTTPException(status_code=409, detail="This block of lessons is finished and waits for approval")
         if progress.status == "finished":
             raise HTTPException(status_code=409, detail="This program is finished")
 

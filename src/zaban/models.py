@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import JSON, DateTime, Float, ForeignKey, Integer, LargeBinary, String, Text, UniqueConstraint
+from sqlalchemy import JSON, Column, DateTime, Float, ForeignKey, Integer, LargeBinary, String, Table, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from zaban.db import Base
@@ -297,6 +297,17 @@ class CurriculumTopic(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
 
+class CurriculumPoint(Base):
+    # A point the teacher wants to talk about in a topic's course. The admin lists them under the topic.
+    __tablename__ = "curriculum_points"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    topic_id: Mapped[str] = mapped_column(ForeignKey("curriculum_topics.id"), index=True)
+    text: Mapped[str] = mapped_column(String(300))
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
 class CurriculumVariant(Base):
     # The version of one topic for one age band and one level, such as INTRO.K.A1.
     __tablename__ = "curriculum_variants"
@@ -331,7 +342,7 @@ class LearningProgram(Base):
     band: Mapped[str] = mapped_column(String(1))
     level: Mapped[str] = mapped_column(String(2))
     goal: Mapped[str] = mapped_column(String(40))
-    # The learner pauses after this many lessons, until the program is approved to continue.
+    # Not used any more: there is no approval step. The column stays so existing databases keep working.
     block_size: Mapped[int] = mapped_column(Integer, default=24)
     # The length of the whole course, in months (for example 24 for two years).
     duration_months: Mapped[int] = mapped_column(Integer, default=24)
@@ -373,7 +384,9 @@ class StudentProgress(Base):
     student_id: Mapped[str] = mapped_column(ForeignKey("students.id"), primary_key=True)
     program_id: Mapped[str] = mapped_column(ForeignKey("learning_programs.id"))
     position: Mapped[int] = mapped_column(Integer, default=0)
-    # active: lessons can start. waiting_approval: the block is finished and needs approval. finished: no items left.
+    # An item the administrator asked to play again in the next lesson. The place in the program does not move.
+    revisit_item_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # active: lessons can start. finished: no items left.
     status: Mapped[str] = mapped_column(String(20), default="active")
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
@@ -385,6 +398,8 @@ class LessonItem(Base):
     session_id: Mapped[str] = mapped_column(ForeignKey("sessions.id"), primary_key=True)
     program_id: Mapped[str] = mapped_column(ForeignKey("learning_programs.id"))
     position: Mapped[int] = mapped_column(Integer)
+    # The item itself. It stays right when the order of the items is changed; position alone does not.
+    item_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     program_version: Mapped[int] = mapped_column(Integer)
     counted: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
@@ -402,6 +417,16 @@ class CooperationRequest(Base):
     status: Mapped[str] = mapped_column(String(20), default="new")  # new, contacted, closed
     request_ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+
+
+# A tag is a label on help content. The administrator defines the facets (groups such as «علایق») and their tags,
+# and changes them later. Learners filter the help content by these tags.
+help_content_tags = Table(
+    "help_content_tags",
+    Base.metadata,
+    Column("content_id", String(32), ForeignKey("help_content.id", ondelete="CASCADE"), primary_key=True),
+    Column("tag_id", String(32), ForeignKey("help_tags.id", ondelete="CASCADE"), primary_key=True),
+)
 
 
 class HelpContent(Base):
@@ -422,6 +447,30 @@ class HelpContent(Base):
     mime: Mapped[str | None] = mapped_column(String(40), nullable=True)
     data: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    tags: Mapped[list["HelpTag"]] = relationship(secondary=help_content_tags, order_by="HelpTag.sort_order")
+
+
+class HelpFacet(Base):
+    __tablename__ = "help_facets"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    name: Mapped[str] = mapped_column(String(60))
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+
+    tags: Mapped[list["HelpTag"]] = relationship(
+        back_populates="facet", cascade="all, delete-orphan", order_by="HelpTag.sort_order"
+    )
+
+
+class HelpTag(Base):
+    __tablename__ = "help_tags"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    facet_id: Mapped[str] = mapped_column(ForeignKey("help_facets.id", ondelete="CASCADE"), index=True)
+    label: Mapped[str] = mapped_column(String(60))
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+
+    facet: Mapped[HelpFacet] = relationship(back_populates="tags")
 
 
 class SelfTest(Base):

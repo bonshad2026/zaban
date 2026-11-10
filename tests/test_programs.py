@@ -48,7 +48,6 @@ def test_the_first_program_has_100_lessons_and_is_seeded(client):
     program = next(p for p in data["programs"] if p["id"] == PROGRAM_ID)
     assert len(program["items"]) == 100
     assert program["items"][0]["title"] == "سلام و معرفی"
-    assert program["block_size"] == 24
     assert {g["key"] for g in data["goals"]} >= {"daily_conversation", "school", "travel", "work", "hobbies"}
 
 
@@ -97,7 +96,7 @@ def _as_student(db, age_band: str, level: str) -> Student:
     return student
 
 
-def test_each_finished_lesson_moves_on_and_a_block_waits_for_approval():
+def test_each_finished_lesson_moves_on_without_any_approval():
     student_id = _new_student("11-14", "A1")
     with SessionLocal() as db:
         student = db.get(Student, student_id)
@@ -110,23 +109,7 @@ def test_each_finished_lesson_moves_on_and_a_block_waits_for_approval():
         for _ in range(23):
             _finish_one_lesson(db, student_id)
         progress = db.get(StudentProgress, student_id)
-        assert (progress.position, progress.status) == (24, "waiting_approval")
-
-
-def test_approval_resumes_the_block(client):
-    student_id = _new_student("11-14", "A1")
-    with SessionLocal() as db:
-        progress = ensure_progress(db, db.get(Student, student_id))
-        progress.position = 24
-        progress.status = "waiting_approval"
-        db.commit()
-
-    _admin(client)
-    resumed = client.post(f"/v1/admin/api/students/{student_id}/resume-program")
-    assert resumed.status_code == 200
-    assert resumed.json()["status"] == "active"
-    approvals = client.get("/v1/admin/api/program-approvals").json()
-    assert all(a["student_id"] != student_id for a in approvals)
+        assert (progress.position, progress.status) == (24, "active")
 
 
 def test_a_goal_outside_the_fixed_list_is_refused(client):

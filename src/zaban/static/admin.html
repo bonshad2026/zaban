@@ -9,10 +9,59 @@
     .admin-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
     .row > .full { flex: 0 0 100%; min-width: 0; }
     .admin-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    .admin-table th, .admin-table td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .admin-table th, .admin-table td { text-align: start; padding: 10px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
     .admin-table th { color: var(--muted); font-weight: 600; }
     .actions { display: flex; gap: 6px; flex-wrap: wrap; }
     .actions button { padding: 6px 10px; font-size: 13px; }
+    /* Phone width: the grid column may shrink, so wide tables scroll inside their box instead of the page. */
+    .wrap { grid-template-columns: minmax(0, 1fr); }
+    .card { min-width: 0; }
+    .admin-tabs { max-width: 100%; }
+    .admin-tabs .tab { max-width: 100%; white-space: normal; }
+    /* Sidebar groups. On a phone the groups are only a wrapping row of tabs, so the titles stay hidden. */
+    .admin-group { display: contents; }
+    .admin-group-title { display: none; }
+    /* On a computer each group is a parent menu; its tabs are the submenu and can be folded. */
+    .app-side .admin-group { display: flex; flex-direction: column; gap: 4px; }
+    .app-side .admin-group-title { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 10px; padding: 9px 14px; border: 0; border-radius: 12px; background: transparent; color: var(--text); font-size: 14px; font-weight: 700; cursor: pointer; text-align: start; }
+    .app-side .admin-group-title:hover { background: var(--accent-soft); }
+    .app-side .admin-group-title::after { content: "▾"; color: var(--muted); transition: transform .2s; }
+    .app-side .admin-group.is-closed .admin-group-title::after { transform: rotate(-90deg); }
+    .app-side .admin-group > .tab { margin-inline-start: 14px; }
+    .app-side .admin-group.is-closed > .tab { display: none; }
+    .app-side .top-tab { margin-top: 10px; }
+    /* Request lists: a short cut of long text, the full text on hover and in the details dialog. */
+    .request-filter { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+    .request-filter select { width: auto; margin: 0; }
+    .clip { display: block; max-width: 220px; white-space: normal; }
+    .status-control { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .status-control select { width: auto; margin: 0; padding: 6px 8px; font-size: 13px; }
+    .status-control button { margin: 0; padding: 6px 10px; font-size: 13px; }
+    .status-badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 13px; background: var(--accent-soft); color: var(--accent-dark); }
+    .status-badge.is-new { background: var(--warn-soft); color: var(--warn); }
+    .status-badge.is-closed { background: var(--card-raised); color: var(--muted); border: 1px solid var(--border); }
+    .request-details { display: grid; grid-template-columns: max-content 1fr; gap: 8px 16px; margin: 0 0 16px; }
+    .request-details dt { color: var(--muted); }
+    .request-details dd { margin: 0; overflow-wrap: anywhere; }
+    .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .icon-add { margin: 0; }
+    .plan-grid { display: grid; gap: 4px 14px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+    .plan-grid input { margin-bottom: 8px; }
+    .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; padding: 0; margin: 0; border-radius: 10px; }
+    .icon-btn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .status-badge.is-off { background: var(--card-raised); color: var(--muted); border: 1px solid var(--border); }
+    .point-row { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); }
+    .tag-fieldset { border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; margin: 10px 0; }
+    .tag-fieldset legend { color: var(--muted); padding: 0 6px; }
+    .tag-picker { display: grid; gap: 8px; }
+    .tag-group { display: flex; gap: 8px 14px; align-items: center; flex-wrap: wrap; }
+    .tag-group strong { min-width: 80px; }
+    .tag-choice { display: inline-flex; align-items: center; gap: 4px; }
+    .tag-chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+    .tag-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 4px 3px 12px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-dark); font-size: 13px; }
+    .tag-chip button { margin: 0; padding: 0 8px; font-size: 13px; line-height: 1.6; border-radius: 999px; }
+    .facet-card { margin: 10px 0; padding: 12px 14px; }
+    .request-message { white-space: pre-wrap; max-height: 40vh; overflow-y: auto; margin: 0; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--card-raised); }
   </style>
 </head>
 <body>
@@ -35,33 +84,62 @@
   <div id="adminApp" hidden>
     <main class="wrap">
       <nav class="admin-tabs" aria-label="بخش‌های مدیریت">
-        <button type="button" class="tab" data-tab="consults">درخواست‌های مشاوره</button>
-        <button type="button" class="tab" data-tab="overview">نمای کلی</button>
-        <button type="button" class="tab" data-tab="cooperations">درخواست‌های همکاری</button>
-        <button type="button" class="tab" data-tab="helpcontent">محتوای کمک‌آموزشی</button>
-        <button type="button" class="tab" data-tab="settings">پرامپت و درگاه</button>
-        <button type="button" class="tab" data-tab="connections">پیامک و درگاه</button>
-        <button type="button" class="tab" data-tab="sessions">نشست‌های فعال</button>
-        <button type="button" class="tab" data-tab="promptgen">تولید پرامپت</button>
-        <button type="button" class="tab" data-tab="placementbank">بانک آزمون سطح</button>
-        <button type="button" class="tab" data-tab="build">خروجی Build</button>
-        <button type="button" class="tab" data-tab="adults">ثبت‌نام‌ها</button>
-        <button type="button" class="tab" data-tab="payments">پرداخت‌ها</button>
-        <button type="button" class="tab" data-tab="plans">پلن‌ها</button>
-        <button type="button" class="tab" data-tab="curriculum">برنامه‌ی آموزشی</button>
-        <button type="button" class="tab" data-tab="programs">برنامه‌های یادگیری</button>
-        <button type="button" class="tab" data-tab="global">پرامپت کلی</button>
-        <button type="button" class="tab" data-tab="voices">نمونه صدا</button>
-        <button type="button" class="tab" data-tab="students">دانش‌آموزان و پرامپت</button>
+        <div class="admin-group">
+          <button type="button" class="admin-group-title" aria-expanded="true">درخواست‌ها</button>
+          <button type="button" class="tab" data-tab="consults">درخواست‌های مشاوره</button>
+          <button type="button" class="tab" data-tab="cooperations">درخواست‌های همکاری</button>
+        </div>
+        <button type="button" class="tab top-tab" data-tab="overview">نمای کلی</button>
+        <div class="admin-group" data-group="users">
+          <button type="button" class="admin-group-title" aria-expanded="true">کاربران</button>
+          <button type="button" class="tab" data-tab="adults">ثبت‌نام‌ها</button>
+          <button type="button" class="tab" data-tab="sessions">نشست‌های فعال</button>
+        </div>
+        <div class="admin-group">
+          <button type="button" class="admin-group-title" aria-expanded="true">مالی</button>
+          <button type="button" class="tab" data-tab="payments">پرداخت‌ها</button>
+          <button type="button" class="tab" data-tab="plans">پلن‌ها</button>
+          <button type="button" class="tab" data-tab="payment">درگاه پرداخت</button>
+        </div>
+        <div class="admin-group">
+          <button type="button" class="admin-group-title" aria-expanded="true">آموزش</button>
+          <button type="button" class="tab" data-tab="curriculum">برنامه‌ی آموزشی</button>
+          <button type="button" class="tab" data-tab="programs">برنامه‌های یادگیری</button>
+          <button type="button" class="tab" data-tab="placementbank">بانک آزمون سطح</button>
+          <button type="button" class="tab" data-tab="helpcontent">محتوای کمک‌آموزشی</button>
+          <button type="button" class="tab" data-tab="voices">نمونه صدا</button>
+        </div>
+        <div class="admin-group" data-group="prompts">
+          <button type="button" class="admin-group-title" aria-expanded="true">مجموعه پرامپت</button>
+          <button type="button" class="tab" data-tab="promptgen">ساختار پرامپت</button>
+          <button type="button" class="tab" data-tab="promptview">مشاهده پرامپت</button>
+          <button type="button" class="tab" data-tab="selftest">پرامپت آزمون</button>
+          <button type="button" class="tab" data-tab="global">پرامپت کلی</button>
+          <button type="button" class="tab" data-tab="settings">تنظیمات پرامپت</button>
+        </div>
+        <div class="admin-group">
+          <button type="button" class="admin-group-title" aria-expanded="true">تنظیمات</button>
+          <button type="button" class="tab" data-tab="connections">پیامک</button>
+        </div>
       </nav>
 
       <section class="card" id="tab-consults">
         <h2>درخواست‌های مشاوره</h2>
+        <p class="muted">وضعیت هر درخواست را از ستون وضعیت انتخاب و با «اعمال» ثبت کنید. متن کامل پیام و موضوع با «مشاهده» باز می‌شود.</p>
+        <div class="request-filter">
+          <label for="consultFilter">فیلتر وضعیت</label>
+          <select id="consultFilter"></select>
+        </div>
         <div class="table-box"><table class="admin-table" id="consultTable"></table></div>
       </section>
 
       <section class="card" id="tab-cooperations" hidden>
         <h2>درخواست‌های همکاری</h2>
+        <p class="muted">وضعیت هر درخواست را از ستون وضعیت انتخاب و با «اعمال» ثبت کنید. متن کامل پیام با «مشاهده» باز می‌شود.</p>
+        <div class="request-filter">
+          <label for="cooperationFilter">فیلتر وضعیت</label>
+          <select id="cooperationFilter"></select>
+        </div>
         <div class="table-box"><table class="admin-table" id="cooperationTable"></table></div>
       </section>
 
@@ -108,8 +186,10 @@
             <option value="female">دختر</option>
             <option value="male">پسر</option>
           </select>
-          <label for="hcInterests">علایق (با کاما جدا کنید)</label>
-          <input id="hcInterests" maxlength="200">
+          <fieldset class="tag-fieldset">
+            <legend>برچسب‌ها</legend>
+            <div id="hcTags" class="tag-picker"></div>
+          </fieldset>
           <label for="hcStage">مرحله‌ی دوره (اختیاری)</label>
           <input id="hcStage" maxlength="40">
           <label for="hcUrl">لینک (اگر فایل ندارید)</label>
@@ -120,10 +200,53 @@
           <p class="error" id="hcError" hidden></p>
         </form>
         <div class="table-box"><table class="admin-table" id="helpTable"></table></div>
+
+        <h3 style="margin-top:20px">گروه‌های برچسب</h3>
+        <p class="muted">گروه‌ها و برچسب‌ها را هر وقت بخواهید تغییر دهید. دانش‌آموز با همین برچسب‌ها فیلتر می‌کند. تغییر یک برچسب روی همه‌ی محتواهای دارای آن اثر می‌گذارد.</p>
+        <form id="facetForm" class="row">
+          <div><label for="facetName">نام گروه (مثلاً علایق)</label><input id="facetName" maxlength="60" required></div>
+          <button type="submit">افزودن گروه</button>
+        </form>
+        <div id="facetList"></div>
       </section>
 
+      <dialog id="helpEditDialog" class="account-dialog account-dialog-wide" aria-labelledby="helpEditTitle">
+        <h2 id="helpEditTitle">ویرایش برچسب‌های محتوا</h2>
+        <p class="muted" id="helpEditName"></p>
+        <form id="helpEditForm">
+          <label for="hbBand">گروه سنی</label>
+          <select id="hbBand">
+            <option value="K">۴ تا ۶ سال</option>
+            <option value="J">۷ تا ۱۰ سال</option>
+            <option value="T">۱۱ تا ۱۴ سال</option>
+            <option value="S">۱۵ تا ۱۸ سال</option>
+            <option value="A">بزرگسال</option>
+          </select>
+          <label for="hbLevel">سطح</label>
+          <select id="hbLevel">
+            <option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option><option>C2</option>
+          </select>
+          <label for="hbGender">جنسیت</label>
+          <select id="hbGender">
+            <option value="">برای همه</option>
+            <option value="female">دختر</option>
+            <option value="male">پسر</option>
+          </select>
+          <fieldset class="tag-fieldset">
+            <legend>برچسب‌ها</legend>
+            <div id="hbTags" class="tag-picker"></div>
+          </fieldset>
+          <p class="error" id="helpEditError" hidden></p>
+          <div class="dialog-actions">
+            <button type="button" class="ghost" id="helpEditClose">بستن</button>
+            <button type="submit">ذخیره</button>
+          </div>
+        </form>
+      </dialog>
+
       <section class="card" id="tab-settings" hidden>
-        <h2>پرامپت و درگاه</h2>
+        <h2>تنظیمات پرامپت</h2>
+        <p class="muted">ترکیب پرامپت کلاس، خروجی‌های موردانتظار و پرامپت آزمون. درگاه پرداخت و پیامک در بخش خودشان هستند.</p>
         <p class="notice" id="settingsNotice" hidden></p>
         <label for="setMode">ترکیب پرامپت کلاس</label>
         <select id="setMode">
@@ -134,35 +257,16 @@
         </select>
         <label for="setExpected">خروجی‌های موردانتظار از هوش مصنوعی</label>
         <textarea id="setExpected" rows="4" maxlength="2000"></textarea>
-        <label for="setProvider">درگاه پرداخت</label>
-        <select id="setProvider">
-          <option value="fake">حالت آزمایشی (فقط توسعه)</option>
-          <option value="zarinpal">زرین‌پال</option>
-        </select>
         <p><button type="button" id="setSave">ذخیره‌ی تنظیمات</button></p>
-        <h3>وضعیت کلیدها</h3>
+        <h3>وضعیت کلید هوش مصنوعی</h3>
         <p class="muted">کلیدهای محرمانه در متغیرهای محیطی سرور نگهداری می‌شوند و در این پنل نمایش داده نمی‌شوند.</p>
         <ul id="secretsList"></ul>
-        <h3>پرامپت «خودت رو محک بزن»</h3>
-        <textarea id="stPrompt" rows="5" maxlength="4000"></textarea>
-        <p><button type="button" id="stPromptSave">ذخیره‌ی پرامپت آزمون</button></p>
       </section>
 
-      <section class="card" id="tab-connections" hidden>
-        <h2>پیامک و درگاه پرداخت</h2>
-        <p class="notice" id="connNotice" hidden></p>
-        <h3>پنل پیامک</h3>
-        <label for="connSmsProvider">سرویس ارسال پیامک</label>
-        <select id="connSmsProvider">
-          <option value="kavenegar">کاوه‌نگار</option>
-          <option value="dev">حالت آزمایشی (فقط توسعه)</option>
-        </select>
-        <label for="connSmsKey">کلید API کاوه‌نگار</label>
-        <p class="muted" id="connSmsKeyHint"></p>
-        <input id="connSmsKey" type="password" class="ltr-field" autocomplete="off" placeholder="برای تغییر، کلید تازه را وارد کنید">
-        <label for="connSmsTemplate">نام الگوی پیامک کد ورود</label>
-        <input id="connSmsTemplate" class="ltr-field" maxlength="60">
-        <h3>درگاه پرداخت</h3>
+      <section class="card" id="tab-payment" hidden>
+        <h2>درگاه پرداخت</h2>
+        <p class="muted">این بخش فقط درگاه پرداخت را تنظیم می‌کند. پیامک و پرامپت تنظیمات جداگانه دارند.</p>
+        <p class="notice" id="payNotice" hidden></p>
         <label for="connPayProvider">درگاه</label>
         <select id="connPayProvider">
           <option value="fake">حالت آزمایشی (فقط توسعه)</option>
@@ -173,7 +277,24 @@
         <input id="connMerchant" type="password" class="ltr-field" autocomplete="off" placeholder="برای تغییر، کد تازه را وارد کنید">
         <label>آدرس بازگشت برای ثبت در زرین‌پال</label>
         <p class="ltr-field" id="connCallback"></p>
-        <p><button type="button" id="connSave">ذخیره‌ی اتصال‌ها</button></p>
+        <p><button type="button" id="paySave">ذخیره‌ی درگاه پرداخت</button></p>
+      </section>
+
+      <section class="card" id="tab-connections" hidden>
+        <h2>پیامک</h2>
+        <p class="muted">این بخش فقط سرویس پیامک کد ورود را تنظیم می‌کند. درگاه پرداخت در بخش خودش است.</p>
+        <p class="notice" id="smsNotice" hidden></p>
+        <label for="connSmsProvider">سرویس ارسال پیامک</label>
+        <select id="connSmsProvider">
+          <option value="kavenegar">کاوه‌نگار</option>
+          <option value="dev">حالت آزمایشی (فقط توسعه)</option>
+        </select>
+        <label for="connSmsKey">کلید API کاوه‌نگار</label>
+        <p class="muted" id="connSmsKeyHint"></p>
+        <input id="connSmsKey" type="password" class="ltr-field" autocomplete="off" placeholder="برای تغییر، کلید تازه را وارد کنید">
+        <label for="connSmsTemplate">نام الگوی پیامک کد ورود</label>
+        <input id="connSmsTemplate" class="ltr-field" maxlength="60">
+        <p><button type="button" id="smsSave">ذخیره‌ی پیامک</button></p>
       </section>
 
       <section class="card" id="tab-sessions" hidden>
@@ -189,8 +310,8 @@
       </section>
 
       <section class="card" id="tab-promptgen" hidden>
-        <h2>تولید پرامپت</h2>
-        <p class="muted">قالب را یک بار بنویسید. هر جا که نوشته‌ی {{کلید}} باشد، با مقدار ذخیره‌شده جایگزین می‌شود. ساخت پرامپت از هوش مصنوعی نیست؛ همان قالب و همان دانش‌آموز همیشه یک متن می‌دهد.</p>
+        <h2>ساختار پرامپت</h2>
+        <p class="muted">این قالبی است که هر پرامپت از روی آن ساخته می‌شود. قالب را یک بار بنویسید. هر جا که نوشته‌ی {{کلید}} باشد، با مقدار ذخیره‌شده جایگزین می‌شود. ساخت پرامپت از هوش مصنوعی نیست؛ همان قالب و همان دانش‌آموز همیشه یک متن می‌دهد.</p>
         <p class="notice" id="genNotice" hidden></p>
         <h3>قالب</h3>
         <label for="genTemplate">متن قالب</label>
@@ -200,16 +321,71 @@
           <summary>کلیدهای قابل استفاده</summary>
           <ul id="genPlaceholders" class="plain"></ul>
         </details>
-        <h3>ساخت پرامپت برای یک دانش‌آموز</h3>
-        <label for="genLearner">دانش‌آموز</label>
-        <select id="genLearner"></select>
-        <p><button type="button" id="genRun">تولید پرامپت</button></p>
+      </section>
+
+      <section class="card" id="tab-selftest" hidden>
+        <h2>پرامپت آزمون</h2>
+        <p class="muted">این پرامپت برای آزمون «خودت رو محک بزن» ساخته می‌شود و مثل ساختار پرامپت با کلیدهای {{…}} پر می‌شود. کلیدهای داده از دیتابیس می‌آیند، قاعده‌ها را همین‌جا تعریف می‌کنید، و یادداشت‌های هر دانش‌آموز هم در آن می‌آید. قاعده‌ی ایمنی همیشه در انتهای پرامپت اضافه می‌شود.</p>
+        <p class="notice" id="stNotice" hidden></p>
+        <h3>قالب</h3>
+        <textarea id="stTemplate" rows="16" maxlength="8000" class="ltr-field"></textarea>
+        <p><button type="button" id="stTemplateSave">ذخیره‌ی قالب</button> <button type="button" id="stTemplateReset" class="ghost">برگشت به قالب پیش‌فرض</button></p>
+        <details class="placeholder-help">
+          <summary>کلیدهای قابل استفاده</summary>
+          <ul id="stPlaceholders" class="plain"></ul>
+        </details>
+        <h3>قاعده‌ها</h3>
+        <p class="muted">قاعده‌ی نوع آزمون با kind.* و قاعده‌ی مهارت با skill.* ساخته می‌شود. قاعده‌ی تازه را با کلید دلخواه اضافه کنید؛ کلید آن در قالب به شکل {{rule.کلید}} می‌آید.</p>
+        <div id="stRules"></div>
+        <form id="stRuleForm" class="row">
+          <div><label for="stRuleKey">کلید قاعده (مثلاً kind.quiz)</label><input id="stRuleKey" class="ltr-field" maxlength="40" required></div>
+          <div class="full"><label for="stRuleText">متن قاعده</label><textarea id="stRuleText" rows="3" maxlength="1500" required></textarea></div>
+          <button type="submit">افزودن قاعده</button>
+        </form>
+        <h3>مشاهده پرامپت آزمون</h3>
+        <p class="muted">یک دانش‌آموز و تنظیمات آزمون را انتخاب کنید تا پرامپتی که همان آزمون می‌گیرد دیده شود. چیزی ذخیره نمی‌شود.</p>
+        <form id="stPreviewForm" class="row">
+          <div><label for="stLearner">دانش‌آموز</label><select id="stLearner"></select></div>
+          <div><label for="stKind">نوع آزمون</label>
+            <select id="stKind">
+              <option value="suggested">پیشنهاد سیستم</option>
+              <option value="qa">سؤال و جواب</option>
+              <option value="conversation">مکالمه</option>
+              <option value="mixed">ترکیبی (سؤال و جواب و مکالمه)</option>
+            </select>
+          </div>
+          <div><label for="stSkill">مهارت</label>
+            <select id="stSkill">
+              <option value="mixed">چند مهارت (نوشتن، شنیداری، گفتاری)</option>
+              <option value="writing">نوشتن</option>
+              <option value="listening">شنیداری</option>
+              <option value="speaking">گفتاری</option>
+            </select>
+          </div>
+          <div><label for="stMinutes">مدت</label>
+            <select id="stMinutes"><option value="5">۵ دقیقه</option><option value="10" selected>۱۰ دقیقه</option><option value="15">۱۵ دقیقه</option><option value="20">۲۰ دقیقه</option><option value="30">۳۰ دقیقه</option></select>
+          </div>
+          <button type="submit">نمایش پرامپت</button>
+        </form>
+        <p class="error" id="stError" hidden></p>
+        <p class="notice" id="stUnknown" hidden></p>
+        <label for="stOutput">پرامپت آزمون</label>
+        <textarea id="stOutput" rows="18" readonly></textarea>
+      </section>
+
+      <section class="card" id="tab-promptview" hidden>
+        <h2>مشاهده پرامپت</h2>
+        <p class="muted">یک دانش‌آموز را از فهرست انتخاب کنید. پرامپت همان دانش‌آموز با ساختار فعلی ساخته و نمایش داده می‌شود؛ هیچ چیزی ذخیره نمی‌شود.</p>
         <p class="error" id="genError" hidden></p>
         <p class="notice" id="genUnknown" hidden></p>
-        <label for="genOutput">پرامپت تولیدی</label>
+        <label for="genLearner">دانش‌آموز</label>
+        <select id="genLearner"></select>
+        <p><button type="button" id="genRun">ساخت دوباره‌ی پرامپت</button></p>
+        <label for="genOutput">پرامپت آماده</label>
         <textarea id="genOutput" rows="18" readonly></textarea>
         <p><button type="button" id="genCopy" class="ghost">کپی پرامپت</button></p>
       </section>
+
 
       <section class="card" id="tab-placementbank" hidden>
         <h2>بانک سؤال تعیین سطح</h2>
@@ -232,16 +408,6 @@
         </form>
       </section>
 
-      <section class="card" id="tab-build" hidden>
-        <h2>خروجی Build سایت</h2>
-        <p class="muted">فایل زیپ شامل کد سایت، ردیف‌های دیتابیس، فایل‌های رسانه‌ای و فایل تغییرات ساختار دیتابیس است. کلیدهای عبور و کلیدهای API در آن نیستند.</p>
-        <form id="buildForm" class="row">
-          <input id="buildSince" class="ltr-field" placeholder="فقط تغییرات از (مثلاً main یا یک commit) — خالی برای کل سایت">
-          <button type="submit">دریافت Build</button>
-        </form>
-        <p class="error" id="buildError" hidden></p>
-      </section>
-
       <section class="card" id="tab-adults" hidden>
         <h2>ثبت‌نام‌ها</h2>
         <div class="table-box"><table class="admin-table" id="adultTable"></table></div>
@@ -254,31 +420,33 @@
       </section>
 
       <section class="card" id="tab-plans" hidden>
-        <h2>پلن‌ها</h2>
+        <div class="section-head">
+          <h2>پلن‌ها</h2>
+          <button type="button" id="planAddOpen" class="icon-add" aria-label="افزودن پلن" title="افزودن پلن">+ افزودن پلن</button>
+        </div>
+        <p class="notice" id="planNotice" hidden></p>
         <div class="table-box"><table class="admin-table" id="planTable"></table></div>
-        <h2 style="margin-top:20px">افزودن پلن</h2>
-        <form id="planForm" class="row">
-          <div><label for="planName">نام پلن</label><input id="planName" required maxlength="80"></div>
-          <div><label for="planNameEn">نام انگلیسی پلن</label><input id="planNameEn" maxlength="80" class="ltr-field"></div>
-          <div><label for="planPrice">قیمت (تومان)</label><input id="planPrice" type="number" min="0" required></div>
-          <div><label for="planDays">مدت (روز)</label><input id="planDays" type="number" min="1" max="3650" required></div>
-          <button type="submit">افزودن</button>
-        </form>
-        <p class="error" id="planError" hidden></p>
-        <h2 style="margin-top:20px">ویرایش پلن</h2>
-        <form id="planEditForm" class="row">
-          <div><label for="planEditSelect">پلن</label><select id="planEditSelect"></select></div>
-          <div><label for="planEditName">نام پلن</label><input id="planEditName" maxlength="80"></div>
-          <div><label for="planEditNameEn">نام انگلیسی</label><input id="planEditNameEn" maxlength="80" class="ltr-field"></div>
-          <div><label for="planEditPrice">قیمت (تومان)</label><input id="planEditPrice" type="number" min="0"></div>
-          <div><label for="planEditDays">مدت (روز)</label><input id="planEditDays" type="number" min="1" max="3650"></div>
-          <div><label for="planEditTokens">سقف توکن</label><input id="planEditTokens" type="number" min="1000"></div>
-          <div class="full"><label for="planEditDescription">توضیح پلن</label><textarea id="planEditDescription" rows="2" maxlength="300"></textarea></div>
-          <button type="submit">ذخیره‌ی تغییرات</button>
-        </form>
-        <p class="notice" id="planEditNotice" hidden></p>
-        <p class="error" id="planEditError" hidden></p>
       </section>
+
+      <dialog id="planDialog" class="account-dialog account-dialog-wide" aria-labelledby="planDialogTitle">
+        <h2 id="planDialogTitle">افزودن پلن</h2>
+        <form id="planForm">
+          <div class="plan-grid">
+            <div><label for="planName">نام پلن</label><input id="planName" required maxlength="80"></div>
+            <div><label for="planNameEn">نام انگلیسی پلن</label><input id="planNameEn" maxlength="80" class="ltr-field"></div>
+            <div><label for="planPrice">قیمت (تومان)</label><input id="planPrice" type="number" min="0" required></div>
+            <div><label for="planDays">مدت (روز)</label><input id="planDays" type="number" min="1" max="3650" required></div>
+            <div><label for="planTokens">سقف توکن</label><input id="planTokens" type="number" min="1000" required></div>
+          </div>
+          <label for="planDescription">توضیح پلن</label>
+          <textarea id="planDescription" rows="2" maxlength="300"></textarea>
+          <p class="error" id="planFormError" hidden></p>
+          <div class="dialog-actions">
+            <button type="button" class="ghost" id="planClose">انصراف</button>
+            <button type="submit" id="planSave">ذخیره</button>
+          </div>
+        </form>
+      </dialog>
 
       <section class="card" id="tab-programs" hidden>
         <h2>برنامه‌های یادگیری</h2>
@@ -304,31 +472,42 @@
         </form>
         <p class="error" id="progError" hidden></p>
         <p class="ok-msg" id="progOk" hidden></p>
-        <h2 style="margin-top:20px">منتظر تأیید ادامه</h2>
-        <div class="table-box"><table class="admin-table" id="approvalTable"></table></div>
+        <p class="muted">برای جابه‌جایی جلسه‌ها، ردیف آن را با ماوس بکشید و در جای تازه رها کنید. دانش‌آموزان فعلی از اولین جلسه‌ای ادامه می‌دهند که در ترتیب جدید هنوز انجام نشده است.</p>
+        <h2 style="margin-top:20px">پیشرفت دانش‌آموز</h2>
+        <p class="muted">تعداد دفعات هر جلسه و میانگین امتیاز آن. با «گفتگوی مجدد» همان جلسه در جلسه‌ی بعدی دوباره گرفته می‌شود و جایگاه اصلی برنامه تغییر نمی‌کند.</p>
+        <div class="row">
+          <div><label for="progLearner">دانش‌آموز</label><select id="progLearner"></select></div>
+        </div>
+        <p class="notice" id="progressNotice" hidden></p>
+        <div class="table-box"><table class="admin-table" id="progressTable"></table></div>
       </section>
 
       <section class="card" id="tab-curriculum" hidden>
         <h2>برنامه‌ی آموزشی</h2>
-        <p class="muted" id="curriculumVersion"></p>
-        <h2 style="margin-top:12px">همه‌ی موضوع‌ها</h2>
+        <p class="muted">برای هر موضوع، شناسه، عنوان و هدف گفتگو را ببینید و موارد آموزشی آن را فهرست کنید. با «مشاهده» همه‌ی متن و موارد باز می‌شود.</p>
         <div class="table-box"><table class="admin-table" id="topicTable"></table></div>
-        <h2 style="margin-top:20px">نسخه‌ها</h2>
-        <div class="table-box"><table class="admin-table" id="variantTable"></table></div>
-        <h2 style="margin-top:20px">ویرایش یک نسخه</h2>
-        <form id="variantForm" class="row">
-          <div><label for="curTopic">موضوع</label><select id="curTopic"></select></div>
-          <div><label for="curBand">بازه‌ی سنی</label><select id="curBand"></select></div>
-          <div><label for="curLevel">سطح</label><select id="curLevel"></select></div>
-          <div class="full"><p class="muted" id="variantTitle"></p></div>
-          <div class="full"><label for="variantOpener">شروع جمله (AI از این الگو شروع می‌کند)</label><input id="variantOpener" maxlength="300" class="ltr-field"></div>
-          <div class="full"><label for="variantPhrases">عبارت‌های هدف (هر خط یک عبارت)</label><textarea id="variantPhrases" rows="5" maxlength="1000" class="ltr-field"></textarea></div>
-          <div class="full"><label for="variantStyle">سبک و لحن</label><input id="variantStyle" maxlength="200"></div>
-          <div class="full"><button type="submit">ذخیره‌ی نسخه</button></div>
-        </form>
-        <p class="error" id="variantError" hidden></p>
-        <p class="ok-msg" id="variantOk" hidden></p>
       </section>
+
+      <dialog id="curDialog" class="account-dialog account-dialog-wide" aria-labelledby="curDialogTitle">
+        <h2 id="curDialogTitle"></h2>
+        <form id="curForm">
+          <label for="curTitle">موضوع</label>
+          <input id="curTitle" maxlength="120" required>
+          <label for="curGoal">هدف گفتگو</label>
+          <textarea id="curGoal" rows="7" maxlength="3000"></textarea>
+          <p class="error" id="curFormError" hidden></p>
+          <p><button type="submit">ذخیره‌ی موضوع</button></p>
+        </form>
+        <h3>موارد آموزشی</h3>
+        <ul id="curPoints" class="plain"></ul>
+        <form id="curPointForm" class="row">
+          <div class="full"><label for="curPointText">مورد تازه</label><input id="curPointText" maxlength="300" required></div>
+          <button type="submit">افزودن</button>
+        </form>
+        <div class="dialog-actions">
+          <button type="button" class="ghost" id="curClose">بستن</button>
+        </div>
+      </dialog>
 
       <section class="card" id="tab-global" hidden>
         <h2>پرامپت کلی</h2>
@@ -343,31 +522,6 @@
         </form>
       </section>
 
-      <section class="card" id="tab-students" hidden>
-        <h2>دانش‌آموزان و پرامپت هرکدام</h2>
-        <p class="muted">اطلاعات هر دانش‌آموز (علاقه‌ها، هدف، و یادداشت شما) در جلسه‌های همان دانش‌آموز استفاده می‌شود. قوانین ایمنی همیشه بالاتر از این‌ها هستند.</p>
-        <div class="table-box"><table class="admin-table" id="studentTable"></table></div>
-        <form id="profileForm" hidden>
-          <h2 style="margin-top:20px" id="profileTitle"></h2>
-          <label for="profileInterests">علاقه‌ها</label>
-          <textarea id="profileInterests" rows="2" maxlength="300" placeholder="مثلاً: فوتبال، نقاشی، حیوانات"></textarea>
-          <label for="profileMotivation">هدف از یادگیری</label>
-          <input id="profileMotivation" maxlength="60" placeholder="مثلاً: مدرسه، سفر، آزمون">
-          <label for="profileText">یادداشت شما برای معلم</label>
-          <textarea id="profileText" rows="8" maxlength="2000" placeholder="مثلاً: با جمله‌های کوتاه و مثال‌های ساده صحبت کن. موضوع این هفته: خرید از فروشگاه."></textarea>
-          <p class="muted" id="profileCount"></p>
-          <div class="row">
-            <button type="submit">ذخیره</button>
-            <button type="button" class="ghost" id="profileCancel">انصراف</button>
-          </div>
-          <p class="error" id="profileError" hidden></p>
-          <p class="ok-msg" id="profileOk" hidden></p>
-          <div class="row">
-            <button type="button" class="ghost" id="previewPrompt">پیش‌نمایش پرامپت شروع جلسه</button>
-          </div>
-          <div id="promptPreview" hidden></div>
-        </form>
-      </section>
 
       <section class="card" id="tab-voices" hidden>
         <h2>نمونه صدای لهجه‌ها</h2>
@@ -395,7 +549,23 @@
     </main>
   </div>
 
+  <!-- Details of one consultation or cooperation request, with its status -->
+  <dialog id="requestDialog" class="account-dialog account-dialog-wide" aria-labelledby="requestTitle">
+    <h2 id="requestTitle"></h2>
+    <dl class="request-details" id="requestDetails"></dl>
+    <h3>پیام کامل</h3>
+    <p class="request-message" id="requestMessage"></p>
+    <h3>وضعیت</h3>
+    <p><span class="status-badge" id="requestCurrent"></span></p>
+    <div id="requestStatusSlot"></div>
+    <p class="error" id="requestError" hidden></p>
+    <div class="dialog-actions">
+      <button type="button" class="ghost" id="requestClose">بستن</button>
+    </div>
+  </dialog>
+
   <script src="/static/js/common.js"></script>
+  <script src="/static/js/admin-i18n.js"></script>
   <script src="/static/js/admin.js"></script>
 </body>
 </html>

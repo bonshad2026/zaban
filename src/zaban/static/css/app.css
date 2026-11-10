@@ -427,6 +427,9 @@ dialog.account-dialog h2 { margin-bottom: 4px; }
 .help-item { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin: 10px 0; }
 .help-item audio, .help-item video { width: 100%; margin: 6px 0; }
 .help-video { max-height: 260px; }
+.help-image { display: block; max-width: 100%; border-radius: 12px; margin: 6px 0; }
+.help-filter-field { display: grid; gap: 4px; margin: 10px 0; }
+.help-filter-field select { width: 100%; }
 .bubble { max-width: 85%; padding: 8px 12px; border-radius: 14px; margin: 6px 0; white-space: pre-wrap; }
 .bubble.niko { background: var(--card-raised); }
 .bubble.me { background: var(--ok-soft); margin-inline-start: auto; }
@@ -755,3 +758,15 @@ dialog.account-dialog { overflow-y: auto; }
   .side-group > .side-item { font-size: 11px; padding: 8px 0; }
 }
 
+
+/* ---- Responsive safety: no sideways scroll on a phone ---- */
+.site-header, .site-header-inner, .site-main, .app-layout { max-width: 100%; min-width: 0; }
+.site-header-inner > * { min-width: 0; max-width: 100%; }
+@media (max-width: 760px) {
+  .site-header-inner { width: 100%; box-sizing: border-box; }
+  .site-nav { max-width: 100%; box-sizing: border-box; }
+}
+.plan-meta { font-size: 13px; }
+/* Admin: a lesson row can be dragged to a new place in the program */
+.admin-table tr.drag-row { cursor: grab; }
+.admin-table tr.drag-row:active { cursor: grabbing; }

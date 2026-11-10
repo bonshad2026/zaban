@@ -1,6 +1,5 @@
 # The first learning program: 100 lessons for ages 11 to 14 at level A1, goal "daily conversation".
 # It is copied into the database once. After that the administrator edits the database, not this file.
-# A program pauses after every block of lessons (block_size) until it is approved to continue.
 
 GOALS = [
     ("daily_conversation", "مکالمه‌ی روزمره"),

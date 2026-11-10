@@ -130,9 +130,22 @@
           <div class="row">
             <input id="helpSearch" type="search" placeholder="جست‌وجو">
             <button type="button" id="helpGo" class="ghost">نمایش</button>
+            <button type="button" id="helpFilterOpen" class="ghost" data-fa="فیلترها" data-en="Filters">فیلترها</button>
           </div>
           <p class="notice" id="helpNotice" hidden></p>
           <div id="helpList"></div>
+          <dialog id="helpFilterDialog" class="account-dialog" aria-labelledby="helpFilterTitle">
+            <h2 id="helpFilterTitle" data-fa="فیلتر محتوا" data-en="Filter the content">فیلتر محتوا</h2>
+            <p class="muted" data-fa="هر فیلتر را انتخاب کنید. محتواهایی نشان داده می‌شوند که همه‌ی فیلترهای انتخاب‌شده را داشته باشند." data-en="Choose a filter. Only content with all the chosen filters is shown.">هر فیلتر را انتخاب کنید. محتواهایی نشان داده می‌شوند که همه‌ی فیلترهای انتخاب‌شده را داشته باشند.</p>
+            <div id="helpFilterFields"></div>
+            <p class="muted" id="helpFilterEmpty" hidden data-fa="برای این بخش فیلتری وجود ندارد." data-en="There are no filters for this section.">برای این بخش فیلتری وجود ندارد.</p>
+            <p class="error" id="helpFilterError" hidden></p>
+            <div class="dialog-actions">
+              <button type="button" class="ghost" id="helpFilterClear" data-fa="پاک کردن" data-en="Clear">پاک کردن</button>
+              <button type="button" class="ghost" id="helpFilterClose" data-fa="انصراف" data-en="Cancel">انصراف</button>
+              <button type="button" id="helpFilterApply" data-fa="اعمال" data-en="Apply">اعمال</button>
+            </div>
+          </dialog>
         </div>
       </section>
 

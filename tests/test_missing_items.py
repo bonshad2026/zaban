@@ -139,8 +139,9 @@ def test_self_test_runs_offline_and_saves_an_evaluation(client):
 
 def test_self_test_prompt_is_editable_by_admin(client):
     _admin(client)
-    assert client.post("/v1/admin/api/self-test-prompt", json={"text": "Be extra gentle."}).status_code == 200
-    assert client.get("/v1/admin/api/self-test-prompt").json()["text"] == "Be extra gentle."
+    assert client.post("/v1/admin/api/self-test/rules", json={"key": "role", "text": "Be extra gentle."}).status_code == 200
+    rules = {r["key"]: r["text"] for r in client.get("/v1/admin/api/self-test/template").json()["rules"]}
+    assert rules["role"] == "Be extra gentle."
 
 
 def test_self_test_is_private_to_its_owner(client):
@@ -151,27 +152,3 @@ def test_self_test_is_private_to_its_owner(client):
     assert client.get("/v1/web/student/self-tests/not-a-test").status_code == 404
 
 
-def test_schema_changes_list_missing_tables_and_columns(tmp_path):
-    from zaban.services.export import schema_changes
-    from sqlalchemy import create_engine, text
-
-    url = f"sqlite:///{tmp_path / 'old.db'}"
-    engine = create_engine(url)
-    with engine.begin() as conn:
-        conn.execute(text("CREATE TABLE students (id VARCHAR(32) PRIMARY KEY)"))
-    engine.dispose()
-
-    statements = "\n".join(schema_changes(url))
-    assert "CREATE TABLE cooperation_requests" in statements
-    assert "ALTER TABLE students ADD COLUMN display_name" in statements
-    assert "CREATE TABLE self_tests" in statements
-
-
-def test_build_export_writes_code_data_media_and_schema(tmp_path, client):
-    from zaban.services.export import build
-
-    summary = build(tmp_path / "out", since=None, with_data=True, target_url=os.environ["DATABASE_URL"])
-    assert summary["code_files"] > 0
-    assert (tmp_path / "out" / "schema" / "schema_changes.sql").exists()
-    assert (tmp_path / "out" / "database" / "data.json").exists()
-    assert (tmp_path / "out" / "media" / "index.json").exists()

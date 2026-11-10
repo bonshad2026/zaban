@@ -1,7 +1,5 @@
 import base64
-import io
 import os
-import zipfile
 
 from zaban.db import SessionLocal
 from zaban.models import Guardian, LearnerDetails, Student, StudentProgress
@@ -52,7 +50,7 @@ def test_parent_page_has_no_child_tools(client):
 
 def test_admin_page_has_the_new_tabs(client):
     html = client.get("/admin").text
-    for tab in ("overview", "helpcontent", "settings", "build"):
+    for tab in ("overview", "helpcontent", "settings"):
         assert f'data-tab="{tab}"' in html
 
 
@@ -163,7 +161,7 @@ def test_admin_sets_course_duration_and_stage(client):
 
 def test_self_test_starts_after_the_admin_changes_its_prompt(client):
     _admin(client)
-    assert client.post("/v1/admin/api/self-test-prompt", json={"text": "Be a strict examiner."}).status_code == 200
+    assert client.post("/v1/admin/api/self-test/rules", json={"key": "role", "text": "Be a strict examiner."}).status_code == 200
     _student(client)
     created = client.post("/v1/web/student/self-tests", json={"kind": "qa", "skill": "writing", "minutes": 5})
     assert created.status_code == 201
@@ -205,26 +203,6 @@ def test_ai_service_needs_a_tenant_key(client):
 def test_ai_service_rejects_a_conversation_that_ends_with_the_assistant(client):
     body = {"system": "Be kind.", "messages": [{"role": "assistant", "content": "Hi"}]}
     assert client.post("/v1/ai/complete", json=body, headers={"x-api-key": API_KEY}).status_code == 422
-
-
-# ----- Build download and migration output -----
-
-def test_admin_build_download_is_a_zip_without_secrets(client):
-    _admin(client)
-    response = client.post("/v1/admin/api/build")
-    assert response.status_code == 200, response.text
-    archive = zipfile.ZipFile(io.BytesIO(response.content))
-    names = archive.namelist()
-    assert "schema/schema_changes.sql" in names
-    assert "database/data.json" in names
-    data = archive.read("database/data.json").decode("utf-8")
-    assert "password_hash" not in data and "api_key_hash" not in data
-    assert "otp_codes" not in data
-
-
-def test_build_rejects_a_ref_that_looks_like_an_option(client):
-    _admin(client)
-    assert client.post("/v1/admin/api/build?since=--output=x").status_code == 422
 
 
 # ----- Consult form: name, subject and call permission -----

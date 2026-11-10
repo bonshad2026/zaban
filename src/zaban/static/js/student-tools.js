@@ -94,7 +94,7 @@
   function helpItem(item) {
     const card = el("article", "help-item");
     card.append(el("h3", "", item.title), el("p", "muted", Z.pick(`${CATEGORY_LABELS[item.category] || item.category} — سطح ${item.level}`, `${CATEGORY_LABELS[item.category] || item.category} — level ${item.level}`)));
-    if (item.interests) card.append(el("p", "muted", Z.pick(`موضوع: ${item.interests}`, `Topics: ${item.interests}`)));
+    if (item.tags && item.tags.length) card.append(el("p", "muted", Z.pick(`برچسب‌ها: ${item.tags.join("، ")}`, `Tags: ${item.tags.join(", ")}`)));
     if (item.has_file) {
       const src = `/v1/web/student/help-content/${item.id}/file`;
       if (item.mime && item.mime.startsWith("audio/")) {
@@ -102,6 +102,11 @@
         audio.controls = true;
         audio.src = src;
         card.appendChild(audio);
+      } else if (item.mime && item.mime.startsWith("image/")) {
+        const img = el("img", "help-image");
+        img.src = src;
+        img.alt = item.title;
+        card.appendChild(img);
       } else if (item.mime && item.mime.startsWith("video/")) {
         const video = el("video");
         video.controls = true;
@@ -146,10 +151,86 @@
     );
   }
 
+  // The filter dialog. The category tabs stay on the page; the other filters are chosen here, one value each.
+  // The dialog works on a copy, so nothing changes until «اعمال».
+  const NO_FILTERS = { level: "", gender: "", tags: {} };
+  let helpFilters = { level: "", gender: "", tags: {} };
+  let helpDraft = null;
+
+  function activeHelpFilterCount() {
+    return [helpFilters.level, helpFilters.gender, ...Object.values(helpFilters.tags)].filter(Boolean).length;
+  }
+
+  function helpFilterOption(value, text) {
+    const o = el("option", "", text);
+    o.value = value;
+    return o;
+  }
+
+  // One select for one filter: «همه» first, then each value with how many items have it.
+  function helpFilterField(label, options, value, onChange) {
+    const wrap = el("div", "help-filter-field");
+    const select = el("select", "");
+    select.setAttribute("aria-label", label);
+    select.appendChild(helpFilterOption("", Z.tr("همه")));
+    options.forEach((o) => select.appendChild(helpFilterOption(o.value, `${o.label} (${o.count})`)));
+    select.value = value;
+    select.addEventListener("change", () => onChange(select.value));
+    wrap.append(el("label", "", label), select);
+    return wrap;
+  }
+
+  function renderHelpFilterFields(data) {
+    const fields = [];
+    if (data.level.options.length > 1) {
+      fields.push(helpFilterField(Z.tr("سطح"), data.level.options, helpDraft.level, (v) => { helpDraft.level = v; }));
+    }
+    if (data.gender.options.length > 1) {
+      fields.push(helpFilterField(Z.tr("جنسیت"), data.gender.options, helpDraft.gender, (v) => { helpDraft.gender = v; }));
+    }
+    data.facets.forEach((facet) => {
+      fields.push(helpFilterField(facet.label, facet.options, helpDraft.tags[facet.key] || "", (v) => { helpDraft.tags[facet.key] = v; }));
+    });
+    const box = $("helpFilterFields");
+    box.replaceChildren(...fields);
+    Z.show($("helpFilterEmpty"), fields.length === 0);
+  }
+
+  async function openHelpFilters() {
+    const params = new URLSearchParams();
+    if (helpCategory) params.set("category", helpCategory);
+    try {
+      const data = await Z.request("GET", `/v1/web/student/help-content/filters?${params.toString()}`);
+      helpDraft = JSON.parse(JSON.stringify(helpFilters));
+      renderHelpFilterFields(data);
+      Z.showError($("helpFilterError"), "");
+      $("helpFilterDialog").showModal();
+    } catch (err) {
+      Z.showError($("helpNotice"), err.message);
+    }
+  }
+
+  function applyHelpFilters() {
+    helpFilters = helpDraft;
+    $("helpFilterDialog").close();
+    loadHelp();
+  }
+
+  function clearHelpFilters() {
+    helpDraft = JSON.parse(JSON.stringify(NO_FILTERS));
+    helpFilters = helpDraft;
+    $("helpFilterDialog").close();
+    loadHelp();
+  }
+
   async function loadHelp() {
     const params = new URLSearchParams();
     if (helpCategory) params.set("category", helpCategory);
     if ($("helpSearch").value.trim()) params.set("q", $("helpSearch").value.trim());
+    if (helpFilters.level) params.set("level", helpFilters.level);
+    if (helpFilters.gender) params.set("gender", helpFilters.gender);
+    Object.values(helpFilters.tags).filter(Boolean).forEach((id) => params.append("tag", id));
+    $("helpFilterOpen").textContent = activeHelpFilterCount() ? Z.tr(`فیلترها (${activeHelpFilterCount()})`) : Z.tr("فیلترها");
     try {
       const rows = await Z.request("GET", `/v1/web/student/help-content?${params.toString()}`);
       const list = $("helpList");
@@ -303,6 +384,10 @@
   document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => toolTab(tab.dataset.tab)));
     $("helpGo").addEventListener("click", loadHelp);
+    $("helpFilterOpen").addEventListener("click", openHelpFilters);
+    $("helpFilterApply").addEventListener("click", applyHelpFilters);
+    $("helpFilterClear").addEventListener("click", clearHelpFilters);
+    $("helpFilterClose").addEventListener("click", () => $("helpFilterDialog").close());
     $("helpSearch").addEventListener("keydown", (event) => {
       if (event.key === "Enter") loadHelp();
     });

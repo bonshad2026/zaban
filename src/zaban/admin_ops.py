@@ -1,15 +1,9 @@
-import re
-import shutil
-import tempfile
 from datetime import timedelta
-from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session as DBSession
-from starlette.background import BackgroundTask
 
 from zaban.admin import require_admin
 from zaban.config import settings
@@ -23,6 +17,8 @@ from zaban.models import (
     Guardian,
     LearnerDetails,
     LearningProgram,
+    ProgramItem,
+    StudentProgress,
     Payment,
     SelfTest,
     Student,
@@ -32,7 +28,7 @@ from zaban.models import (
     utcnow,
 )
 from zaban.services.evaluation import past_evaluations
-from zaban.services.export import build
+from zaban.services.programs import current_item, item_stats, reorder_items
 from zaban.services.learner_details import details_out
 from zaban.services.settings_store import (
     EXPECTED_OUTPUT_KEY,
@@ -54,7 +50,6 @@ from zaban.services.payments import has_active_plan
 # Everything the operator panel needs that is not part of the lesson itself.
 router = APIRouter(prefix="/admin/api", dependencies=[Depends(require_admin)])
 
-GIT_REF = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/~^-]{0,79}$")
 
 
 @router.get("/overview")
@@ -189,29 +184,63 @@ def learner_detail(student_id: str, db: DBSession = Depends(get_db)) -> dict:
     }
 
 
-@router.post("/build")
-def download_build(since: str | None = None) -> FileResponse:
-    # The build is a zip with the code, the database rows, the media files, and the schema changes.
-    if since is not None and not GIT_REF.match(since):
-        raise HTTPException(status_code=422, detail="Enter a git branch, tag or commit")
-    work = Path(tempfile.mkdtemp(prefix="zaban-build-"))
-    try:
-        out = work / "zaban-build"
-        build(out, since=since, with_data=True, target_url=settings.database_url)
-        archive = shutil.make_archive(str(work / "zaban-build"), "zip", out)
-    except ValueError as exc:
-        shutil.rmtree(work, ignore_errors=True)
-        raise HTTPException(status_code=422, detail=str(exc))
-    return FileResponse(
-        archive,
-        media_type="application/zip",
-        filename="zaban-build.zip",
-        background=BackgroundTask(shutil.rmtree, work, True),
-    )
-
-
 class ProgramDuration(BaseModel):
     duration_months: int = Field(ge=1, le=60)
+
+
+class ProgramOrder(BaseModel):
+    # Every lesson id of the program, in the new order.
+    item_ids: list[int] = Field(min_length=1, max_length=500)
+
+
+@router.post("/programs/{program_id}/order")
+def save_program_order(program_id: str, body: ProgramOrder, db: DBSession = Depends(get_db)) -> dict:
+    # Learners continue at the first lesson the new order has not covered yet. Lessons already done stay done.
+    if db.get(LearningProgram, program_id) is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    try:
+        reorder_items(db, program_id, body.item_ids)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    db.commit()
+    return {"ok": True}
+
+
+@router.get("/students/{student_id}/program-progress")
+def student_program_progress(student_id: str, db: DBSession = Depends(get_db)) -> dict:
+    # Each lesson of the learner's program with the number of times it was played and its average score.
+    progress = db.get(StudentProgress, student_id)
+    if progress is None:
+        raise HTTPException(status_code=404, detail="This learner has no program yet")
+    program = db.get(LearningProgram, progress.program_id)
+    next_item = current_item(db, progress) if progress.status == "active" else None
+    return {
+        "program": program.name,
+        "status": progress.status,
+        "next_item_id": next_item.id if next_item else None,
+        "revisit_item_id": progress.revisit_item_id,
+        "items": item_stats(db, student_id, program.id),
+    }
+
+
+class RevisitRequest(BaseModel):
+    # The lesson to play again in the next session. None cancels the request.
+    item_id: int | None = None
+
+
+@router.post("/students/{student_id}/revisit")
+def request_revisit(student_id: str, body: RevisitRequest, db: DBSession = Depends(get_db)) -> dict:
+    # Plays one lesson again in the next session. The learner's place in the program does not change.
+    progress = db.get(StudentProgress, student_id)
+    if progress is None:
+        raise HTTPException(status_code=404, detail="This learner has no program yet")
+    if body.item_id is not None:
+        item = db.get(ProgramItem, body.item_id)
+        if item is None or item.program_id != progress.program_id:
+            raise HTTPException(status_code=404, detail="Not found")
+    progress.revisit_item_id = body.item_id
+    db.commit()
+    return {"ok": True}
 
 
 @router.post("/programs/{program_id}/duration")
