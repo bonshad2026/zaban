@@ -92,7 +92,7 @@ Customer sites call the API from their own server with `X-API-Key`. Routes are u
 | GET | `/students/{id}/reports/parent` | tenant key or parent |
 | GET | `/tenant/usage` | tenant key only |
 
-Website sign-in endpoints: `POST /v1/web/user/otp/request` (send a code), `POST /v1/web/user/otp/verify` (sign in, or create the adult account with `full_name`), `POST /v1/web/student/login` (username and PIN), `POST /v1/web/user/self` (learn for yourself), `POST /v1/web/user/logout-all`, `POST /v1/web/logout?role=…`, `GET /v1/web/me?role=…`.
+Website sign-in endpoints: `POST /v1/web/user/otp/request` (send a code), `POST /v1/web/user/otp/verify` (sign in, or create the adult account with `full_name`), `POST /v1/web/student/login` (username and PIN), `POST /v1/web/user/self` (learn for yourself), `POST /v1/web/user/logout-all`, `POST /v1/web/logout?role=…`, `GET /v1/web/me?role=…`. The adult's profile (name, email, age, gender, photo) is at `GET` and `PUT /v1/web/user/profile`, and the password change is `POST /v1/web/user/password`. The header menu that uses them is described in [docs/account-menu.md](docs/account-menu.md). Agents working in this repo should also read [AGENTS.md](AGENTS.md).
 
 ## Run locally without Docker
 
