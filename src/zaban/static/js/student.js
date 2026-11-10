@@ -308,6 +308,8 @@
       });
       me = await Z.request("GET", "/v1/web/me?role=student");
       form.password.value = "";
+      // The header was drawn as a guest before this sign-in, so draw it again now.
+      await Z.initSiteHeader();
       await enterApp();
     } catch (err) {
       Z.showError($("loginError"), err.message);

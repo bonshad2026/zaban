@@ -441,6 +441,12 @@ const Z = (() => {
     location.href = "/";
   }
 
+  // Set by each build of the menu. The document-level listeners are added only once, in initSiteHeader.
+  let closeAccountMenu = () => {};
+  // Set by each build of the header, so the one-time form wiring always updates the current name and photo.
+  let onProfileSaved = () => {};
+  let headerWired = false;
+
   // The profile photo in the header. Its menu holds the account items and sign-out.
   function buildAccountMenu(signedIn, avatarSrc) {
     const wrap = el("div", "account-menu");
@@ -481,12 +487,7 @@ const Z = (() => {
       list.hidden = !open;
       avatar.setAttribute("aria-expanded", String(open));
     });
-    document.addEventListener("click", (event) => {
-      if (!wrap.contains(event.target)) close();
-    });
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") close();
-    });
+    closeAccountMenu = close;
     wrap.append(avatar, list);
     return { wrap, avatar };
   }
@@ -522,14 +523,26 @@ const Z = (() => {
     box.appendChild(menu.wrap);
     box.dataset.state = "member";
 
-    setupAccountForms((saved) => {
+    onProfileSaved = (saved) => {
       if (signedIn.includes("parent")) nameNode.textContent = saved.name;
       paintAvatar(menu.avatar, saved.avatar);
-    });
+    };
+    if (!headerWired) {
+      headerWired = true;
+      setupAccountForms((saved) => onProfileSaved(saved));
+      // Clicking outside the menu, or pressing Escape, closes it.
+      document.addEventListener("click", (event) => {
+        if (!event.target.closest(".account-menu")) closeAccountMenu();
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") closeAccountMenu();
+      });
+    }
 
     // Row two of the header: the signed-in person's own items, after the public menu.
     const nav = document.getElementById("memberNav");
     if (nav) {
+      nav.replaceChildren();
       const items = signedIn.includes("parent")
         ? [
             ["/parent#childrenCard", "فرزندان شما", "Your children"],
