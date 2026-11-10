@@ -11,12 +11,12 @@
   --accent-dark: #e3c58f;
   --accent-soft: #2a2418;
   --on-accent: #0b0b0e;
-  --ok: #8fbf9a;
-  --ok-soft: #14231a;
+  --ok: #e3c58f;
+  --ok-soft: #2a2418;
   --warn: #e2b86b;
   --warn-soft: #2b2212;
-  --bad: #e08b7e;
-  --bad-soft: #2d1714;
+  --bad: #f4efe6;
+  --bad-soft: #2a2418;
   --border: #2a2a33;
   --shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
   --page-bg: url("/static/img/page-bg-dark.svg");
@@ -33,12 +33,12 @@
   --accent-dark: #7d5612;
   --accent-soft: #f5ecd6;
   --on-accent: #ffffff;
-  --ok: #2f7a45;
-  --ok-soft: #e6f2ea;
+  --ok: #7d5612;
+  --ok-soft: #f5ecd6;
   --warn: #9a6a10;
   --warn-soft: #fbf1dc;
-  --bad: #b4442f;
-  --bad-soft: #fbe9e5;
+  --bad: #1d1a14;
+  --bad-soft: #f5ecd6;
   --border: #e3dccb;
   --shadow: 0 18px 48px rgba(60, 45, 15, 0.12);
   --page-bg: url("/static/img/page-bg-light.svg");
@@ -83,8 +83,8 @@ button:hover:not(:disabled) { background: var(--accent-dark); }
 button:disabled { opacity: 0.45; cursor: default; }
 button.ghost { background: transparent; color: var(--accent); border: 1px solid var(--border); }
 button.ghost:hover:not(:disabled) { background: var(--accent-soft); }
-button.danger { background: var(--bad); }
-button.danger:hover:not(:disabled) { background: #912018; }
+button.danger { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+button.danger:hover:not(:disabled) { background: var(--accent-soft); color: var(--accent-dark); }
 button.wide { width: 100%; }
 label { display: block; font-size: 14px; color: var(--muted); margin: 12px 0 0; }
 input, select, textarea {
@@ -105,7 +105,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent-soft
 .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
 .row > * { flex: 1; min-width: 160px; }
 .row > button { flex: 0 0 auto; min-width: 0; }
-.error { color: var(--bad); background: var(--bad-soft); padding: 10px 12px; border-radius: 10px; }
+.error { color: var(--text); background: var(--bad-soft); border: 1px solid var(--accent); padding: 10px 12px; border-radius: 10px; }
 .notice { color: var(--warn); background: var(--warn-soft); padding: 10px 12px; border-radius: 10px; font-size: 14px; }
 .ok-msg { color: var(--ok); background: var(--ok-soft); padding: 10px 12px; border-radius: 10px; }
 
@@ -221,7 +221,7 @@ button.secondary:hover:not(:disabled) { background: var(--accent); color: var(--
 }
 .chip::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: currentColor; }
 .chip.turn-you { background: var(--ok-soft); color: var(--ok); }
-.chip.turn-recording { background: var(--bad-soft); color: var(--bad); }
+.chip.turn-recording { background: var(--accent-soft); color: var(--accent-dark); }
 .chip.turn-recording::before { animation: blink 1s infinite; }
 .chip.turn-niko { background: var(--accent-soft); color: var(--accent); }
 .chip.turn-ended { background: var(--card); color: var(--muted); border: 1px solid var(--border); }
@@ -267,7 +267,7 @@ button.secondary:hover:not(:disabled) { background: var(--accent); color: var(--
   background: var(--accent);
 }
 .mic svg { width: 26px; height: 26px; fill: currentColor; }
-.mic.is-recording { background: var(--bad); animation: pulse 1.2s infinite; }
+.mic.is-recording { background: var(--accent); color: var(--on-accent); animation: pulse 1.2s infinite; }
 @keyframes pulse {
   0% { box-shadow: 0 0 0 0 rgba(180, 35, 24, 0.45); }
   70% { box-shadow: 0 0 0 16px rgba(180, 35, 24, 0); }
@@ -284,7 +284,7 @@ button.secondary:hover:not(:disabled) { background: var(--accent); color: var(--
 .bar-label { display: flex; justify-content: space-between; font-size: 14px; color: var(--muted); margin-top: 10px; }
 .bar { height: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; overflow: hidden; margin-top: 4px; }
 .bar > span { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
-.bar > span.planned { background: #94a3b8; }
+.bar > span.planned { background: var(--muted); }
 .suggestion { background: var(--accent-soft); color: var(--text); padding: 12px 14px; border-radius: 12px; }
 table { width: 100%; border-collapse: collapse; font-size: 15px; }
 th, td { padding: 10px 8px; border-bottom: 1px solid var(--border); text-align: right; }
