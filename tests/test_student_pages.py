@@ -4,20 +4,16 @@ from datetime import timedelta
 from zaban.db import SessionLocal
 from zaban.models import BillingPlan, LessonItem, LearningProgram, Payment, ProgramItem, Student, TutorSession, utcnow
 from zaban.reports import _session_rows
-
-STUDENT_USERNAME = os.environ["ZABAN_DEMO_STUDENT_USERNAME"]
-STUDENT_PASSWORD = os.environ["ZABAN_DEMO_STUDENT_PASSWORD"]
+from helpers_learner import learner_login, self_student
 
 
-def _student_login(client) -> None:
-    body = {"username": STUDENT_USERNAME, "password": STUDENT_PASSWORD}
-    assert client.post("/v1/web/student/login", json=body).status_code == 200
+
 
 
 def test_report_rows_title_program_lessons_and_free_talks(client):
     # A lesson of the program is titled with its program item, and a free talk gets a plain title.
     with SessionLocal() as db:
-        student = db.query(Student).filter(Student.username == STUDENT_USERNAME).one()
+        student = self_student(db)
         program = db.query(LearningProgram).order_by(LearningProgram.id).first()
         item = db.query(ProgramItem).filter(ProgramItem.program_id == program.id).order_by(ProgramItem.position).first()
         now = utcnow()
@@ -42,9 +38,9 @@ def test_report_rows_title_program_lessons_and_free_talks(client):
 
 
 def test_student_payments_show_the_plan_name(client):
-    _student_login(client)
+    learner_login(client)
     with SessionLocal() as db:
-        student = db.query(Student).filter(Student.username == STUDENT_USERNAME).one()
+        student = self_student(db)
         owner = student.guardian_id or student.self_owner_id
         plan = db.query(BillingPlan).order_by(BillingPlan.price_toman).first()
         payment = Payment(guardian_id=owner, plan_id=plan.id, amount_toman=plan.price_toman, status="confirmed",

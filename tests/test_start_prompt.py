@@ -4,9 +4,9 @@ from zaban.db import SessionLocal
 from zaban.models import Student, TutorProfile
 from zaban.services.accents import DEFAULT_ACCENT
 from zaban.services.sessions import compose_start_prompt, join_prompt
+from helpers_learner import learner_login, self_student
 
 ADMIN_PASSWORD = os.environ["ADMIN_PASSWORD"]
-STUDENT_USERNAME = os.environ["ZABAN_DEMO_STUDENT_USERNAME"]
 
 
 class _Student:
@@ -45,7 +45,7 @@ def test_each_mode_uses_only_its_sources():
 def test_admin_preview_builds_the_prompt_for_a_learner(client):
     assert client.post("/v1/admin/api/login", json={"password": ADMIN_PASSWORD}).status_code == 200
     with SessionLocal() as db:
-        student_id = db.query(Student).filter(Student.username == STUDENT_USERNAME).one().id
+        student_id = self_student(db).id
     data = client.get(f"/v1/admin/api/students/{student_id}/start-prompt").json()
     assert set(data["parts"]) >= {"intro", "admin", "database", "learner", "rules"}
     assert data["prompt"].startswith("You are a friendly")

@@ -18,6 +18,7 @@
         <span data-lang="en">EN</span><span data-lang="fa">فا</span>
       </button>
     </div>
+    <div class="site-drawer" id="siteDrawer">
     <nav class="site-nav" aria-label="منوی اصلی">
       <a href="/" data-fa="خانه" data-en="Home">خانه</a>
       <a href="/demo" data-fa="دمو" data-en="Demo">دمو</a>
@@ -26,23 +27,20 @@
       <a href="/about" data-fa="درباره‌ی ما" data-en="About us">درباره‌ی ما</a>
       <a href="/contact" data-fa="تماس با ما" data-en="Contact">تماس با ما</a>
     </nav>
+    </div>
     <!-- The script in common.js replaces the guest buttons below when someone is signed in. -->
     <div class="site-actions" id="siteActions" data-state="guest">
-      <details class="site-menu">
-        <summary class="pill" data-fa="ورود" data-en="Sign in">ورود</summary>
-        <div class="site-menu-list">
-          <a href="/parent" data-fa="والد یا بزرگسال" data-en="Parent or adult">والد یا بزرگسال</a>
-          <a href="/student" data-fa="دانش‌آموز" data-en="Learner">دانش‌آموز</a>
-        </div>
-      </details>
+      <a class="pill" href="/parent" data-fa="ورود" data-en="Sign in">ورود</a>
       <a class="pill gold" href="/signup" data-fa="ثبت‌نام" data-en="Sign up">ثبت‌نام</a>
     </div>
-    <nav class="member-nav" id="memberNav" aria-label="بخش من" hidden></nav>
+    <button class="menu-toggle" id="menuToggle" type="button" aria-expanded="false" aria-controls="siteDrawer" aria-label="منو">
+      <span></span><span></span><span></span>
+    </button>
   </div>
 </header>
 
 <!-- Account forms. They open from the profile menu in the header, which only shows after sign-in. -->
-<dialog id="accInfoDialog" class="account-dialog" aria-labelledby="infoTitle">
+<dialog id="accInfoDialog" class="account-dialog account-dialog-wide" aria-labelledby="infoTitle">
   <form id="accInfoForm" novalidate>
     <h2 id="infoTitle" data-fa="اطلاعات شخصی" data-en="Personal details">اطلاعات شخصی</h2>
     <div class="avatar-edit">
@@ -63,11 +61,47 @@
     <input id="accAge" name="age" type="number" min="18" max="120" inputmode="numeric" class="ltr-field">
     <label for="accGender" data-fa="جنسیت" data-en="Gender">جنسیت</label>
     <select id="accGender" name="gender">
-      <option value="" data-fa="ترجیح می‌دهم نگویم" data-en="Prefer not to say">ترجیح می‌دهم نگویم</option>
+      <option value="" disabled selected data-fa="انتخاب کنید" data-en="Choose">انتخاب کنید</option>
       <option value="female" data-fa="زن" data-en="Woman">زن</option>
       <option value="male" data-fa="مرد" data-en="Man">مرد</option>
-      <option value="other" data-fa="سایر" data-en="Other">سایر</option>
     </select>
+    <div id="accLearnerBox" hidden>
+      <h3 data-fa="اطلاعات یادگیری" data-en="Learning details">اطلاعات یادگیری</h3>
+      <label for="accLevelListening" data-fa="سطح شنیداری" data-en="Listening level">سطح شنیداری</label>
+      <select id="accLevelListening"><option value="A1">A1</option><option value="A2">A2</option><option value="B1">B1</option><option value="B2">B2</option><option value="C1">C1</option></select>
+      <label for="accLevelReading" data-fa="سطح خواندن" data-en="Reading level">سطح خواندن</label>
+      <select id="accLevelReading"><option value="A1">A1</option><option value="A2">A2</option><option value="B1">B1</option><option value="B2">B2</option><option value="C1">C1</option></select>
+      <label for="accLevelGrammar" data-fa="سطح دستور و واژگان" data-en="Grammar and vocabulary level">سطح دستور و واژگان</label>
+      <select id="accLevelGrammar"><option value="A1">A1</option><option value="A2">A2</option><option value="B1">B1</option><option value="B2">B2</option><option value="C1">C1</option></select>
+      <label for="accLevelSpeakingWriting" data-fa="سطح گفتار و نوشتار" data-en="Speaking and writing level">سطح گفتار و نوشتار</label>
+      <select id="accLevelSpeakingWriting"><option value="A1">A1</option><option value="A2">A2</option><option value="B1">B1</option><option value="B2">B2</option><option value="C1">C1</option></select>
+      <p class="muted"><a href="/level" data-fa="تعیین سطح با آزمون" data-en="Take the level test">تعیین سطح با آزمون</a></p>
+      <label for="accGrade" data-fa="مقطع تحصیلی" data-en="School grade">مقطع تحصیلی</label>
+      <input id="accGrade" maxlength="40" data-fa-placeholder="مثلاً پنجم دبستان" placeholder="مثلاً پنجم دبستان">
+      <label for="accAttributes" data-fa="دوست دارم معلمم چطور باشد" data-en="How I want my teacher to be">دوست دارم معلمم چطور باشد</label>
+      <textarea id="accAttributes" rows="2" maxlength="1000" placeholder="مثلاً مهربان، با شوخی، صبور"></textarea>
+      <label for="accConversation" data-fa="دوست دارم چطور حرف بزنیم" data-en="How I like to talk">دوست دارم چطور حرف بزنیم</label>
+      <select id="accConversation">
+        <option value="" data-fa="انتخاب نشده" data-en="Not chosen">انتخاب نشده</option>
+        <option value="chat" data-fa="گفتگوی آزاد" data-en="Free chat">گفتگوی آزاد</option>
+        <option value="story" data-fa="داستان ساختن با هم" data-en="Building stories together">داستان ساختن با هم</option>
+        <option value="role_play" data-fa="نقش‌بازی" data-en="Role play">نقش‌بازی</option>
+        <option value="quiz" data-fa="سؤال و جواب" data-en="Questions and answers">سؤال و جواب</option>
+        <option value="mixed" data-fa="ترکیبی" data-en="Mixed">ترکیبی</option>
+      </select>
+      <label for="accResponse" data-fa="سبک پاسخ معلم" data-en="Teacher's style">سبک پاسخ معلم</label>
+      <select id="accResponse">
+        <option value="" data-fa="انتخاب نشده" data-en="Not chosen">انتخاب نشده</option>
+        <option value="gentle" data-fa="ملایم" data-en="Gentle">ملایم</option>
+        <option value="direct" data-fa="مستقیم" data-en="Direct">مستقیم</option>
+        <option value="playful" data-fa="بازیگوش" data-en="Playful">بازیگوش</option>
+        <option value="strict" data-fa="سخت‌گیر" data-en="Strict">سخت‌گیر</option>
+      </select>
+      <label for="accSample" data-fa="یک جمله‌ی انگلیسی خودتان (اختیاری)" data-en="One English sentence from you (optional)">یک جمله‌ی انگلیسی خودتان (اختیاری)</label>
+      <textarea id="accSample" rows="2" maxlength="1000" class="ltr-field"></textarea>
+      <label for="accFree" data-fa="هر چیز دیگری که معلم باید بداند" data-en="Anything else the teacher should know">هر چیز دیگری که معلم باید بداند</label>
+      <textarea id="accFree" rows="3" maxlength="1000"></textarea>
+    </div>
     <p class="error" id="accInfoError" hidden></p>
     <p class="ok-msg" id="accInfoOk" hidden></p>
     <div class="dialog-actions">
@@ -93,4 +127,16 @@
       <button type="submit" data-fa="ذخیره‌ی رمز تازه" data-en="Save new password">ذخیره‌ی رمز تازه</button>
     </div>
   </form>
+</dialog>
+
+<!-- Sign-out asks first. The thank-you line is always shown; the question text is set by common.js. -->
+<dialog id="accSignOutDialog" class="account-dialog" aria-labelledby="signOutTitle">
+  <h2 id="signOutTitle" data-fa="خروج از حساب" data-en="Sign out">خروج از حساب</h2>
+  <p data-fa="ممنون که از سایت ما استفاده می‌کنید." data-en="Thank you for using our site.">ممنون که از سایت ما استفاده می‌کنید.</p>
+  <p id="accSignOutQuestion"></p>
+  <p class="error" id="accSignOutError" hidden></p>
+  <div class="dialog-actions">
+    <button type="button" class="ghost" data-close data-fa="انصراف" data-en="Cancel">انصراف</button>
+    <button type="button" id="accSignOutConfirm" data-fa="بله، خارج شو" data-en="Yes, sign out">بله، خارج شو</button>
+  </div>
 </dialog>

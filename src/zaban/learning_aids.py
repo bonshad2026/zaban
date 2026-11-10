@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session as DBSession
 
 from zaban.db import get_db
@@ -232,7 +233,39 @@ def _progress_out(db: DBSession, student: Student) -> dict:
 @router.get("/details")
 def read_details(zaban_student: str | None = Cookie(default=None), db: DBSession = Depends(get_db)) -> dict:
     student = _student_from_cookie(db, zaban_student)
-    return {"details": details_out(db.get(LearnerDetails, student.id)), "cefr_level": student.cefr_level}
+    from zaban.services.placement_test import skill_levels
+
+    return {"details": details_out(db.get(LearnerDetails, student.id)), "skill_levels": skill_levels(student)}
+
+
+class SkillLevelsUpdate(BaseModel):
+    # Each skill is optional. Only the skills that are sent change.
+    listening: str | None = Field(default=None, pattern=r"^(A1|A2|B1|B2|C1)$")
+    reading: str | None = Field(default=None, pattern=r"^(A1|A2|B1|B2|C1)$")
+    grammar: str | None = Field(default=None, pattern=r"^(A1|A2|B1|B2|C1)$")
+    speaking_writing: str | None = Field(default=None, pattern=r"^(A1|A2|B1|B2|C1)$")
+
+
+@router.put("/skill-levels")
+def set_skill_levels(
+    body: SkillLevelsUpdate,
+    zaban_student: str | None = Cookie(default=None),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    from zaban.services.placement_test import skill_levels
+
+    student = _student_from_cookie(db, zaban_student)
+    columns = {
+        "listening": "level_listening",
+        "reading": "level_reading",
+        "grammar": "level_grammar",
+        "speaking_writing": "level_speaking_writing",
+    }
+    for key, value in body.model_dump(exclude_unset=True).items():
+        if value is not None:
+            setattr(student, columns[key], value)
+    db.commit()
+    return {"skill_levels": skill_levels(student)}
 
 
 @router.put("/details")

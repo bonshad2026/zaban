@@ -129,6 +129,10 @@ const Lesson = (() => {
       bubble("assistant", reply.reply);
       if (reply.seconds_left !== null && reply.seconds_left !== undefined) setTimer(reply.seconds_left);
       await speak(reply.reply);
+      if (reply.closed) {
+        await endLesson(false, reply.notice);
+        return;
+      }
     } catch (err) {
       thinking.remove();
       note(err.message);
@@ -200,7 +204,7 @@ const Lesson = (() => {
     else if (S.phase === "your_turn") startRecording();
   }
 
-  async function endLesson(automatic) {
+  async function endLesson(automatic, customNote) {
     if (!S.sessionId || S.phase === "ended") return;
     if (S.recognizer) S.recognizer.abort();
     if (canSpeak) window.speechSynthesis.cancel();
@@ -212,7 +216,7 @@ const Lesson = (() => {
     } catch (_) { /* the lesson still closes on screen */ }
     setPhase("ended");
     $("timeLeft").textContent = "";
-    note(automatic ? Z.tr("زمان جلسه تمام شد. کار خوبی بود!") : Z.tr("جلسه تمام شد. آفرین!"));
+    note(customNote || (automatic ? Z.tr("زمان جلسه تمام شد. کار خوبی بود!") : Z.tr("جلسه تمام شد. آفرین!")));
     if (S.onEnded) S.onEnded();
   }
 

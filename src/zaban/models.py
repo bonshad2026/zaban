@@ -50,6 +50,13 @@ class Guardian(Base):
     locked_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     # The account can use the service until this time. Empty means no plan has been activated yet.
     plan_expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # When the current paid period began. A renewal before the old plan ends keeps this date.
+    plan_started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # The token allowance of the current plan, and how many tokens lessons have used so far.
+    plan_token_allowance: Mapped[int] = mapped_column(Integer, default=0)
+    # A suspended adult cannot sign in, and no page or lesson is open to them until the suspension is lifted.
+    suspended: Mapped[bool] = mapped_column(default=False)
+    plan_tokens_used: Mapped[int] = mapped_column(Integer, default=0)
     # What the adult says they want to learn at sign-up (free text, short).
     goal: Mapped[str | None] = mapped_column(String(60), nullable=True)
     # Bumped on logout-everywhere and password reset, so older sign-in cookies stop working.
@@ -88,6 +95,8 @@ class BillingPlan(Base):
     description: Mapped[str] = mapped_column(Text, default="")
     price_toman: Mapped[int] = mapped_column(Integer)
     days: Mapped[int] = mapped_column(Integer)
+    # How many tokens (input and output together) the plan allows before it is used up.
+    token_allowance: Mapped[int] = mapped_column(Integer, default=1_000_000)
     active: Mapped[bool] = mapped_column(default=True)
 
 
@@ -102,6 +111,8 @@ class Payment(Base):
     status: Mapped[str] = mapped_column(String(20), default="pending")  # pending, confirmed, failed
     gateway: Mapped[str] = mapped_column(String(20), default="fake")
     gateway_ref: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    # Why the payment failed, in words the buyer can read. Empty when it did not fail.
+    failure_reason: Mapped[str] = mapped_column(String(200), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     confirmed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
@@ -137,6 +148,11 @@ class Student(Base):
     self_owner_id: Mapped[str | None] = mapped_column(ForeignKey("guardians.id"), index=True, nullable=True)
     age_band: Mapped[str] = mapped_column(String(20))
     cefr_level: Mapped[str | None] = mapped_column(String(4), nullable=True)
+    # One level per skill. Each starts at A1 and is changed by the learner or by the level test of that skill.
+    level_listening: Mapped[str] = mapped_column(String(4), default="A1")
+    level_reading: Mapped[str] = mapped_column(String(4), default="A1")
+    level_grammar: Mapped[str] = mapped_column(String(4), default="A1")
+    level_speaking_writing: Mapped[str] = mapped_column(String(4), default="A1")
     # PIN login protection: after repeated wrong PINs the login is paused for a while.
     failed_logins: Mapped[int] = mapped_column(Integer, default=0)
     locked_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -456,3 +472,48 @@ class LearnerDetails(Base):
     level_sample: Mapped[str] = mapped_column(Text, default="")  # a sample of the learner's English or a level code
     free_text: Mapped[str] = mapped_column(Text, default="")  # anything else the learner wants Niko to know
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class WebSession(Base):
+    # One row per sign-in on a device. The cookie carries its id, so an administrator can end a single sign-in.
+    __tablename__ = "web_sessions"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    tenant_id: Mapped[str] = mapped_column(ForeignKey("tenants.id"), index=True)
+    # "guardian" for an adult, "student" for a learner profile.
+    role: Mapped[str] = mapped_column(String(10))
+    subject_id: Mapped[str] = mapped_column(String(32), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    user_agent: Mapped[str] = mapped_column(String(200), default="")
+    ip: Mapped[str] = mapped_column(String(64), default="")
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class PlacementQuestion(Base):
+    # One question of the level test. The bank is kept in the database and edited by the administrator.
+    __tablename__ = "placement_questions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    skill: Mapped[str] = mapped_column(String(20), index=True)  # reading, grammar, listening
+    level: Mapped[str] = mapped_column(String(4), index=True)  # A1 to C1
+    text: Mapped[str] = mapped_column(Text)
+    options: Mapped[str] = mapped_column(Text)  # JSON list of choices
+    answer: Mapped[int] = mapped_column(Integer)  # index of the correct choice
+    audio_text: Mapped[str] = mapped_column(Text, default="")  # read aloud in the browser for listening items
+    active: Mapped[bool] = mapped_column(default=True)
+
+
+class PlacementAttempt(Base):
+    # One sitting of one skill. It can be left and continued later, because the answers are stored as they are given.
+    __tablename__ = "placement_attempts"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    student_id: Mapped[str] = mapped_column(ForeignKey("students.id"), index=True)
+    skill: Mapped[str] = mapped_column(String(20))
+    status: Mapped[str] = mapped_column(String(20), default="in_progress")  # in_progress, done, skipped
+    level_index: Mapped[int] = mapped_column(Integer, default=0)
+    answers: Mapped[str] = mapped_column(Text, default="[]")  # JSON list of answers given so far
+    result_level: Mapped[str | None] = mapped_column(String(4), nullable=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+

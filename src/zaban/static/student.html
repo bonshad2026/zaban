@@ -3,28 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ورود دانش‌آموز | گفتاریار</title>
+  <title>آموزش من | گفتاریار</title>
   <link rel="stylesheet" href="/static/css/app.css?v=4">
 </head>
 <body>
   <!--site-header-->
-  <!-- Sign-in view -->
-  <section id="loginView" class="hero" hidden>
-    <div class="auth-wrap">
-      <form id="loginForm" class="auth-card" autocomplete="on">
-        <h1 data-fa="ورود دانش‌آموز" data-en="Learner sign in">ورود دانش‌آموز</h1>
-        <label for="studentUsername" data-fa="نام کاربری" data-en="Username">نام کاربری</label>
-        <input id="studentUsername" name="username" class="ltr-field" autocomplete="username" required autofocus>
-        <label for="studentPassword" data-fa="PIN ورود (۴ تا ۶ رقم)" data-en="Sign-in PIN (4 to 6 digits)">PIN ورود (۴ تا ۶ رقم)</label>
-        <input id="studentPassword" name="password" type="password" inputmode="numeric" class="ltr-field" autocomplete="new-password" pattern="\d{4,6}" required>
-        <p></p>
-        <button type="submit" class="wide" data-fa="ورود" data-en="Sign in">ورود</button>
-        <p class="error" id="loginError" hidden></p>
-        <p class="muted">والد یا بزرگسال هستید؟ <a href="/parent" data-fa="از اینجا وارد شوید" data-en="Sign in here">از اینجا وارد شوید</a></p>
-      </form>
-    </div>
-  </section>
-
   <!-- App view -->
   <div id="appView" hidden>
 
@@ -33,7 +16,6 @@
       <button class="tab" type="button" data-tab="accent">لهجه</button>
       <button class="tab" type="button" data-tab="report">گزارش من</button>
       <button class="tab" type="button" data-tab="progress">پیشرفت</button>
-      <button class="tab" type="button" data-tab="profile">اطلاعات من</button>
       <button class="tab" type="button" data-tab="help">کمک‌آموزشی</button>
       <button class="tab" type="button" data-tab="test">خودت رو محک بزن</button>
       <button class="tab" type="button" data-tab="payments">پرداخت‌ها</button>
@@ -125,65 +107,6 @@
 
       <section id="tab-report" hidden>
         <div class="card" id="reportBox"></div>
-      </section>
-
-      <section id="tab-profile" class="tool-section" hidden>
-        <div class="card">
-          <h2>اطلاعات من</h2>
-          <p class="muted">این اطلاعات به معلم کمک می‌کند جلسه را برای شما شخصی‌سازی کند. هر وقت بخواهید می‌توانید آن‌ها را تغییر دهید.</p>
-          <p class="notice" id="profileNotice" hidden></p>
-          <label for="pfLevel">سطح انگلیسی من</label>
-          <div class="row">
-            <select id="pfLevel">
-              <option value="">هنوز نمی‌دانم</option>
-              <option value="A1">A1 (تازه شروع کرده‌ام)</option>
-              <option value="A2">A2 (کلمات ساده را می‌فهمم)</option>
-              <option value="B1">B1 (درباره‌ی زندگی‌ام حرف می‌زنم)</option>
-              <option value="B2">B2 (با اعتماد به نفس حرف می‌زنم)</option>
-              <option value="C1">C1 (خیلی مسلط)</option>
-              <option value="C2">C2 (تقریباً مثل بومی‌ها)</option>
-            </select>
-            <button type="button" id="pfLevelSave" class="ghost">ذخیره‌ی سطح</button>
-          </div>
-          <form id="profileForm">
-            <label for="pfAge">سن</label>
-            <input id="pfAge" type="number" min="3" max="99" class="ltr-field">
-            <label for="pfGender">جنسیت</label>
-            <select id="pfGender">
-              <option value="">انتخاب نشده</option>
-              <option value="female">دختر / زن</option>
-              <option value="male">پسر / مرد</option>
-              <option value="other">دیگر</option>
-            </select>
-            <label for="pfGrade">مقطع تحصیلی</label>
-            <input id="pfGrade" maxlength="40" placeholder="مثلاً پنجم دبستان">
-            <label for="pfAttributes">دوست دارم معلمم چطور باشد</label>
-            <textarea id="pfAttributes" rows="2" maxlength="1000" placeholder="مثلاً مهربان، با شوخی، صبور"></textarea>
-            <label for="pfConversation">دوست دارم چطور حرف بزنیم</label>
-            <select id="pfConversation">
-              <option value="">انتخاب نشده</option>
-              <option value="chat">گفتگوی آزاد</option>
-              <option value="story">داستان ساختن با هم</option>
-              <option value="role_play">نقش‌بازی</option>
-              <option value="quiz">سؤال و جواب</option>
-              <option value="mixed">ترکیبی</option>
-            </select>
-            <label for="pfResponse">سبک پاسخ معلم</label>
-            <select id="pfResponse">
-              <option value="">انتخاب نشده</option>
-              <option value="gentle">ملایم</option>
-              <option value="direct">مستقیم</option>
-              <option value="playful">بازیگوش</option>
-              <option value="strict">سخت‌گیر</option>
-            </select>
-            <label for="pfSample">یک جمله‌ی انگلیسی خودتان (اختیاری)</label>
-            <textarea id="pfSample" rows="2" maxlength="1000" class="ltr-field"></textarea>
-            <label for="pfFree">هر چیز دیگری که معلم باید بداند</label>
-            <textarea id="pfFree" rows="3" maxlength="1000"></textarea>
-            <p><button type="submit">ذخیره‌ی اطلاعات</button></p>
-            <p class="error" id="profileError" hidden></p>
-          </form>
-        </div>
       </section>
 
       <section id="tab-progress" class="tool-section" hidden>

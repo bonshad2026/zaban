@@ -4,12 +4,11 @@ import os
 import zipfile
 
 from zaban.db import SessionLocal
-from zaban.models import LearnerDetails, Student, StudentProgress
+from zaban.models import Guardian, LearnerDetails, Student, StudentProgress
 from zaban.services.sessions import build_system_prompt
+from helpers_learner import learner_login, self_student
 
 ADMIN_PASSWORD = os.environ["ADMIN_PASSWORD"]
-STUDENT_USERNAME = os.environ["ZABAN_DEMO_STUDENT_USERNAME"]
-STUDENT_PASSWORD = os.environ["ZABAN_DEMO_STUDENT_PASSWORD"]
 PARENT_PHONE = os.environ["ZABAN_DEMO_PARENT_PHONE"]
 PARENT_PASSWORD = os.environ["ZABAN_DEMO_PARENT_PASSWORD"]
 API_KEY = os.environ["ZABAN_DEMO_API_KEY"]
@@ -20,10 +19,9 @@ def _admin(client) -> None:
 
 
 def _student(client) -> str:
-    body = {"username": STUDENT_USERNAME, "password": STUDENT_PASSWORD}
-    assert client.post("/v1/web/student/login", json=body).status_code == 200
+    learner_login(client)
     with SessionLocal() as db:
-        return db.query(Student).filter(Student.username == STUDENT_USERNAME).one().id
+        return self_student(db).id
 
 
 def _parent(client) -> None:
@@ -33,22 +31,23 @@ def _parent(client) -> None:
 
 # ----- Pages -----
 
-def test_landing_offers_learner_sign_in_from_header(client):
+def test_landing_offers_one_sign_in_from_header(client):
     html = client.get("/").text
-    # The sign-in menu in the header links to the learner page. The admin page is not linked publicly.
-    assert 'href="/student"' in html
+    # One sign-in for adults. The admin page is not linked publicly.
+    assert 'href="/parent"' in html
+    assert 'href="/student"' not in html
 
 
 def test_student_page_has_the_learner_tools(client):
     html = client.get("/student").text
-    for section in ("tab-profile", "tab-progress", "tab-help", "tab-test", "tab-payments"):
+    for section in ("tab-progress", "tab-help", "tab-test", "tab-payments"):
         assert f'id="{section}"' in html
     assert "student-tools.js" in html
 
 
-def test_parent_page_has_the_child_details_card(client):
+def test_parent_page_has_no_child_tools(client):
     html = client.get("/parent").text
-    assert 'id="cdForm"' in html and "parent-tools.js" in html
+    assert 'id="cdForm"' not in html and 'id="addForm"' not in html and "parent-tools.js" not in html
 
 
 def test_admin_page_has_the_new_tabs(client):
@@ -58,7 +57,7 @@ def test_admin_page_has_the_new_tabs(client):
 
 
 def test_static_scripts_are_served(client):
-    for path in ("/static/js/student-tools.js", "/static/js/parent-tools.js", "/static/js/cooperation.js"):
+    for path in ("/static/js/student-tools.js", "/static/js/cooperation.js"):
         assert client.get(path).status_code == 200
 
 
@@ -95,7 +94,7 @@ def test_learner_sets_their_own_level(client):
 
 def test_prompt_modes_choose_the_sources(client):
     with SessionLocal() as db:
-        student = db.query(Student).filter(Student.username == STUDENT_USERNAME).one()
+        student = self_student(db)
         db.expunge(student)
     details = LearnerDetails(student_id=student.id, free_text="FOOTBALL_TOKEN")
     kwargs = {"details": details, "global_prompt": "GENERAL_TOKEN", "course_note": "COURSE_TOKEN", "past_notes": "PAST_TOKEN"}
@@ -111,7 +110,7 @@ def test_prompt_modes_choose_the_sources(client):
 
 def test_prompt_contains_the_seventy_percent_rule(client):
     with SessionLocal() as db:
-        student = db.query(Student).filter(Student.username == STUDENT_USERNAME).one()
+        student = self_student(db)
         db.expunge(student)
     assert "70 percent" in build_system_prompt(student, None, "main_practice", 10)
 
@@ -131,7 +130,6 @@ def test_admin_reads_a_learner_detail(client):
     student_id = _student(client)
     _admin(client)
     detail = client.get(f"/v1/admin/api/learners/{student_id}").json()
-    assert detail["username"] == STUDENT_USERNAME
     assert "progress" in detail and "self_tests" in detail
 
 
@@ -300,6 +298,14 @@ class _FakeResponse:
 def _parent_payment(client, monkeypatch, sent: list):
     from zaban.services import payments as payments_module
 
+    # The demo adult already has an active plan, so it has to use up its tokens before it can buy again.
+    # The tokens are restored once the purchase has been requested, so the other tests keep their demo plan.
+    with SessionLocal() as db:
+        guardian = db.query(Guardian).filter(Guardian.phone == PARENT_PHONE).one()
+        spent_before = guardian.plan_tokens_used
+        guardian.plan_tokens_used = guardian.plan_token_allowance
+        db.commit()
+
     import dataclasses
 
     test_settings = dataclasses.replace(payments_module.settings, zarinpal_merchant_id="merchant-test-id",
@@ -315,7 +321,12 @@ def _parent_payment(client, monkeypatch, sent: list):
     monkeypatch.setattr(payments_module.httpx, "post", fake_post)
     _parent(client)
     plan_id = client.get("/v1/web/billing/plans").json()[0]["id"]
-    return client.post("/v1/web/billing/checkout", json={"plan_id": plan_id})
+    response = client.post("/v1/web/billing/checkout", json={"plan_id": plan_id})
+    with SessionLocal() as db:
+        guardian = db.query(Guardian).filter(Guardian.phone == PARENT_PHONE).one()
+        guardian.plan_tokens_used = spent_before
+        db.commit()
+    return response
 
 
 def test_zarinpal_checkout_sends_the_amount_in_rials_and_a_callback(client, monkeypatch):
@@ -351,7 +362,7 @@ def test_zarinpal_callback_marks_paid_only_after_verification(client, monkeypatc
                         follow_redirects=False)
         assert ok.status_code == 303 and "payment=paid" in ok.headers["location"]
         with SessionLocal() as db:
-            assert db.get(Payment, payment_id).status == "paid"
+            assert db.get(Payment, payment_id).status == "confirmed"
         # A wrong authority, or a cancelled payment, never reaches ZarinPal and is never marked paid.
         bad = client.get(f"/v1/web/billing/zarinpal/callback?payment_id={payment_id}&Authority=WRONG&Status=OK",
                          follow_redirects=False)

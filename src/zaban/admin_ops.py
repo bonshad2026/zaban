@@ -1,6 +1,7 @@
 import re
 import shutil
 import tempfile
+from datetime import timedelta
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -16,6 +17,8 @@ from zaban.db import get_db
 from zaban.learning_aids import _progress_out
 from zaban.models import (
     ConsultRequest,
+    PlacementQuestion,
+    WebSession,
     CooperationRequest,
     Guardian,
     LearnerDetails,
@@ -26,6 +29,7 @@ from zaban.models import (
     Tenant,
     TutorSession,
     Usage,
+    utcnow,
 )
 from zaban.services.evaluation import past_evaluations
 from zaban.services.export import build
@@ -36,9 +40,15 @@ from zaban.services.settings_store import (
     PROMPT_MODE_DEFAULT,
     PROMPT_MODE_KEY,
     MODE_LABELS,
+    SMS_API_KEY_KEY,
+    SMS_PROVIDER_KEY,
+    SMS_TEMPLATE_KEY,
+    ZARINPAL_MERCHANT_KEY,
     get_setting,
     set_setting,
 )
+from zaban.services.prompt_template import DEFAULT_TEMPLATE, PLACEHOLDERS, get_template, learner_values, render, save_template
+from zaban.services.sms import sms_provider_for
 from zaban.services.payments import has_active_plan
 
 # Everything the operator panel needs that is not part of the lesson itself.
@@ -111,6 +121,55 @@ def save_settings(body: SettingsUpdate, db: DBSession = Depends(get_db)) -> dict
     return {"ok": True}
 
 
+def _mask(value: str) -> str:
+    # Only the last four characters are shown, so the administrator can tell which key is stored.
+    return f"••••{value[-4:]}" if len(value) > 4 else ("••••" if value else "")
+
+
+@router.get("/connections")
+def read_connections(db: DBSession = Depends(get_db)) -> dict:
+    # Keys are returned masked. The panel never sends a full key back to the browser.
+    sms_key = get_setting(db, SMS_API_KEY_KEY) or settings.kavenegar_api_key or ""
+    merchant = get_setting(db, ZARINPAL_MERCHANT_KEY) or settings.zarinpal_merchant_id or ""
+    return {
+        "sms_provider": sms_provider_for(db),
+        "sms_api_key_masked": _mask(sms_key),
+        "sms_api_key_set": bool(sms_key),
+        "sms_otp_template": get_setting(db, SMS_TEMPLATE_KEY, settings.kavenegar_otp_template or ""),
+        "payment_provider": get_setting(db, PAYMENT_PROVIDER_KEY, settings.payment_gateway),
+        "zarinpal_merchant_masked": _mask(merchant),
+        "zarinpal_merchant_set": bool(merchant),
+        "callback_url": f"{settings.public_base_url}/v1/web/billing/zarinpal/callback",
+    }
+
+
+class ConnectionsUpdate(BaseModel):
+    # None means "leave as it is". An empty string clears a value, so the environment value applies again.
+    sms_provider: str | None = Field(default=None, pattern=r"^(kavenegar|dev)$")
+    sms_api_key: str | None = Field(default=None, max_length=200)
+    sms_otp_template: str | None = Field(default=None, max_length=60)
+    payment_provider: str | None = Field(default=None, pattern=r"^(fake|zarinpal)$")
+    zarinpal_merchant_id: str | None = Field(default=None, max_length=100)
+
+
+@router.post("/connections")
+def save_connections(body: ConnectionsUpdate, db: DBSession = Depends(get_db)) -> dict:
+    if body.sms_provider == "dev" and settings.environment == "production":
+        raise HTTPException(status_code=400, detail="The development SMS sender cannot be used in production")
+    if body.sms_provider is not None:
+        set_setting(db, SMS_PROVIDER_KEY, body.sms_provider)
+    if body.sms_api_key is not None and body.sms_api_key.strip():
+        set_setting(db, SMS_API_KEY_KEY, body.sms_api_key.strip())
+    if body.sms_otp_template is not None:
+        set_setting(db, SMS_TEMPLATE_KEY, body.sms_otp_template.strip())
+    if body.payment_provider is not None:
+        set_setting(db, PAYMENT_PROVIDER_KEY, body.payment_provider)
+    if body.zarinpal_merchant_id is not None and body.zarinpal_merchant_id.strip():
+        set_setting(db, ZARINPAL_MERCHANT_KEY, body.zarinpal_merchant_id.strip())
+    db.commit()
+    return {"ok": True}
+
+
 @router.get("/learners/{student_id}")
 def learner_detail(student_id: str, db: DBSession = Depends(get_db)) -> dict:
     student = db.get(Student, student_id)
@@ -164,3 +223,141 @@ def set_program_duration(program_id: str, body: ProgramDuration, db: DBSession =
     program.version += 1
     db.commit()
     return {"ok": True, "version": program.version}
+
+
+@router.get("/sessions")
+def active_sessions(db: DBSession = Depends(get_db)) -> list[dict]:
+    # Sign-ins that are still valid, grouped by the person. Each person has one entry with the list of their sign-ins.
+    cutoff = utcnow() - timedelta(seconds=settings.web_session_ttl_seconds)
+    rows = (
+        db.query(WebSession)
+        .filter(WebSession.revoked_at.is_(None), WebSession.created_at >= cutoff)
+        .order_by(WebSession.created_at.desc())
+        .limit(2000)
+        .all()
+    )
+    groups: dict[tuple[str, str], dict] = {}
+    for row in rows:
+        key = (row.role, row.subject_id)
+        if key not in groups:
+            if row.role == "guardian":
+                person = db.get(Guardian, row.subject_id)
+                name, contact = (person.full_name, person.phone) if person else ("", "")
+            else:
+                person = db.get(Student, row.subject_id)
+                name, contact = (person.display_name, "پروفایل یادگیری خود بزرگسال") if person else ("", "")
+            groups[key] = {"role": row.role, "subject_id": row.subject_id, "name": name, "contact": contact, "sessions": []}
+        groups[key]["sessions"].append(
+            {"id": row.id, "started_at": row.created_at.isoformat(), "user_agent": row.user_agent, "ip": row.ip}
+        )
+    return list(groups.values())
+
+
+class SessionRevoke(BaseModel):
+    ids: list[str] = Field(min_length=1, max_length=500)
+
+
+@router.post("/sessions/revoke")
+def revoke_sessions(body: SessionRevoke, db: DBSession = Depends(get_db)) -> dict:
+    # Ends the chosen sign-ins. Those devices must sign in again.
+    count = (
+        db.query(WebSession)
+        .filter(WebSession.id.in_(body.ids), WebSession.revoked_at.is_(None))
+        .update({"revoked_at": utcnow()}, synchronize_session=False)
+    )
+    db.commit()
+    return {"revoked": count}
+
+
+@router.get("/prompt-template")
+def read_prompt_template(db: DBSession = Depends(get_db)) -> dict:
+    return {
+        "template": get_template(db),
+        "default_template": DEFAULT_TEMPLATE,
+        "placeholders": [{"key": key, "label": label} for key, label in PLACEHOLDERS],
+    }
+
+
+class PromptTemplateUpdate(BaseModel):
+    template: str = Field(min_length=1, max_length=8000)
+
+
+@router.post("/prompt-template")
+def write_prompt_template(body: PromptTemplateUpdate, db: DBSession = Depends(get_db)) -> dict:
+    save_template(db, body.template)
+    return {"ok": True}
+
+
+class PromptGenerate(BaseModel):
+    student_id: str = Field(min_length=1, max_length=32)
+
+
+@router.post("/prompt/generate")
+def generate_prompt(body: PromptGenerate, db: DBSession = Depends(get_db)) -> dict:
+    # The template is filled with stored values only. Placeholders that have no value are returned, so the administrator can fix them.
+    student = db.get(Student, body.student_id)
+    if student is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    text, unknown = render(get_template(db), learner_values(db, student))
+    return {"prompt": text, "unknown_placeholders": unknown}
+
+
+class PlacementQuestionIn(BaseModel):
+    skill: str = Field(pattern=r"^(reading|grammar|listening)$")
+    level: str = Field(pattern=r"^(A1|A2|B1|B2|C1)$")
+    text: str = Field(min_length=1, max_length=1000)
+    options: list[str] = Field(min_length=2, max_length=6)
+    answer: int = Field(ge=0, le=5)
+    audio_text: str = Field(default="", max_length=1000)
+    active: bool = True
+
+
+def _question_out(q: PlacementQuestion) -> dict:
+    import json as _json
+
+    return {
+        "id": q.id,
+        "skill": q.skill,
+        "level": q.level,
+        "text": q.text,
+        "options": _json.loads(q.options),
+        "answer": q.answer,
+        "audio_text": q.audio_text or "",
+        "active": bool(q.active),
+    }
+
+
+@router.get("/placement-questions")
+def list_placement_questions(db: DBSession = Depends(get_db)) -> list[dict]:
+    rows = db.query(PlacementQuestion).order_by(PlacementQuestion.skill, PlacementQuestion.level, PlacementQuestion.id).all()
+    return [_question_out(q) for q in rows]
+
+
+@router.post("/placement-questions", status_code=201)
+def add_placement_question(body: PlacementQuestionIn, db: DBSession = Depends(get_db)) -> dict:
+    import json as _json
+
+    if body.answer >= len(body.options):
+        raise HTTPException(status_code=400, detail="The correct answer must be one of the options")
+    q = PlacementQuestion(skill=body.skill, level=body.level, text=body.text.strip(), options=_json.dumps(body.options),
+                          answer=body.answer, audio_text=body.audio_text.strip(), active=body.active)
+    db.add(q)
+    db.commit()
+    return _question_out(q)
+
+
+@router.post("/placement-questions/{question_id}")
+def update_placement_question(question_id: int, body: PlacementQuestionIn, db: DBSession = Depends(get_db)) -> dict:
+    import json as _json
+
+    q = db.get(PlacementQuestion, question_id)
+    if q is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    if body.answer >= len(body.options):
+        raise HTTPException(status_code=400, detail="The correct answer must be one of the options")
+    q.skill, q.level, q.text = body.skill, body.level, body.text.strip()
+    q.options, q.answer = _json.dumps(body.options), body.answer
+    q.audio_text, q.active = body.audio_text.strip(), body.active
+    db.commit()
+    return _question_out(q)
+

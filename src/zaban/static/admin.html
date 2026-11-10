@@ -34,13 +34,16 @@
   <!-- Console -->
   <div id="adminApp" hidden>
     <main class="wrap">
-      <p class="page-actions"><button id="adminLogout" class="ghost" type="button">خروج</button></p>
       <nav class="admin-tabs" aria-label="بخش‌های مدیریت">
         <button type="button" class="tab" data-tab="consults">درخواست‌های مشاوره</button>
         <button type="button" class="tab" data-tab="overview">نمای کلی</button>
         <button type="button" class="tab" data-tab="cooperations">درخواست‌های همکاری</button>
         <button type="button" class="tab" data-tab="helpcontent">محتوای کمک‌آموزشی</button>
         <button type="button" class="tab" data-tab="settings">پرامپت و درگاه</button>
+        <button type="button" class="tab" data-tab="connections">پیامک و درگاه</button>
+        <button type="button" class="tab" data-tab="sessions">نشست‌های فعال</button>
+        <button type="button" class="tab" data-tab="promptgen">تولید پرامپت</button>
+        <button type="button" class="tab" data-tab="placementbank">بانک آزمون سطح</button>
         <button type="button" class="tab" data-tab="build">خروجی Build</button>
         <button type="button" class="tab" data-tab="adults">ثبت‌نام‌ها</button>
         <button type="button" class="tab" data-tab="payments">پرداخت‌ها</button>
@@ -145,6 +148,90 @@
         <p><button type="button" id="stPromptSave">ذخیره‌ی پرامپت آزمون</button></p>
       </section>
 
+      <section class="card" id="tab-connections" hidden>
+        <h2>پیامک و درگاه پرداخت</h2>
+        <p class="notice" id="connNotice" hidden></p>
+        <h3>پنل پیامک</h3>
+        <label for="connSmsProvider">سرویس ارسال پیامک</label>
+        <select id="connSmsProvider">
+          <option value="kavenegar">کاوه‌نگار</option>
+          <option value="dev">حالت آزمایشی (فقط توسعه)</option>
+        </select>
+        <label for="connSmsKey">کلید API کاوه‌نگار</label>
+        <p class="muted" id="connSmsKeyHint"></p>
+        <input id="connSmsKey" type="password" class="ltr-field" autocomplete="off" placeholder="برای تغییر، کلید تازه را وارد کنید">
+        <label for="connSmsTemplate">نام الگوی پیامک کد ورود</label>
+        <input id="connSmsTemplate" class="ltr-field" maxlength="60">
+        <h3>درگاه پرداخت</h3>
+        <label for="connPayProvider">درگاه</label>
+        <select id="connPayProvider">
+          <option value="fake">حالت آزمایشی (فقط توسعه)</option>
+          <option value="zarinpal">زرین‌پال</option>
+        </select>
+        <label for="connMerchant">کد پذیرنده‌ی زرین‌پال</label>
+        <p class="muted" id="connMerchantHint"></p>
+        <input id="connMerchant" type="password" class="ltr-field" autocomplete="off" placeholder="برای تغییر، کد تازه را وارد کنید">
+        <label>آدرس بازگشت برای ثبت در زرین‌پال</label>
+        <p class="ltr-field" id="connCallback"></p>
+        <p><button type="button" id="connSave">ذخیره‌ی اتصال‌ها</button></p>
+      </section>
+
+      <section class="card" id="tab-sessions" hidden>
+        <h2>نشست‌های فعال</h2>
+        <p class="muted">هر کاربر یک ردیف است. با باز کردن ردیف، نشست‌های دستگاه‌های او دیده می‌شود. می‌توانید یک نشست، چند نشست یا همه را انتخاب و ببندید.</p>
+        <p class="notice" id="sesNotice" hidden></p>
+        <div class="session-toolbar">
+          <label class="inline"><input type="checkbox" id="sesAll"> انتخاب همه</label>
+          <span class="muted" id="sesCount"></span>
+          <button type="button" id="sesRevoke" class="danger" disabled>بستن نشست‌های انتخاب‌شده</button>
+        </div>
+        <div id="sesList"></div>
+      </section>
+
+      <section class="card" id="tab-promptgen" hidden>
+        <h2>تولید پرامپت</h2>
+        <p class="muted">قالب را یک بار بنویسید. هر جا که نوشته‌ی {{کلید}} باشد، با مقدار ذخیره‌شده جایگزین می‌شود. ساخت پرامپت از هوش مصنوعی نیست؛ همان قالب و همان دانش‌آموز همیشه یک متن می‌دهد.</p>
+        <p class="notice" id="genNotice" hidden></p>
+        <h3>قالب</h3>
+        <label for="genTemplate">متن قالب</label>
+        <textarea id="genTemplate" rows="16" maxlength="8000" class="ltr-field"></textarea>
+        <p><button type="button" id="genTemplateSave">ذخیره‌ی قالب</button> <button type="button" id="genTemplateReset" class="ghost">برگشت به قالب پیش‌فرض</button></p>
+        <details class="placeholder-help">
+          <summary>کلیدهای قابل استفاده</summary>
+          <ul id="genPlaceholders" class="plain"></ul>
+        </details>
+        <h3>ساخت پرامپت برای یک دانش‌آموز</h3>
+        <label for="genLearner">دانش‌آموز</label>
+        <select id="genLearner"></select>
+        <p><button type="button" id="genRun">تولید پرامپت</button></p>
+        <p class="error" id="genError" hidden></p>
+        <p class="notice" id="genUnknown" hidden></p>
+        <label for="genOutput">پرامپت تولیدی</label>
+        <textarea id="genOutput" rows="18" readonly></textarea>
+        <p><button type="button" id="genCopy" class="ghost">کپی پرامپت</button></p>
+      </section>
+
+      <section class="card" id="tab-placementbank" hidden>
+        <h2>بانک سؤال تعیین سطح</h2>
+        <p class="muted">هر سؤال یک مهارت و یک سطح دارد. گزینه‌ها را هر کدام در یک خط بنویسید. شمارهٔ گزینهٔ درست از صفر شروع می‌شود. برای شنیداری، متن جمله‌ای که باید خوانده شود را در «متن صوتی» بنویسید؛ مرورگر آن را پخش می‌کند.</p>
+        <p class="notice" id="bankNotice" hidden></p>
+        <p class="error" id="bankError" hidden></p>
+        <div class="table-box"><table class="admin-table" id="bankTable"></table></div>
+        <h3 style="margin-top:20px" id="bankFormTitle">افزودن سؤال</h3>
+        <form id="bankForm" class="row">
+          <input type="hidden" id="bankId">
+          <div><label for="bankSkill">مهارت</label><select id="bankSkill"><option value="reading">خواندن</option><option value="grammar">دستور و واژگان</option><option value="listening">شنیداری</option></select></div>
+          <div><label for="bankLevel">سطح</label><select id="bankLevel"><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select></div>
+          <div class="full"><label for="bankText">متن سؤال</label><textarea id="bankText" rows="2" maxlength="1000" required></textarea></div>
+          <div class="full"><label for="bankOptions">گزینه‌ها (هر خط یک گزینه)</label><textarea id="bankOptions" rows="4" required class="ltr-field"></textarea></div>
+          <div><label for="bankAnswer">شمارهٔ گزینهٔ درست</label><input id="bankAnswer" type="number" min="0" max="5" required></div>
+          <div class="full"><label for="bankAudio">متن صوتی (فقط شنیداری)</label><textarea id="bankAudio" rows="2" maxlength="1000" class="ltr-field"></textarea></div>
+          <div><label class="inline"><input type="checkbox" id="bankActive" checked> فعال</label></div>
+          <button type="submit">ذخیره</button>
+          <button type="button" id="bankReset" class="ghost">سؤال جدید</button>
+        </form>
+      </section>
+
       <section class="card" id="tab-build" hidden>
         <h2>خروجی Build سایت</h2>
         <p class="muted">فایل زیپ شامل کد سایت، ردیف‌های دیتابیس، فایل‌های رسانه‌ای و فایل تغییرات ساختار دیتابیس است. کلیدهای عبور و کلیدهای API در آن نیستند.</p>
@@ -178,6 +265,19 @@
           <button type="submit">افزودن</button>
         </form>
         <p class="error" id="planError" hidden></p>
+        <h2 style="margin-top:20px">ویرایش پلن</h2>
+        <form id="planEditForm" class="row">
+          <div><label for="planEditSelect">پلن</label><select id="planEditSelect"></select></div>
+          <div><label for="planEditName">نام پلن</label><input id="planEditName" maxlength="80"></div>
+          <div><label for="planEditNameEn">نام انگلیسی</label><input id="planEditNameEn" maxlength="80" class="ltr-field"></div>
+          <div><label for="planEditPrice">قیمت (تومان)</label><input id="planEditPrice" type="number" min="0"></div>
+          <div><label for="planEditDays">مدت (روز)</label><input id="planEditDays" type="number" min="1" max="3650"></div>
+          <div><label for="planEditTokens">سقف توکن</label><input id="planEditTokens" type="number" min="1000"></div>
+          <div class="full"><label for="planEditDescription">توضیح پلن</label><textarea id="planEditDescription" rows="2" maxlength="300"></textarea></div>
+          <button type="submit">ذخیره‌ی تغییرات</button>
+        </form>
+        <p class="notice" id="planEditNotice" hidden></p>
+        <p class="error" id="planEditError" hidden></p>
       </section>
 
       <section class="card" id="tab-programs" hidden>

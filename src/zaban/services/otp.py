@@ -64,15 +64,15 @@ def request_code(db: DBSession, phone: str, ip: str | None) -> str:
     )
     db.commit()
     try:
-        get_sms_sender().send_otp(phone, code)
+        get_sms_sender(db).send_otp(phone, code)
     except RuntimeError:
         raise HTTPException(status_code=502, detail="The SMS could not be sent. Please try again")
     return code
 
 
-def development_code(code: str) -> str | None:
+def development_code(code: str, db: DBSession) -> str | None:
     # Development without an SMS provider: the code is shown on screen so sign-up can be tried. Never in production.
-    if settings.environment == "development" and isinstance(get_sms_sender(), DevSms):
+    if settings.environment == "development" and isinstance(get_sms_sender(db), DevSms):
         return code
     return None
 

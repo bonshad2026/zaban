@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>تعیین سطح | گفتاریار</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body data-bilingual>
+  <!--site-header-->
+  <main class="page-main">
+    <div class="page-wrap">
+      <div class="page-stack">
+        <h1 class="page-title accent-title" data-fa="تعیین سطح" data-en="Set level">تعیین سطح</h1>
+        <p class="error" id="levelError" hidden></p>
+        <p class="notice" id="levelNotice" hidden></p>
+
+        <section class="page-card">
+          <h2 data-fa="سطح هر مهارت" data-en="Level of each skill">سطح هر مهارت</h2>
+          <p class="muted" data-fa="هر مهارت سطح جدا دارد. اگر سطحتان را می‌دانید، آن را انتخاب و ذخیره کنید. وگرنه با آزمون همان مهارت سطحتان را تعیین کنید. اگر آزمون را رد کنید، سطح مقدماتی (A1) در نظر گرفته می‌شود."
+             data-en="Each skill has its own level. If you know your level, choose it and save. Otherwise take the test for that skill. If you skip a test, the beginner level (A1) is used.">هر مهارت سطح جدا دارد. اگر سطحتان را می‌دانید، آن را انتخاب و ذخیره کنید. وگرنه با آزمون همان مهارت سطحتان را تعیین کنید. اگر آزمون را رد کنید، سطح مقدماتی (A1) در نظر گرفته می‌شود.</p>
+          <div id="skillRows" class="skill-rows"></div>
+        </section>
+
+        <section class="page-card" id="testCard" hidden>
+          <h2 id="testTitle"></h2>
+          <p class="muted" id="testProgress"></p>
+          <p id="testText" class="test-text"></p>
+          <p><button type="button" id="testListen" class="ghost" hidden data-fa="پخش دوباره" data-en="Play again">پخش دوباره</button></p>
+          <div id="testOptions" class="test-options"></div>
+          <p><button type="button" id="testSkip" class="ghost" data-fa="رد کردن این بخش" data-en="Skip this part">رد کردن این بخش</button></p>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/level.js"></script>
+</body>
+</html>

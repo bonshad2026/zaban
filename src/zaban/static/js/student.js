@@ -2,9 +2,8 @@
   const $ = (id) => document.getElementById(id);
   let me = null;
 
-  function showView(name) {
-    Z.show($("loginView"), name === "login");
-    Z.show($("appView"), name === "app");
+  function showView() {
+    Z.show($("appView"), true);
   }
 
   function selectTab(name) {
@@ -98,7 +97,7 @@
   }
 
   async function enterApp() {
-    showView("app");
+    showView();
     showLevel();
     loadAccent();
     // Lessons need the plan of the adult who owns this profile. Without it, the learner is told why and cannot start.
@@ -297,26 +296,6 @@
     }
   }
 
-  async function login(event) {
-    event.preventDefault();
-    const form = event.target;
-    Z.showError($("loginError"), "");
-    try {
-      await Z.request("POST", "/v1/web/student/login", {
-        username: form.username.value,
-        password: form.password.value,
-      });
-      me = await Z.request("GET", "/v1/web/me?role=student");
-      form.password.value = "";
-      // The header was drawn as a guest before this sign-in, so draw it again now.
-      await Z.initSiteHeader();
-      await enterApp();
-    } catch (err) {
-      Z.showError($("loginError"), err.message);
-    }
-  }
-
-
   // The learner sees their level before a lesson. Without one, they can take a short check or ask a parent.
   async function showLevel() {
     try {
@@ -386,7 +365,6 @@
   async function boot() {
     Z.initLang();
     Lesson.init({ onEnded: () => { showLesson(false); } });
-    $("loginForm").addEventListener("submit", login);
     $("startBtn").addEventListener("click", startLesson);
     $("programShowAll").addEventListener("click", () => showFullProgram(true));
     $("programHideAll").addEventListener("click", () => showFullProgram(false));
@@ -399,11 +377,18 @@
     } catch (_) {
       me = null;
     }
-    if (me && me.role === "student") {
-      await enterApp();
-    } else {
-      showView("login");
+    if (!me || me.role !== "student") {
+      // An adult who has a plan learns for themself. Anyone else goes to sign-in.
+      try {
+        await Z.request("POST", "/v1/web/user/self");
+        me = await Z.request("GET", "/v1/web/me?role=student");
+      } catch (_) {
+        location.replace("/parent");
+        return;
+      }
     }
+    await Z.initSiteHeader();
+    await enterApp();
   }
 
   Z.pageRole.value = "student";

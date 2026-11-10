@@ -6,10 +6,9 @@ from pathlib import Path
 from zaban.db import SessionLocal
 from zaban.models import ConsultRequest, HelpContent, SelfTest, Student
 from zaban.services.curriculum import band_code
+from helpers_learner import learner_login, self_student
 
 ADMIN_PASSWORD = os.environ["ADMIN_PASSWORD"]
-STUDENT_USERNAME = os.environ["ZABAN_DEMO_STUDENT_USERNAME"]
-STUDENT_PASSWORD = os.environ["ZABAN_DEMO_STUDENT_PASSWORD"]
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 
@@ -17,14 +16,11 @@ def _admin(client) -> None:
     assert client.post("/v1/admin/api/login", json={"password": ADMIN_PASSWORD}).status_code == 200
 
 
-def _student_login(client) -> None:
-    body = {"username": STUDENT_USERNAME, "password": STUDENT_PASSWORD}
-    assert client.post("/v1/web/student/login", json=body).status_code == 200
 
 
 def _demo_student() -> Student:
     with SessionLocal() as db:
-        student = db.query(Student).filter(Student.username == STUDENT_USERNAME).one()
+        student = self_student(db)
         db.expunge(student)
         return student
 
@@ -78,7 +74,7 @@ def test_consult_status_accepts_the_new_call_states(client):
 def test_help_content_link_is_listed_for_matching_learner_only(client):
     _admin(client)
     assert client.post("/v1/admin/api/help-content", json=_content_for_demo_student()).status_code == 201
-    _student_login(client)
+    learner_login(client)
     titles = [item["title"] for item in client.get("/v1/web/student/help-content").json()]
     assert "Ten-minute story" in titles
 
@@ -87,7 +83,7 @@ def test_help_content_link_is_listed_for_matching_learner_only(client):
     _admin(client)
     other = _content_for_demo_student(age_band=other_band, title="Only for others")
     client.post("/v1/admin/api/help-content", json=other)
-    _student_login(client)
+    learner_login(client)
     titles = [item["title"] for item in client.get("/v1/web/student/help-content").json()]
     assert "Only for others" not in titles
 
@@ -97,7 +93,7 @@ def test_help_content_file_is_served_to_a_matching_learner(client):
     data = base64.b64encode(b"ID3fake-audio-bytes").decode()
     body = _content_for_demo_student(url=None, data_base64=data, mime="audio/mpeg", title="Podcast file")
     item_id = client.post("/v1/admin/api/help-content", json=body).json()["id"]
-    _student_login(client)
+    learner_login(client)
     response = client.get(f"/v1/web/student/help-content/{item_id}/file")
     assert response.status_code == 200
     assert response.content == b"ID3fake-audio-bytes"
@@ -123,7 +119,7 @@ def test_help_content_is_admin_only_and_can_be_deleted(client):
 
 
 def test_self_test_runs_offline_and_saves_an_evaluation(client):
-    _student_login(client)
+    learner_login(client)
     created = client.post("/v1/web/student/self-tests", json={"kind": "suggested", "skill": "speaking", "minutes": 5})
     assert created.status_code == 201
     test = created.json()
@@ -148,7 +144,7 @@ def test_self_test_prompt_is_editable_by_admin(client):
 
 
 def test_self_test_is_private_to_its_owner(client):
-    _student_login(client)
+    learner_login(client)
     created = client.post("/v1/web/student/self-tests", json={"kind": "qa", "skill": "mixed", "minutes": 5})
     test_id = created.json()["id"]
     assert client.get(f"/v1/web/student/self-tests/{test_id}").status_code == 200

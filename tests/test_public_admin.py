@@ -59,7 +59,7 @@ def test_admin_sees_consult_requests_and_updates_their_status(client):
     assert updated["status"] == "contacted"
 
 
-def test_admin_can_confirm_a_pending_payment_by_hand(client):
+def test_a_paid_plan_starts_at_once_and_the_admin_can_still_decide_a_pending_payment(client):
     phone = "09121230091"
     adult = TestClient(app)
     adult.post("/v1/web/user/otp/request", json={"phone": phone, "purpose": "signup"})
@@ -70,18 +70,14 @@ def test_admin_can_confirm_a_pending_payment_by_hand(client):
     )
     plans = adult.get("/v1/web/billing/plans").json()
     paid = adult.post("/v1/web/billing/checkout", json={"plan_id": plans[0]["id"]}).json()
-    # The buyer presses "pay" on the test gateway. That only marks the payment as paid.
+    # The gateway confirms the money, so the plan starts at once without an administrator.
     adult.post("/v1/web/billing/fake/confirm", json={"payment_id": paid["payment_id"], "ok": True})
-    assert adult.get("/v1/web/me?role=parent").json()["has_active_plan"] is False
-
-    admin = TestClient(app)
-    _admin(admin)
-    waiting = [p for p in admin.get("/v1/admin/api/payments").json() if p["id"] == paid["payment_id"]]
-    assert waiting, "a paid payment should be listed for the administrator"
-    decided = admin.post(f"/v1/admin/api/payments/{paid['payment_id']}/decision", json={"ok": True})
-    assert decided.json()["status"] == "confirmed"
     assert adult.get("/v1/web/me?role=parent").json()["has_active_plan"] is True
-    # The plan's days are added to the adult's plan period when the payment is confirmed.
+
+    # A payment that is still waiting for a decision can be settled by the administrator.
+    second = adult.post("/v1/web/billing/checkout", json={"plan_id": plans[0]["id"]})
+    assert second.status_code == 409
+
     with SessionLocal() as db:
         guardian = db.query(Guardian).filter(Guardian.phone == phone).one()
         remaining = guardian.plan_expires_at - utcnow()

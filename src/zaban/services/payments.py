@@ -70,13 +70,21 @@ class ZarinPalGateway:
         return response.status_code == 200 and data.get("code") in (100, 101)
 
 
-def get_gateway(provider: str) -> PaymentGateway:
-    # The provider is chosen in the admin panel. Its secret keys are read from the environment, never from the panel.
+def get_gateway(provider: str, merchant_id: str | None = None) -> PaymentGateway:
+    # The provider and the merchant ID are set in the admin panel. The merchant ID falls back to the environment.
     if provider == "zarinpal":
-        return ZarinPalGateway(settings.zarinpal_merchant_id, f"{settings.public_base_url}/v1/web/billing/zarinpal/callback")
+        return ZarinPalGateway(merchant_id or settings.zarinpal_merchant_id, f"{settings.public_base_url}/v1/web/billing/zarinpal/callback")
     if settings.environment == "production":
         raise HTTPException(status_code=503, detail="The payment gateway is not ready yet")
     return FakeGateway()
+
+
+def mark_failed(db: DBSession, payment: Payment, reason: str) -> None:
+    # The buyer sees the reason in the payments list. The plan does not change.
+    if payment.status in ("pending", "paid"):
+        payment.status = "failed"
+        payment.failure_reason = reason
+        db.commit()
 
 
 def mark_paid(db: DBSession, payment: Payment) -> None:
@@ -98,15 +106,29 @@ def confirm_payment(db: DBSession, payment: Payment, ok: bool) -> None:
     plan = db.get(BillingPlan, payment.plan_id)
     guardian = db.get(Guardian, payment.guardian_id)
     now = utcnow()
-    start = max(now, guardian.plan_expires_at) if guardian.plan_expires_at else now
-    guardian.plan_expires_at = start + timedelta(days=plan.days)
+    # A new plan starts on the day of payment with its full allowance. Nothing carries over from an old plan.
+    guardian.plan_started_at = now
+    guardian.plan_expires_at = now + timedelta(days=plan.days)
+    guardian.plan_token_allowance = plan.token_allowance
+    guardian.plan_tokens_used = 0
     payment.status = "confirmed"
     payment.confirmed_at = now
     db.commit()
 
 
 def has_active_plan(guardian: Guardian) -> bool:
-    return guardian.plan_expires_at is not None and guardian.plan_expires_at > utcnow()
+    # A plan is active until its date passes or its tokens are used up, whichever comes first.
+    return (
+        guardian.plan_expires_at is not None
+        and guardian.plan_expires_at > utcnow()
+        and guardian.plan_tokens_used < guardian.plan_token_allowance
+    )
+
+
+def charge_plan_tokens(db: DBSession, guardian: Guardian, tokens: int) -> None:
+    # Every lesson reply is charged to the adult who pays for the learner.
+    guardian.plan_tokens_used += tokens
+    db.commit()
 
 
 def require_plan(guardian: Guardian | None) -> None:

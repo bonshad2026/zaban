@@ -80,6 +80,7 @@ class PlanCreate(BaseModel):
     description: str = Field(default="", max_length=300)
     price_toman: int = Field(ge=0)
     days: int = Field(ge=1, le=3650)
+    token_allowance: int = Field(default=1_000_000, ge=1_000, le=1_000_000_000)
 
 
 class PlanUpdate(BaseModel):
@@ -172,6 +173,7 @@ def list_adults(db: DBSession = Depends(get_db)) -> list[dict]:
                 "goal": g.goal,
                 "plan_name": plan.name if plan else None,
                 "plan_expires_at": g.plan_expires_at.isoformat() if g.plan_expires_at else None,
+                "suspended": bool(g.suspended),
                 "created_at": g.created_at.isoformat(),
             }
         )
@@ -218,7 +220,7 @@ def decide_payment(payment_id: str, body: PaymentDecision, db: DBSession = Depen
 def list_plans(db: DBSession = Depends(get_db)) -> list[dict]:
     rows = db.query(BillingPlan).order_by(BillingPlan.price_toman).all()
     return [
-        {"id": p.id, "name": p.name, "description": p.description, "price_toman": p.price_toman, "days": p.days, "active": p.active}
+        {"id": p.id, "name": p.name, "name_en": p.name_en or "", "description": p.description, "price_toman": p.price_toman, "days": p.days, "token_allowance": p.token_allowance, "active": p.active}
         for p in rows
     ]
 
@@ -229,6 +231,7 @@ def create_plan(body: PlanCreate, db: DBSession = Depends(get_db)) -> dict:
         name=body.name.strip(),
         name_en=body.name_en.strip() or None,
         description=body.description.strip(),
+        token_allowance=body.token_allowance,
         price_toman=body.price_toman,
         days=body.days,
     )
@@ -249,7 +252,8 @@ def set_plan_active(plan_id: str, body: PlanUpdate, db: DBSession = Depends(get_
 
 @router.get("/students", dependencies=[Depends(require_admin)])
 def list_students(db: DBSession = Depends(get_db)) -> list[dict]:
-    rows = db.query(Student).order_by(Student.created_at.desc()).limit(300).all()
+    # Children created on the website are not listed. Self learners and tenant API students are.
+    rows = db.query(Student).filter(Student.guardian_id.is_(None)).order_by(Student.created_at.desc()).limit(300).all()
     profiles = {p.student_id: p for p in db.query(TutorProfile).all()}
     return [
         {
@@ -635,3 +639,52 @@ def save_self_test_prompt(body: SelfTestPrompt, db: DBSession = Depends(get_db))
         row.value = body.text
     db.commit()
     return {"ok": True}
+
+
+class SuspensionUpdate(BaseModel):
+    suspended: bool
+
+
+@router.post("/adults/{adult_id}/suspension")
+def set_suspension(adult_id: str, body: SuspensionUpdate, db: DBSession = Depends(get_db)) -> dict:
+    # Suspending ends every sign-in of the adult and of their learner profile at once.
+    guardian = db.get(Guardian, adult_id)
+    if guardian is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    guardian.suspended = body.suspended
+    if body.suspended:
+        ids = [guardian.id] + [s.id for s in db.query(Student).filter(Student.self_owner_id == guardian.id).all()]
+        db.query(WebSession).filter(WebSession.subject_id.in_(ids), WebSession.revoked_at.is_(None)).update(
+            {"revoked_at": utcnow()}, synchronize_session=False
+        )
+    db.commit()
+    return {"suspended": guardian.suspended}
+
+
+class PlanEdit(BaseModel):
+    # Every field is optional. Only the fields that are sent change.
+    name: str | None = Field(default=None, min_length=2, max_length=80)
+    name_en: str | None = Field(default=None, max_length=80)
+    description: str | None = Field(default=None, max_length=300)
+    price_toman: int | None = Field(default=None, ge=0)
+    days: int | None = Field(default=None, ge=1, le=3650)
+    token_allowance: int | None = Field(default=None, ge=1_000, le=1_000_000_000)
+
+
+@router.post("/plans/{plan_id}/update", dependencies=[Depends(require_admin)])
+def update_plan(plan_id: str, body: PlanEdit, db: DBSession = Depends(get_db)) -> dict:
+    plan = db.get(BillingPlan, plan_id)
+    if plan is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    sent = body.model_dump(exclude_unset=True)
+    for key, value in sent.items():
+        if value is None:
+            continue
+        if key == "name_en":
+            value = value.strip() or None
+        elif isinstance(value, str):
+            value = value.strip()
+        setattr(plan, key, value)
+    db.commit()
+    return {"ok": True}
+

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>پلن و اعتبار | گفتاریار</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body data-bilingual>
+  <!--site-header-->
+  <main class="page-main">
+    <div class="page-wrap">
+      <div class="page-stack">
+        <h1 class="page-title accent-title" data-fa="پلن و اعتبار" data-en="Plan and credit">پلن و اعتبار</h1>
+        <section class="page-card">
+          <p class="muted" id="planStatus" hidden></p>
+          <dl class="plan-facts" id="planFacts" hidden>
+            <div>
+              <dt data-fa="پلن شما" data-en="Your plan">پلن شما</dt>
+              <dd id="planName"></dd>
+            </div>
+            <div>
+              <dt data-fa="تاریخ شروع پلن" data-en="Plan started on">تاریخ شروع پلن</dt>
+              <dd id="planStarted"></dd>
+            </div>
+            <div>
+              <dt data-fa="تاریخ انقضای پلن" data-en="Plan expires on">تاریخ انقضای پلن</dt>
+              <dd id="planExpires"></dd>
+            </div>
+            <div>
+              <dt data-fa="روزهای باقی‌مانده" data-en="Days left">روزهای باقی‌مانده</dt>
+              <dd id="planDays"></dd>
+            </div>
+            <div>
+              <dt data-fa="توکن مصرف‌شده" data-en="Tokens used">توکن مصرف‌شده</dt>
+              <dd id="planTokens"></dd>
+            </div>
+          </dl>
+          <div class="plan-meter" id="planMeter" hidden>
+            <p class="muted"><span data-fa="درصد مصرف توکن" data-en="Tokens used">درصد مصرف توکن</span>: <strong id="planPercent"></strong></p>
+            <div class="meter"><span id="planBar"></span></div>
+          </div>
+          <p class="notice" id="planNotice" hidden></p>
+          <p class="error" id="planError" hidden></p>
+          <p><button type="button" id="planBuyBtn" data-fa="خرید یا تمدید پلن" data-en="Buy or renew a plan">خرید یا تمدید پلن</button></p>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/plan.js"></script>
+</body>
+</html>

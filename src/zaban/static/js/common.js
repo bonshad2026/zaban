@@ -7,6 +7,9 @@ const Z = (() => {
     ["Invalid or expired code", "کد اشتباه است یا منقضی شده. کد تازه بگیرید."],
     ["Please wait a minute", "لطفاً یک دقیقه صبر کنید، سپس دوباره کد بگیرید."],
     ["Too many codes", "تعداد درخواست کد زیاد شده است. کمی بعد دوباره تلاش کنید."],
+    ["This account is suspended", "این حساب موقتاً تعلیق شده است. برای پیگیری با پشتیبانی تماس بگیرید."],
+    ["Your current plan is not finished yet", "پلن فعلی شما هنوز تمام نشده است. بعد از پایان آن می‌توانید پلن جدید تهیه کنید."],
+    ["This plan is not available", "این پلن در حال حاضر در دسترس نیست."],
     ["Enter a valid mobile number", "شماره‌ی موبایل معتبر نیست. مثلاً 09121234567 را وارد کنید."],
     ["Your name is needed", "برای ساخت حساب، نام و نام خانوادگی لازم است."],
     ["SMS could not be sent", "پیامک ارسال نشد. لطفاً دوباره تلاش کنید."],
@@ -48,6 +51,9 @@ const Z = (() => {
     ["Invalid or expired code", "The code is wrong or has expired. Please request a new one."],
     ["Please wait a minute", "Please wait a minute, then request a new code."],
     ["Too many codes", "Too many codes were requested. Please try again later."],
+    ["This account is suspended", "This account is suspended for now. Contact support to follow up."],
+    ["Your current plan is not finished yet", "Your current plan is not finished yet. You can buy a new one when it ends."],
+    ["This plan is not available", "This plan is not available right now."],
     ["Enter a valid mobile number", "Please enter a valid mobile number, for example 09121234567."],
     ["Your name is needed", "Please enter your full name."],
     ["SMS could not be sent", "The SMS could not be sent. Please try again."],
@@ -348,7 +354,63 @@ const Z = (() => {
     } catch (err) {
       showError(byId("accInfoError"), err.message);
     }
+    learnerReady = false;
+    const learner = await learnerDetails();
+    learnerReady = Boolean(learner);
+    fillLearner(learner);
     dialog.showModal();
+  }
+
+  // The learner part of the dialog (level, grade, how the teacher should talk, and so on) needs the learner sign-in.
+  // The adult gets it by starting their own learning, which needs a plan. Without one, this part stays hidden.
+  let learnerReady = false;
+  async function learnerDetails() {
+    try {
+      return await request("GET", "/v1/web/student/details");
+    } catch (_) { /* not signed in as the learner yet */ }
+    try {
+      await request("POST", "/v1/web/user/self");
+      return await request("GET", "/v1/web/student/details");
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function fillLearner(data) {
+    byId("accLearnerBox").hidden = !data;
+    if (!data) return;
+    const d = data.details;
+    const levels = data.skill_levels || {};
+    byId("accLevelListening").value = levels.listening || "A1";
+    byId("accLevelReading").value = levels.reading || "A1";
+    byId("accLevelGrammar").value = levels.grammar || "A1";
+    byId("accLevelSpeakingWriting").value = levels.speaking_writing || "A1";
+    byId("accGrade").value = d.grade || "";
+    byId("accAttributes").value = d.attributes || "";
+    byId("accConversation").value = d.conversation_style || "";
+    byId("accResponse").value = d.response_style || "";
+    byId("accSample").value = d.level_sample || "";
+    byId("accFree").value = d.free_text || "";
+  }
+
+  async function saveLearner() {
+    const nullIfEmpty = (value) => value || null;
+    await request("PUT", "/v1/web/student/details", {
+      age: byId("accAge").value ? Number(byId("accAge").value) : null,
+      gender: nullIfEmpty(byId("accGender").value),
+      grade: nullIfEmpty(byId("accGrade").value.trim()),
+      attributes: byId("accAttributes").value.trim(),
+      conversation_style: nullIfEmpty(byId("accConversation").value),
+      response_style: nullIfEmpty(byId("accResponse").value),
+      level_sample: byId("accSample").value.trim(),
+      free_text: byId("accFree").value.trim(),
+    });
+    await request("PUT", "/v1/web/student/skill-levels", {
+      listening: byId("accLevelListening").value,
+      reading: byId("accLevelReading").value,
+      grammar: byId("accLevelGrammar").value,
+      speaking_writing: byId("accLevelSpeakingWriting").value,
+    });
   }
 
   // The photo shown in the personal-details form. Only a change is sent when the form is saved.
@@ -362,8 +424,24 @@ const Z = (() => {
 
   // Wires the two account forms once, on the first page that shows them. onSaved gets the saved profile.
   function setupAccountForms(onSaved) {
-    document.querySelectorAll("#accInfoDialog [data-close], #accPasswordDialog [data-close]").forEach((button) => {
+    document.querySelectorAll("#accInfoDialog [data-close], #accPasswordDialog [data-close], #accSignOutDialog [data-close]").forEach((button) => {
       button.addEventListener("click", () => button.closest("dialog").close());
+    });
+    // A click on the grey area outside a dialog closes it. Clicks inside the box have another target.
+    document.querySelectorAll("dialog.account-dialog").forEach((dialog) => {
+      dialog.addEventListener("click", (event) => {
+        if (event.target === dialog) dialog.close();
+      });
+    });
+    byId("accSignOutConfirm").addEventListener("click", async () => {
+      const run = pendingSignOut;
+      pendingSignOut = null;
+      if (!run) return;
+      try {
+        await run();
+      } catch (err) {
+        showError(byId("accSignOutError"), err.message);
+      }
     });
     byId("accAvatarPick").addEventListener("click", () => byId("accAvatarFile").click());
     byId("accAvatarRemove").addEventListener("click", () => {
@@ -396,6 +474,7 @@ const Z = (() => {
       if (photoChanged) body.avatar = photoDraft;
       try {
         const saved = await request("PUT", "/v1/web/user/profile", body);
+        if (learnerReady) await saveLearner();
         onSaved(saved);
         setPhoto(saved.avatar);
         byId("accInfoOk").textContent = isEnglish() ? "Saved." : "ذخیره شد.";
@@ -426,6 +505,26 @@ const Z = (() => {
     });
   }
 
+  // An adult opens their own learning from the menu. The server sets the learner sign-in, then the learner page opens.
+  async function startOwnLearning(event) {
+    event.preventDefault();
+    try {
+      await request("POST", "/v1/web/user/self");
+      location.href = "/student";
+    } catch (err) {
+      window.alert(err.message);
+    }
+  }
+
+  // The action waits until the visitor confirms in the dialog, so a mis-tap does not sign them out.
+  let pendingSignOut = null;
+  function askSignOut(question, action) {
+    byId("accSignOutQuestion").textContent = question;
+    show(byId("accSignOutError"), false);
+    pendingSignOut = action;
+    byId("accSignOutDialog").showModal();
+  }
+
   async function signOut(signedIn) {
     await Promise.all(signedIn.map((role) => request("POST", `/v1/web/logout?role=${role}`).catch(() => {})));
     location.href = "/";
@@ -433,10 +532,6 @@ const Z = (() => {
 
   // Ends every sign-in for this adult and their own learning, on every device. Only the adult can do this.
   async function signOutEverywhere() {
-    const message = isEnglish()
-      ? "Sign out of all devices? You will need your password to sign in again."
-      : "از همه‌ی دستگاه‌ها خارج شوید؟ دوباره باید با رمز عبور وارد شوید.";
-    if (!confirm(message)) return;
     await request("POST", "/v1/web/user/logout-all").catch(() => {});
     location.href = "/";
   }
@@ -458,9 +553,8 @@ const Z = (() => {
 
     const list = el("div", "account-menu-list");
     list.setAttribute("role", "menu");
-    list.hidden = true;
     const close = () => {
-      list.hidden = true;
+      list.classList.remove("is-open");
       avatar.setAttribute("aria-expanded", "false");
     };
     const addItem = (fa, en, action, extraClass) => {
@@ -475,16 +569,28 @@ const Z = (() => {
     };
     addItem("اطلاعات شخصی", "Personal details", openPersonalDetails);
     addItem("تغییر رمز عبور", "Change password", () => byId("accPasswordDialog").showModal());
+    addItem("درخواست‌های شما", "Your requests", () => { location.href = "/requests"; });
+    addItem("پرداخت‌های شما", "Your payments", () => {
+      location.href = signedIn.includes("parent") ? "/payments" : "/student?tab=payments";
+    });
     list.appendChild(el("div", "account-sep"));
-    addItem("خروج", "Sign out", () => signOut(signedIn));
+    addItem("خروج", "Sign out", () => askSignOut(
+      isEnglish() ? "Are you sure you want to sign out?" : "آیا برای خروج اطمینان دارید؟",
+      () => signOut(signedIn),
+    ));
     if (signedIn.includes("parent")) {
-      addItem("خروج از همه‌ی دستگاه‌ها", "Sign out of all devices", signOutEverywhere, "danger");
+      addItem("خروج از همه‌ی دستگاه‌ها", "Sign out of all devices", () => askSignOut(
+        isEnglish()
+          ? "Are you sure you want to sign out of all devices? You will need your password to sign in again."
+          : "آیا برای خروج از همه‌ی دستگاه‌ها اطمینان دارید؟ دوباره باید با رمز عبور وارد شوید.",
+        signOutEverywhere,
+      ), "danger");
     }
 
     avatar.addEventListener("click", (event) => {
       event.stopPropagation();
-      const open = list.hidden;
-      list.hidden = !open;
+      const open = !list.classList.contains("is-open");
+      list.classList.toggle("is-open", open);
       avatar.setAttribute("aria-expanded", String(open));
     });
     closeAccountMenu = close;
@@ -517,8 +623,6 @@ const Z = (() => {
     // Only the name, then the photo. The photo opens the account menu.
     const nameNode = el("span", "site-greeting", greeting);
     box.appendChild(nameNode);
-    if (signedIn.includes("parent")) box.appendChild(labelled("a", "pill", "/parent", "پنل والد", "Parent area"));
-    if (signedIn.includes("student")) box.appendChild(labelled("a", "pill", "/student", "یادگیری من", "My learning"));
     const menu = buildAccountMenu(signedIn, profile.avatar);
     box.appendChild(menu.wrap);
     box.dataset.state = "member";
@@ -539,30 +643,113 @@ const Z = (() => {
       });
     }
 
-    // Row two of the header: the signed-in person's own items, after the public menu.
+    // The side menu of the signed-in area. One level only; the learning tabs sit under «آموزش من».
+    const path = location.pathname;
+    const tool = new URLSearchParams(location.search).get("tab");
+    const onLearnerPage = path === "/student";
+    const learnerSignedIn = signedIn.includes("student");
+    const items = [];
+    items.push({ href: "/student", fa: "آموزش من", en: "My learning", active: onLearnerPage && tool !== "payments" && tool !== "help", startOwn: !learnerSignedIn, learning: true });
+    if (signedIn.includes("parent")) {
+      items.push({ href: "/plan", fa: "پلن و اعتبار", en: "Plan and credit", active: path === "/plan" });
+      items.push({ href: "/level", fa: "تعیین سطح", en: "Set level", active: path === "/level" });
+    } else {
+    }
+    items.push({ href: "/student?tab=help", fa: "کمک‌آموزشی", en: "Help", active: onLearnerPage && tool === "help" });
+
     const nav = document.getElementById("memberNav");
+    const header = document.querySelector(".site-header");
+    if (header) header.dataset.member = String(signedIn.length > 0);
     if (nav) {
       nav.replaceChildren();
-      const items = signedIn.includes("parent")
-        ? [
-            ["/parent#childrenCard", "فرزندان شما", "Your children"],
-            ["/parent#selfCard", "شروع آموزش / شروع جلسه", "Start learning / session"],
-            ["/parent#childrenCard", "تاریخچه‌ی یادگیری / پیشرفت", "Learning history / progress"],
-            ["/requests", "درخواست‌های شما", "Your requests"],
-            ["/parent#billingCard", "پرداخت‌های شما", "Your payments"],
-          ]
-        : [
-            ["/student", "شروع آموزش / شروع جلسه", "Start learning / session"],
-            ["/student?tab=progress", "تاریخچه‌ی یادگیری / پیشرفت", "Learning history / progress"],
-            ["/requests", "درخواست‌های شما", "Your requests"],
-            ["/student?tab=payments", "پرداخت‌های شما", "Your payments"],
-          ];
-      items.forEach(([href, fa, en]) => {
-        const link = labelled("a", "member-link", href, fa, en);
-        nav.appendChild(link);
+      items.forEach((item) => {
+        const group = el("div", "side-group");
+        const link = labelled("a", "side-item", item.href, item.fa, item.en);
+        if (item.active) link.setAttribute("aria-current", "page");
+        if (item.startOwn) link.addEventListener("click", startOwnLearning);
+        group.appendChild(link);
+        if (item.learning) {
+          const collapse = learningMenu(onLearnerPage && learnerSignedIn);
+          const chevron = el("span", "side-chevron");
+          link.appendChild(chevron);
+          const isOpen = () => !collapse.classList.contains("is-closed");
+          link.setAttribute("aria-expanded", String(isOpen()));
+          // The chevron always opens and closes the list. On the learner page the label does too, without a reload.
+          link.addEventListener("click", (event) => {
+            const onChevron = event.target.closest(".side-chevron");
+            if (!onChevron && !onLearnerPage) return;
+            event.preventDefault();
+            collapse.classList.toggle("is-closed", isOpen());
+            link.setAttribute("aria-expanded", String(isOpen()));
+            rememberLearningOpen(isOpen());
+          });
+          group.appendChild(collapse);
+        }
+        nav.appendChild(group);
       });
       nav.hidden = !items.length;
     }
+  }
+
+  // The learning tabs, shown under «آموزش من» on the learner page. Each entry clicks the page's own tab,
+  // so the lesson, report and progress sections stay where they are. The entries follow the page's active tab.
+  let learnObserver = null;
+  // The visitor's own choice of open or closed is remembered in this browser. Without a choice, the list is open on a computer and closed on a phone.
+  const LEARNING_OPEN_KEY = "zaban-learning-open";
+  function learningListOpen() {
+    try {
+      const saved = localStorage.getItem(LEARNING_OPEN_KEY);
+      if (saved !== null) return saved === "open";
+    } catch (_) { /* storage can be blocked; the default applies */ }
+    return !window.matchMedia("(max-width: 760px)").matches;
+  }
+  function rememberLearningOpen(open) {
+    try {
+      localStorage.setItem(LEARNING_OPEN_KEY, open ? "open" : "closed");
+    } catch (_) { /* the choice lasts only for this page then */ }
+  }
+  const LEARNING_TABS = [
+    ["lesson", "جلسه"], ["accent", "لهجه"], ["report", "گزارش من"], ["progress", "پیشرفت"],
+    ["profile", "اطلاعات من"], ["test", "خودت رو محک بزن"],
+  ];
+
+  // The learning list under «آموزش من». On the learner page its entries click the page's own tabs and follow the active tab.
+  // Elsewhere each entry opens the learner page on that tab. It starts open on the learner page of a desktop, and closed otherwise.
+  function learningMenu(live) {
+    const collapse = el("div", "side-collapse");
+    const box = el("div", "side-sub");
+    const list = el("div", "side-list");
+    box.appendChild(list);
+    collapse.appendChild(box);
+    const tabs = live ? document.querySelector("#appView .tabs") : null;
+    if (tabs) {
+      const entries = [];
+      // Payments and help have their own main items, so they are left out of this list.
+      tabs.querySelectorAll('.tab:not([data-tab="payments"]):not([data-tab="help"])').forEach((tab) => {
+        const entry = el("button", "side-sub-item", tab.textContent.trim());
+        entry.type = "button";
+        entry.addEventListener("click", () => tab.click());
+        entries.push([tab, entry]);
+        list.appendChild(entry);
+      });
+      const sync = () => entries.forEach(([tab, entry]) => {
+        entry.textContent = tab.textContent.trim();
+        entry.classList.toggle("is-active", tab.classList.contains("is-active"));
+      });
+      sync();
+      if (learnObserver) learnObserver.disconnect();
+      learnObserver = new MutationObserver(sync);
+      learnObserver.observe(tabs, { subtree: true, attributes: true, childList: true, characterData: true });
+    } else {
+      const current = new URLSearchParams(location.search).get("tab") || "lesson";
+      LEARNING_TABS.forEach(([key, fa]) => {
+        const entry = labelled("a", "side-sub-item", key === "lesson" ? "/student" : `/student?tab=${key}`, fa, fa);
+        entry.classList.toggle("is-active", location.pathname === "/student" && current === key);
+        list.appendChild(entry);
+      });
+    }
+    collapse.classList.toggle("is-closed", !learningListOpen());
+    return collapse;
   }
 
   // Blocks marked .reveal rise in once they reach the screen. Each one animates only once.

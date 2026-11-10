@@ -38,7 +38,9 @@ from zaban.services.programs import (
 )
 from zaban.services.learner import get_accent, get_global_prompt, set_learner_profile
 from zaban.services.metering import ensure_quota, record_usage
-from zaban.services.payments import require_plan
+from zaban.services.payments import charge_plan_tokens, has_active_plan, require_plan
+from zaban.services.prompt_template import has_saved_template, learner_values, render, get_template
+from zaban.services.sessions import finish_session
 from zaban.services.passwords import hash_password
 from zaban.services.progress import build_milestones, cefr_from_score
 from zaban.services.sessions import (
@@ -51,6 +53,9 @@ from zaban.services.sessions import (
     guard_message,
     join_prompt,
 )
+
+# Shown to the learner when the adult's plan has no tokens left. The lesson closes after it.
+PLAN_USED_NOTICE = "توکن‌های پلن شما تمام شده و این کلاس همین‌جا بسته می‌شود. برای ادامه، پلن جدید تهیه کنید."
 
 router = APIRouter()
 
@@ -473,7 +478,11 @@ def start_session(
         db.commit()
         out["topic"] = {"id": topic.id, "title": topic.title, "variant": variant.id}
     # The start prompt is composed once here and sent as the first input of every reply in this lesson.
-    session.start_prompt = join_prompt(_start_parts(db, student, session))
+    if has_saved_template(db):
+        # The administrator's template is filled with this learner's stored values, once, at the start of the lesson.
+        session.start_prompt, _ = render(get_template(db), learner_values(db, student, session.duration_minutes))
+    else:
+        session.start_prompt = join_prompt(_start_parts(db, student, session))
     db.commit()
     return out
 
@@ -503,6 +512,14 @@ def send_message(
         db.commit()
         raise HTTPException(status_code=409, detail="This lesson is closed")
     ensure_quota(auth.tenant)
+    # The adult who pays for this learner must still have a plan with tokens left. If not, the lesson closes here.
+    owner_id = student.guardian_id or student.self_owner_id
+    owner = db.get(Guardian, owner_id) if owner_id else None
+    if owner is not None and not has_active_plan(owner):
+        finish_session(session, now)
+        db.commit()
+        return {"reply": PLAN_USED_NOTICE, "block": None, "guarded": None, "mode": "closed", "seconds_left": 0,
+                "closed": True, "notice": PLAN_USED_NOTICE}
 
     text = body.content.strip()
     block = current_block(session.started_at, session.ends_at, now)
@@ -539,6 +556,13 @@ def send_message(
     db.add(Message(session_id=session.id, role="user", content=text))
     db.add(Message(session_id=session.id, role="assistant", content=reply.text))
     record_usage(db, auth.tenant, session.id, reply.input_tokens, reply.output_tokens)
+    closed = False
+    if owner is not None:
+        charge_plan_tokens(db, owner, reply.input_tokens + reply.output_tokens)
+        # When the last tokens are used, the lesson ends after this reply.
+        closed = not has_active_plan(owner)
+    if closed:
+        finish_session(session, now)
     db.commit()
     seconds_left = max(0, int((session.ends_at - now).total_seconds()))
     return {
@@ -547,6 +571,8 @@ def send_message(
         "guarded": None,
         "mode": reply.mode,
         "seconds_left": seconds_left,
+        "closed": closed,
+        "notice": PLAN_USED_NOTICE if closed else None,
     }
 
 

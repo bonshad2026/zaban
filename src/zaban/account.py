@@ -36,7 +36,7 @@ class ProfileUpdate(BaseModel):
     full_name: str | None = Field(default=None, min_length=2, max_length=120)
     email: str | None = Field(default=None, max_length=190)
     age: int | None = Field(default=None, ge=18, le=120)
-    gender: Literal["female", "male", "other"] | None = None
+    gender: Literal["female", "male"] | None = None
     avatar: str | None = Field(default=None, max_length=200_000)
 
 
@@ -49,12 +49,12 @@ def _adult_from_cookies(db: DBSession, parent_token: str | None, student_token: 
     payload = read_web_session(parent_token) if parent_token else None
     if payload and payload["role"] == "guardian":
         guardian = db.get(Guardian, payload["sid"])
-        if session_is_current(payload, guardian):
+        if session_is_current(payload, guardian, db):
             return guardian
     payload = read_web_session(student_token) if student_token else None
     if payload and payload["role"] == "student":
         student = db.get(Student, payload["sid"])
-        if session_is_current(payload, student):
+        if session_is_current(payload, student, db):
             owner_id = student.guardian_id or student.self_owner_id
             owner = db.get(Guardian, owner_id) if owner_id else None
             if owner is not None:

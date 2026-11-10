@@ -5,15 +5,29 @@ This note is for any developer or AI coding agent working on the website. It des
 ## What the user sees
 
 - **Signed out:** the header shows the "ورود" menu (parent or learner) and the "ثبت‌نام" button.
-- **Signed in:** the header shows the signed-in person's name, the "پنل والد" and/or "یادگیری من" links, and a round profile button. The button shows the profile photo, or a plain silhouette when there is none.
-- **Second header row (signed in only):** the person's own links (children, progress, requests, payments). Filled by `initSiteHeader` from `#memberNav`.
+- **Signed in:** the header shows the signed-in person's name, the "پنل والد" link (for an adult), and a round profile button. The button shows the profile photo, or a plain silhouette when there is none. There is no "یادگیری من" link in the top row.
+- **Second header row (signed in only):** the person's own items, filled by `initSiteHeader` from `#memberNav`. For an adult: فرزندان, آموزش من, درخواست‌ها, پرداخت‌ها. For a learner: آموزش من, درخواست‌ها, پرداخت‌ها. The item for the current page gets `aria-current="page"` and a filled style.
+  - «آموزش من» always opens the learner page (`/student`). An adult with no learner sign-in first calls `POST /v1/web/user/self` (`startOwnLearning` in `common.js`), then the learner page opens. The parent page has no «یادگیری خودم» section any more.
+  - «فرزندان» opens `/parent#childrenCard`. That hash shows only the children area (list, add child, child details) and hides the plan section (`applyView` in `parent.js`).
+  - «پرداخت‌ها» (adults) opens `/payments`, a plain list of the adult's payments from `GET /v1/web/billing/payments`. Learners keep their own payments tab.
+  - «پلن و اعتبار» opens `/plan`. Its «خرید یا تمدید پلن» button does nothing yet; what it should do is still to be decided.
+- **Third header row (learner page only):** the learning tabs (جلسه, لهجه, گزارش من, پیشرفت, اطلاعات من, کمک‌آموزشی, خودت رو محک بزن). The payments tab is hidden here, because payments has its own main-row item. `initSiteHeader` moves the `.tabs` nav from `student.html` into `#memberSub`, and shows it only on `/student`. The tab buttons keep their click handlers because they are the same nodes.
 - **Profile menu** (opens from the round button; closes on outside click or Escape):
   - اطلاعات شخصی / Personal details: opens the personal details dialog.
   - تغییر رمز عبور / Change password: opens the password dialog.
-  - خروج / Sign out: ends the sign-in on this browser (every role cookie).
-  - خروج از همه‌ی دستگاه‌ها / Sign out of all devices: only for an adult (`zaban_parent` cookie). Ends every sign-in for the adult and their own learner profile.
+  - خروج / Sign out: asks for confirmation first (a thank-you line, then the question). Then it ends the sign-in on this browser (every role cookie).
+  - خروج از همه‌ی دستگاه‌ها / Sign out of all devices: only for an adult (`zaban_parent` cookie). Asks for confirmation first, then ends every sign-in for the adult and their own learner profile.
 
 "Sign out of all devices" appears only in this menu. It is not on any page body.
+
+- Dialogs (personal details, password, sign-out confirmation) close on the Close or Cancel button, or on a click on the grey area outside the box.
+- The personal details dialog is wider on desktop (`account-dialog-wide`).
+
+## Plan and credit page
+
+- Menu item «پلن و اعتبار» (adults only), page `/plan` (`static/plan.html`, `static/js/plan.js`).
+- Shows the plan name, the start of the current paid period, the expiry date and the days left.
+- Data: `GET /v1/web/billing/plan`. The plan name comes from the last confirmed payment. The start date is `guardians.plan_started_at`, set in `confirm_payment` when no plan is active. A renewal before the old plan ends keeps that date.
 
 ## Personal details fields
 
@@ -23,7 +37,7 @@ This note is for any developer or AI coding agent working on the website. It des
 | Mobile number | `guardians.phone` | Read only. It is the sign-in, so it cannot change here. |
 | Email | `guardians.email` | Optional. Lower-cased. Must be unique across adults. |
 | Age | `guardians.age` | Optional. Integer 18 to 120. |
-| Gender | `guardians.gender` | Optional. `female`, `male` or `other`. Empty means not stated. |
+| Gender | `guardians.gender` | Optional. `female` (زن) or `male` (مرد). Empty means not chosen. The select shows a disabled «انتخاب کنید» placeholder for empty. Older rows may hold `other`; the form shows them as empty. |
 | Photo | `guardians.avatar_data` | Optional. A `data:image/jpeg|png|webp;base64,...` string, at most 200,000 characters. |
 
 The browser resizes a picked photo to a 256 px square JPEG (`readPhoto` in `common.js`) before it is sent, so the stored value stays small.
@@ -69,3 +83,12 @@ The dialog controls use the `acc` prefix (`accName`, `accEmail`, `accAge`, `accG
 - The name is one field. A first name and last name split would need a migration and changes to every place that reads `full_name`.
 - Changing the password does not end other sign-ins. Only "sign out of all devices" does that.
 - The phone number cannot be changed. Changing it needs an SMS check.
+
+## Layout and menu (current)
+
+- Adults only. Children created on the website were removed (`zaban.cli purge-children` deletes them with all their data). The learner PIN sign-in (`/v1/web/student/login`) is gone. Learning is for the adult, through `POST /v1/web/user/self`.
+- Guests see one «ورود» link to `/parent`. The header has no sign-in menu.
+- Signed in, the public links are hidden and the header is one row: logo, greeting and the profile button.
+- The side menu (`nav#memberNav`, `app-side`, built by `initSiteHeader`) holds one level: آموزش من, درخواست‌ها, پلن و اعتبار, پرداخت‌ها. On the learner page, «آموزش من» has a collapsible list of the learning tabs. Each entry clicks the page's own tab, and the list follows the active tab.
+- On desktop the side menu is a column beside the content. On a phone (up to 760 px) it is a bar at the bottom, and the learning list opens above it.
+- Tenant API keys still manage students through `/v1/students` (`require_manager` accepts only API keys). The admin students list hides website children (`guardian_id` set).

@@ -14,7 +14,9 @@ from zaban.billing import router as billing_router
 from zaban.config import settings
 from zaban.db import Base, SessionLocal, add_missing_columns, engine
 from zaban.reports import router as reports_router
-from zaban.seed import seed_demo_accounts, seed_demo_plans, seed_demo_tenant
+from zaban.seed import ensure_default_plan, seed_demo_accounts, seed_demo_plans, seed_demo_tenant
+from zaban.placement_web import router as placement_router
+from zaban.services.placement_test import ensure_bank as ensure_placement_bank
 from zaban.public import router as public_router
 from zaban.services.curriculum import seed_curriculum
 from zaban.services.programs import seed_programs
@@ -43,6 +45,8 @@ async def lifespan(_: FastAPI):
         with SessionLocal() as db:
             tenant = seed_demo_tenant(db, settings.demo_api_key)
             seed_demo_plans(db)
+            ensure_default_plan(db)
+            ensure_placement_bank(db)
             seed_demo_accounts(db, tenant, settings)
     yield
 
@@ -56,6 +60,7 @@ app.include_router(learning_aids_router, prefix="/v1")
 app.include_router(learning_parent_router, prefix="/v1")
 app.include_router(ai_router, prefix="/v1")
 app.include_router(billing_router, prefix="/v1")
+app.include_router(placement_router, prefix="/v1")
 app.include_router(public_router, prefix="/v1")
 app.include_router(admin_router, prefix="/v1")
 app.include_router(admin_ops_router, prefix="/v1")
@@ -90,8 +95,10 @@ def _page(name: str, current: str = "") -> HTMLResponse:
     # The copyright footer goes at the end of every page.
     footer = (PARTIALS_DIR / "footer.html").read_text(encoding="utf-8")
     # The page content sits in one block that grows to fill the screen, so the footer stays at the bottom even on short pages.
-    html = html.replace("</body>", f"</div>{footer}</body>")
-    return HTMLResponse(html.replace("<!--site-header-->", f'{header}<div class="site-main">'))
+    # The side menu sits beside the content. It is empty and hidden until someone signs in.
+    html = html.replace("</body>", f"</div></div>{footer}</body>")
+    layout = '<div class="app-layout"><nav class="app-side" id="memberNav" aria-label="بخش من" hidden></nav><div class="site-main">'
+    return HTMLResponse(html.replace("<!--site-header-->", f"{header}{layout}"))
 
 
 @app.get("/", include_in_schema=False)
@@ -122,6 +129,21 @@ def profile_page() -> HTMLResponse:
 @app.get("/requests", include_in_schema=False)
 def requests_page() -> HTMLResponse:
     return _page("requests.html", "/requests")
+
+
+@app.get("/plan", include_in_schema=False)
+def plan_page() -> HTMLResponse:
+    return _page("plan.html", "/plan")
+
+
+@app.get("/level", include_in_schema=False)
+def level_page() -> HTMLResponse:
+    return _page("level.html", "/level")
+
+
+@app.get("/payments", include_in_schema=False)
+def payments_page() -> HTMLResponse:
+    return _page("payments.html", "/payments")
 
 
 @app.get("/demo", include_in_schema=False)

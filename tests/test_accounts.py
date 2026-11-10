@@ -3,22 +3,9 @@ import os
 from fastapi.testclient import TestClient
 
 from zaban.main import app
+from helpers_learner import learner_login, self_student
 
 DEMO = {"X-API-Key": os.environ["ZABAN_DEMO_API_KEY"]}
-STUDENT_USERNAME = os.environ["ZABAN_DEMO_STUDENT_USERNAME"]
-STUDENT_PASSWORD = os.environ["ZABAN_DEMO_STUDENT_PASSWORD"]
-
-
-def test_a_new_learner_sign_in_ends_the_older_one(client):
-    first = TestClient(app)
-    second = TestClient(app)
-    assert first.post("/v1/web/student/login", json={"username": STUDENT_USERNAME, "password": STUDENT_PASSWORD}).status_code == 200
-    assert first.get("/v1/web/me?role=student").status_code == 200
-
-    assert second.post("/v1/web/student/login", json={"username": STUDENT_USERNAME, "password": STUDENT_PASSWORD}).status_code == 200
-
-    assert first.get("/v1/web/me?role=student").status_code == 401
-    assert second.get("/v1/web/me?role=student").status_code == 200
 
 
 def test_placement_accepts_a_level_picked_by_a_parent(client):
@@ -48,7 +35,7 @@ def test_learner_level_test_sets_the_level_once(client):
     )
     assert created.status_code == 201, created.text
     learner = TestClient(app)
-    assert learner.post("/v1/web/student/login", json={"username": "quiz-kid-1", "password": "4444"}).status_code == 200
+    learner_login(learner)
 
     questions = learner.get("/v1/web/student/level-test").json()
     assert len(questions) == 6 and "answer" not in questions[0]
@@ -78,14 +65,14 @@ def test_learner_chooses_an_accent_and_the_lesson_prompt_uses_it(client):
     )
     assert created.status_code == 201, created.text
     learner = TestClient(app)
-    learner.post("/v1/web/student/login", json={"username": "accent-kid-1", "password": "5555"})
+    learner_login(learner)
 
     assert learner.get("/v1/web/student/accent").json() == {"accent": "en-US"}
     assert learner.post("/v1/web/student/accent", json={"accent": "en-GB"}).status_code == 200
     assert learner.get("/v1/web/student/accent").json() == {"accent": "en-GB"}
     assert learner.post("/v1/web/student/accent", json={"accent": "fr-FR"}).status_code == 422
 
-    student_id = created.json()["id"]
+    student_id = learner.get("/v1/web/me?role=student").json()["id"]
     with SessionLocal() as db:
         assert get_accent(db, student_id) == "en-GB"
         prompt = build_system_prompt(db.get(Student, student_id), None, "warm_up", 10, "", None, "en-GB")
@@ -118,7 +105,7 @@ def test_admin_uploads_a_named_voice_sample_and_learner_can_play_it(client):
     )
     assert created.status_code == 201, created.text
     learner = TestClient(app)
-    learner.post("/v1/web/student/login", json={"username": "sample-kid-1", "password": "6666"})
+    learner_login(learner)
     assert learner.get("/v1/web/student/voice-samples").json()[0]["name"] == "Sarah - American"
     played = learner.get(f"/v1/web/student/voice-samples/{sample_id}/audio")
     assert played.status_code == 200 and played.content == audio

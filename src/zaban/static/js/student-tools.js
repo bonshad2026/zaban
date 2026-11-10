@@ -4,7 +4,6 @@
   // The learner's own tools: profile, progress, help content, self-test and payments.
   // Each tool has its own section. Any other tab hides them, so the lesson tabs work as before.
   const SECTIONS = {
-    profile: "tab-profile",
     progress: "tab-progress",
     help: "tab-help",
     test: "tab-test",
@@ -24,7 +23,6 @@
 
   function toolTab(name) {
     Object.entries(SECTIONS).forEach(([key, id]) => Z.show($(id), key === name));
-    if (name === "profile") loadProfile();
     if (name === "progress") loadProgress();
     if (name === "help") {
       renderHelpTabs();
@@ -43,62 +41,6 @@
   }
 
   // ----- Profile and level -----
-
-  async function loadProfile() {
-    try {
-      const data = await Z.request("GET", "/v1/web/student/details");
-      const d = data.details;
-      $("pfLevel").value = data.cefr_level || "";
-      $("pfAge").value = d.age ?? "";
-      $("pfGender").value = d.gender || "";
-      $("pfGrade").value = d.grade || "";
-      $("pfAttributes").value = d.attributes || "";
-      $("pfConversation").value = d.conversation_style || "";
-      $("pfResponse").value = d.response_style || "";
-      $("pfSample").value = d.level_sample || "";
-      $("pfFree").value = d.free_text || "";
-    } catch (err) {
-      Z.showError($("profileError"), err.message);
-    }
-  }
-
-  async function saveProfile(event) {
-    event.preventDefault();
-    Z.showError($("profileError"), "");
-    const age = $("pfAge").value ? Number($("pfAge").value) : null;
-    try {
-      await Z.request("PUT", "/v1/web/student/details", {
-        age,
-        gender: nullIfEmpty($("pfGender").value),
-        grade: nullIfEmpty($("pfGrade").value),
-        attributes: $("pfAttributes").value.trim(),
-        conversation_style: nullIfEmpty($("pfConversation").value),
-        response_style: nullIfEmpty($("pfResponse").value),
-        level_sample: $("pfSample").value.trim(),
-        free_text: $("pfFree").value.trim(),
-      });
-      Z.showError($("profileNotice"), "");
-      $("profileNotice").hidden = false;
-      $("profileNotice").textContent = Z.tr("اطلاعات شما ذخیره شد.");
-    } catch (err) {
-      Z.showError($("profileError"), err.message);
-    }
-  }
-
-  async function saveLevel() {
-    const level = $("pfLevel").value;
-    if (!level) {
-      Z.showError($("profileError"), Z.tr("یک سطح را انتخاب کنید."));
-      return;
-    }
-    try {
-      await Z.request("PUT", "/v1/web/student/level", { cefr_level: level });
-      $("profileNotice").hidden = false;
-      $("profileNotice").textContent = Z.pick(`سطح ${level} ذخیره شد.`, `Level ${level} saved.`);
-    } catch (err) {
-      Z.showError($("profileError"), err.message);
-    }
-  }
 
   // ----- Progress -----
 
@@ -360,8 +302,6 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => toolTab(tab.dataset.tab)));
-    $("profileForm").addEventListener("submit", saveProfile);
-    $("pfLevelSave").addEventListener("click", saveLevel);
     $("helpGo").addEventListener("click", loadHelp);
     $("helpSearch").addEventListener("keydown", (event) => {
       if (event.key === "Enter") loadHelp();

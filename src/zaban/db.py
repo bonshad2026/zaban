@@ -23,6 +23,16 @@ ADDED_COLUMNS = [
     ("guardians", "age", "INTEGER"),
     ("guardians", "gender", "VARCHAR(20)"),
     ("guardians", "avatar_data", "TEXT"),
+    ("guardians", "plan_started_at", "TIMESTAMP"),
+    ("billing_plans", "token_allowance", "INTEGER NOT NULL DEFAULT 1000000"),
+    ("guardians", "plan_token_allowance", "INTEGER NOT NULL DEFAULT 0"),
+    ("guardians", "plan_tokens_used", "INTEGER NOT NULL DEFAULT 0"),
+    ("guardians", "suspended", "BOOLEAN NOT NULL DEFAULT FALSE"),
+    ("payments", "failure_reason", "VARCHAR(200) NOT NULL DEFAULT ''"),
+    ("students", "level_listening", "VARCHAR(4) NOT NULL DEFAULT 'A1'"),
+    ("students", "level_reading", "VARCHAR(4) NOT NULL DEFAULT 'A1'"),
+    ("students", "level_grammar", "VARCHAR(4) NOT NULL DEFAULT 'A1'"),
+    ("students", "level_speaking_writing", "VARCHAR(4) NOT NULL DEFAULT 'A1'"),
 ]
 
 
@@ -39,6 +49,9 @@ def add_missing_columns() -> None:
             existing = {c["name"] for c in inspector.get_columns(table)}
             if column not in existing:
                 conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {column_type}"))
+                if (table, column) == ("guardians", "plan_token_allowance"):
+                    # Adults who already paid get a standard allowance, so their plan stays usable until its date.
+                    conn.execute(text("UPDATE guardians SET plan_token_allowance = 1000000 WHERE plan_expires_at IS NOT NULL"))
 
 
 def get_db() -> Iterator[Session]:

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>پرداخت‌ها | گفتاریار</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body data-bilingual>
+  <!--site-header-->
+  <main class="page-main">
+    <div class="page-wrap">
+      <div class="page-stack">
+        <h1 class="page-title accent-title" data-fa="پرداخت‌ها" data-en="Payments">پرداخت‌ها</h1>
+        <section class="page-card">
+          <p class="muted" id="paymentsEmpty" data-fa="هنوز پرداختی ثبت نشده است." data-en="No payments yet." hidden>هنوز پرداختی ثبت نشده است.</p>
+          <div class="table-wrap" id="paymentsTableWrap" hidden>
+            <table class="list-table">
+              <thead>
+                <tr>
+                  <th data-fa="تاریخ" data-en="Date">تاریخ</th>
+                  <th data-fa="پلن" data-en="Plan">پلن</th>
+                  <th data-fa="مبلغ" data-en="Amount">مبلغ</th>
+                  <th data-fa="وضعیت" data-en="Status">وضعیت</th>
+                  <th data-fa="دلیل" data-en="Reason">دلیل</th>
+                </tr>
+              </thead>
+              <tbody id="paymentsRows"></tbody>
+            </table>
+          </div>
+          <p class="error" id="paymentsError" hidden></p>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/payments.js"></script>
+</body>
+</html>

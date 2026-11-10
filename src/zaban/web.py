@@ -6,9 +6,10 @@ from sqlalchemy.orm import Session as DBSession
 
 from zaban.config import settings
 from zaban.db import get_db
-from zaban.models import Consent, Guardian, LearningProgram, ProgramItem, Student, Tenant, VoiceSample, utcnow
-from zaban.schemas import AccentChoice, LevelTestAnswers, OtpRequest, PasswordReset, SignUpCreate, StudentLogin, UserLogin
-from zaban.security import WEB_COOKIE_NAMES, issue_web_session, read_web_session, session_is_current
+from zaban.models import Consent, Guardian, LearningProgram, ProgramItem, Student, Tenant, VoiceSample, WebSession, utcnow
+from zaban.schemas import AccentChoice, LevelTestAnswers, OtpRequest, PasswordReset, SignUpCreate, UserLogin
+from zaban.security import WEB_COOKIE_NAMES, read_web_session, session_is_current
+from zaban.services.web_sessions import start_web_session
 from zaban.services.learner import get_accent, set_accent, set_learner_profile
 from zaban.services.placement import level_for_score, public_questions, score_answers
 from zaban.services.programs import advance_if_done, ensure_progress
@@ -18,14 +19,11 @@ from zaban.services.payments import has_active_plan, require_plan
 
 # Sign-in endpoints for the website. They set an HttpOnly cookie, so the browser never holds an API key.
 # Adults sign in with a mobile number and a password. Forgotten passwords are reset with an SMS code.
-# Children sign in with a username and PIN.
 router = APIRouter(prefix="/web")
 
-WRONG_PIN = "Wrong username or PIN"
 WRONG_LOGIN = "Wrong phone number or password"
-MAX_PIN_FAILURES = 3
 MAX_PASSWORD_FAILURES = 5
-PIN_LOCK_MINUTES = 15
+PASSWORD_LOCK_MINUTES = 15
 Role = Literal["student", "parent"]
 
 
@@ -44,7 +42,7 @@ def _set_session_cookie(response: Response, role: str, token: str) -> None:
 def _guardian_from_cookie(db: DBSession, token: str | None) -> Guardian:
     payload = read_web_session(token) if token else None
     guardian = db.get(Guardian, payload["sid"]) if payload and payload["role"] == "guardian" else None
-    if not session_is_current(payload or {}, guardian):
+    if not session_is_current(payload or {}, guardian, db):
         raise HTTPException(status_code=401, detail="Please sign in")
     return guardian
 
@@ -57,10 +55,9 @@ def _adult_out(guardian: Guardian) -> dict:
     return {"role": "parent", "name": guardian.full_name}
 
 
-def _set_adult_cookie(response: Response, guardian: Guardian) -> None:
-    _set_session_cookie(
-        response, "parent", issue_web_session("guardian", guardian.id, guardian.tenant_id, guardian.session_version)
-    )
+def _set_adult_cookie(response: Response, guardian: Guardian, db: DBSession, request: Request) -> None:
+    token = start_web_session(db, request, "guardian", guardian.id, guardian.tenant_id, guardian.session_version)
+    _set_session_cookie(response, "parent", token)
 
 
 @router.post("/user/otp/request")
@@ -76,11 +73,11 @@ def request_otp(body: OtpRequest, request: Request, db: DBSession = Depends(get_
         return {"ok": True, "resend_in_seconds": 60}
     ip = request.client.host if request.client else None
     code = request_code(db, phone, ip)
-    return {"ok": True, "resend_in_seconds": 60, "dev_code": development_code(code)}
+    return {"ok": True, "resend_in_seconds": 60, "dev_code": development_code(code, db)}
 
 
 @router.post("/user/signup", status_code=201)
-def sign_up(body: SignUpCreate, response: Response, db: DBSession = Depends(get_db)) -> dict:
+def sign_up(body: SignUpCreate, response: Response, request: Request, db: DBSession = Depends(get_db)) -> dict:
     # Open sign-up: anyone who can receive an SMS on this number can create the adult account. No approval step.
     phone = normalize_phone(body.phone)
     if phone is None:
@@ -104,25 +101,27 @@ def sign_up(body: SignUpCreate, response: Response, db: DBSession = Depends(get_
     db.add(guardian)
     db.commit()
     db.refresh(guardian)
-    _set_adult_cookie(response, guardian)
+    _set_adult_cookie(response, guardian, db, request)
     return _adult_out(guardian)
 
 
 @router.post("/user/login")
-def adult_login(body: UserLogin, response: Response, db: DBSession = Depends(get_db)) -> dict:
+def adult_login(body: UserLogin, response: Response, request: Request, db: DBSession = Depends(get_db)) -> dict:
     phone = normalize_phone(body.phone)
     guardian = db.query(Guardian).filter(Guardian.phone == phone).first() if phone else None
     if guardian is None or guardian.password_hash is None:
         raise HTTPException(status_code=401, detail=WRONG_LOGIN)
 
     now = utcnow()
+    if guardian.suspended:
+        raise HTTPException(status_code=403, detail="This account is suspended")
     if guardian.locked_until and guardian.locked_until > now:
         raise HTTPException(status_code=429, detail="Too many wrong passwords. Try again in 15 minutes")
     if not verify_password(body.password, guardian.password_hash):
         guardian.failed_logins += 1
         if guardian.failed_logins >= MAX_PASSWORD_FAILURES:
             guardian.failed_logins = 0
-            guardian.locked_until = now + timedelta(minutes=PIN_LOCK_MINUTES)
+            guardian.locked_until = now + timedelta(minutes=PASSWORD_LOCK_MINUTES)
         db.commit()
         raise HTTPException(status_code=401, detail=WRONG_LOGIN)
 
@@ -133,8 +132,13 @@ def adult_login(body: UserLogin, response: Response, db: DBSession = Depends(get
     self_profile = _self_profile(db, guardian)
     if self_profile:
         self_profile.session_version += 1
+    # Every recorded sign-in of this adult and of their learner profile ends too.
+    subject_ids = [guardian.id] + ([self_profile.id] if self_profile else [])
+    db.query(WebSession).filter(WebSession.subject_id.in_(subject_ids), WebSession.revoked_at.is_(None)).update(
+        {"revoked_at": utcnow()}, synchronize_session=False
+    )
     db.commit()
-    _set_adult_cookie(response, guardian)
+    _set_adult_cookie(response, guardian, db, request)
     return _adult_out(guardian)
 
 
@@ -154,38 +158,10 @@ def reset_password(body: PasswordReset, db: DBSession = Depends(get_db)) -> dict
     return {"ok": True}
 
 
-@router.post("/student/login")
-def student_login(body: StudentLogin, response: Response, db: DBSession = Depends(get_db)) -> dict:
-    student = db.query(Student).filter(Student.username == body.username.strip().lower()).first()
-    if student is None:
-        raise HTTPException(status_code=401, detail=WRONG_PIN)
-
-    now = utcnow()
-    if student.locked_until and student.locked_until > now:
-        raise HTTPException(status_code=429, detail="Too many wrong PINs. Try again in 15 minutes")
-
-    if student.password_hash is None or not verify_password(body.password, student.password_hash):
-        student.failed_logins += 1
-        if student.failed_logins >= MAX_PIN_FAILURES:
-            student.failed_logins = 0
-            student.locked_until = now + timedelta(minutes=PIN_LOCK_MINUTES)
-        db.commit()
-        raise HTTPException(status_code=401, detail=WRONG_PIN)
-
-    student.failed_logins = 0
-    student.locked_until = None
-    # One sign-in per learner: the newest sign-in ends older ones on other devices.
-    student.session_version += 1
-    db.commit()
-    _set_session_cookie(
-        response, "student", issue_web_session("student", student.id, student.tenant_id, student.session_version)
-    )
-    return {"role": "student", "name": student.display_name or student.username}
-
-
 @router.post("/user/self")
 def start_own_learning(
     response: Response,
+    request: Request,
     zaban_parent: str | None = Cookie(default=None),
     db: DBSession = Depends(get_db),
 ) -> dict:
@@ -210,9 +186,8 @@ def start_own_learning(
         set_learner_profile(db, student.id, motivation=guardian.goal or "")
         db.commit()
 
-    _set_session_cookie(
-        response, "student", issue_web_session("student", student.id, student.tenant_id, student.session_version)
-    )
+    token = start_web_session(db, request, "student", student.id, student.tenant_id, student.session_version)
+    _set_session_cookie(response, "student", token)
     return {"role": "student", "name": student.display_name, "id": student.id}
 
 
@@ -228,6 +203,11 @@ def logout_everywhere(
     self_profile = _self_profile(db, guardian)
     if self_profile:
         self_profile.session_version += 1
+    # Every recorded sign-in of this adult and of their learner profile ends too.
+    subject_ids = [guardian.id] + ([self_profile.id] if self_profile else [])
+    db.query(WebSession).filter(WebSession.subject_id.in_(subject_ids), WebSession.revoked_at.is_(None)).update(
+        {"revoked_at": utcnow()}, synchronize_session=False
+    )
     db.commit()
     response.delete_cookie(WEB_COOKIE_NAMES["parent"], path="/")
     response.delete_cookie(WEB_COOKIE_NAMES["student"], path="/")
@@ -235,7 +215,20 @@ def logout_everywhere(
 
 
 @router.post("/logout")
-def logout(response: Response, role: Role = "student") -> dict:
+def logout(
+    response: Response,
+    role: Role = "student",
+    zaban_parent: str | None = Cookie(default=None),
+    zaban_student: str | None = Cookie(default=None),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    # Ends this device's sign-in, so the same cookie cannot be used again.
+    token = zaban_parent if role == "parent" else zaban_student
+    payload = read_web_session(token) if token else None
+    row = db.get(WebSession, payload.get("j") or "") if payload else None
+    if row is not None and row.revoked_at is None:
+        row.revoked_at = utcnow()
+        db.commit()
     response.delete_cookie(WEB_COOKIE_NAMES[role], path="/")
     return {"ok": True}
 
@@ -243,7 +236,7 @@ def logout(response: Response, role: Role = "student") -> dict:
 def _student_from_cookie(db: DBSession, token: str | None) -> Student:
     payload = read_web_session(token) if token else None
     student = db.get(Student, payload["sid"]) if payload and payload["role"] == "student" else None
-    if not session_is_current(payload or {}, student):
+    if not session_is_current(payload or {}, student, db):
         raise HTTPException(status_code=401, detail="Please sign in")
     return student
 
@@ -321,7 +314,7 @@ def me(
         raise HTTPException(status_code=401, detail="Please sign in")
     if payload["role"] == "student":
         student = db.get(Student, payload["sid"])
-        if session_is_current(payload, student):
+        if session_is_current(payload, student, db):
             # Lessons need the plan of the adult who owns this learner profile.
             owner_id = student.guardian_id or student.self_owner_id
             owner = db.get(Guardian, owner_id) if owner_id else None
@@ -333,7 +326,7 @@ def me(
             }
     if payload["role"] == "guardian":
         guardian = db.get(Guardian, payload["sid"])
-        if session_is_current(payload, guardian):
+        if session_is_current(payload, guardian, db):
             return {
                 "role": "parent",
                 "name": guardian.full_name,
