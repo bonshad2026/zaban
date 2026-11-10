@@ -84,7 +84,6 @@
 
   function openTab(name) {
     document.querySelectorAll(".admin-tabs .tab").forEach((t) => t.classList.toggle("is-active", t.dataset.tab === name));
-    revealGroupOf(name);
     ["overview", "consults", "cooperations", "helpcontent", "settings", "connections", "payment", "sessions", "promptgen", "promptview", "selftest", "placementbank", "adults", "payments", "plans", "curriculum", "programs", "global", "voices"]
       .forEach((n) => show(`tab-${n}`, n === name));
     return run(loaders[name]);
@@ -1183,7 +1182,11 @@
     if (!side || !tabs || !window.matchMedia("(min-width: 761px)").matches) return;
     side.appendChild(tabs);
     side.hidden = false;
-    // Each group folds away under its title. A folded group opens again when one of its tabs is chosen.
+    // Every group starts folded. The administrator opens the group they need, and it folds again on its title.
+    tabs.querySelectorAll(".admin-group").forEach((group) => {
+      group.classList.add("is-closed");
+      group.querySelector(".admin-group-title").setAttribute("aria-expanded", "false");
+    });
     tabs.querySelectorAll(".admin-group-title").forEach((title) => {
       title.addEventListener("click", () => {
         const group = title.parentElement;
@@ -1193,13 +1196,7 @@
     });
   }
 
-  function revealGroupOf(name) {
-    const tab = document.querySelector(`.admin-tabs .tab[data-tab="${name}"]`);
-    const group = tab && tab.closest(".admin-group");
-    if (!group) return;
-    group.classList.remove("is-closed");
-    group.querySelector(".admin-group-title").setAttribute("aria-expanded", "true");
-  }
+  // Tabs are only visible when their group is open, so choosing a tab never needs to open a group.
 
   // ----- Prompt generator -----
 
