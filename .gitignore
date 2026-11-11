@@ -10,3 +10,6 @@ dist/
 # Local development databases (never commit)
 *.db
 *.db.bak
+
+# Database dumps hold personal data of real people (never commit)
+backups/

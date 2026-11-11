@@ -206,7 +206,9 @@ def latest_attempt(db: DBSession, student: Student, skill: str) -> PlacementAtte
 
 def skill_view(db: DBSession, student: Student, skill: str) -> dict:
     attempt = latest_attempt(db, student, skill)
-    view = {"skill": skill, "label": SKILLS[skill], "status": "new", "level": None, "question": None}
+    # The total is shown before the test starts, so the learner knows how long it will take.
+    total = db.query(PlacementQuestion).filter(PlacementQuestion.skill == skill, PlacementQuestion.active.is_(True)).count()
+    view = {"skill": skill, "label": SKILLS[skill], "status": "new", "level": None, "question": None, "total": total}
     if attempt is None:
         return view
     view["status"] = attempt.status

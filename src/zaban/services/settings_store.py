@@ -11,6 +11,8 @@ SMS_PROVIDER_KEY = "sms_provider"  # kavenegar, dev
 SMS_TEMPLATE_KEY = "sms_otp_template"
 SMS_API_KEY_KEY = "sms_api_key"  # secret: shown masked only
 ZARINPAL_MERCHANT_KEY = "zarinpal_merchant_id"  # secret: shown masked only
+# The address the site is reached at from outside, for example https://zaban.example.com. The payment gateway returns the buyer here.
+PUBLIC_BASE_URL_KEY = "public_base_url"
 PROMPT_MODE_DEFAULT = "all"
 # What the administrator sees for each way of combining the lesson prompt.
 MODE_LABELS = {

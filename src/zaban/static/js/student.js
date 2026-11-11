@@ -310,60 +310,12 @@
         notice.textContent = Z.pick(`سطح شما: ${student.cefr_level} (${Z.LEVEL_FA[student.cefr_level]})`, `Your level: ${student.cefr_level} (${Z.LEVEL_FA[student.cefr_level]})`);
         Z.show($("levelTestBox"), false);
       } else {
-        notice.textContent = Z.tr("سطح شما هنوز تعیین نشده است. با ۶ سؤال کوتاه سطحتان را پیدا کنید، یا والدتان می‌توانند آن را انتخاب کنند. تا آن زمان معلم از سطح مقدماتی شروع می‌کند.");
+        notice.textContent = Z.tr("سطح شما هنوز تعیین نشده است. از صفحه‌ی تعیین سطح آزمون بدهید یا سطحتان را انتخاب کنید. تا آن زمان معلم از سطح مقدماتی شروع می‌کند.");
         Z.show($("levelTestBox"), true);
       }
       Z.show(notice, true);
     } catch (_) {
       Z.show($("levelNotice"), false);
-    }
-  }
-
-  async function startLevelTest() {
-    Z.showError($("levelTestError"), "");
-    try {
-      const questions = await Z.request("GET", "/v1/web/student/level-test");
-      const box = $("levelQuestions");
-      box.replaceChildren();
-      questions.forEach((question, i) => {
-        const fieldset = document.createElement("fieldset");
-        fieldset.appendChild(Z.el("legend", null, `${i + 1}. ${question.text}`));
-        question.options.forEach((option, j) => {
-          const label = Z.el("label", "inline");
-          const input = document.createElement("input");
-          input.type = "radio";
-          input.name = `q${i}`;
-          input.value = String(j);
-          input.required = true;
-          label.append(input, document.createTextNode(` ${option}`));
-          fieldset.appendChild(label);
-        });
-        box.appendChild(fieldset);
-      });
-      Z.show($("levelTestStart"), false);
-      Z.show($("levelTestForm"), true);
-    } catch (err) {
-      Z.showError($("levelTestError"), err.message);
-    }
-  }
-
-  async function submitLevelTest(event) {
-    event.preventDefault();
-    const form = event.target;
-    Z.showError($("levelTestError"), "");
-    const count = $("levelQuestions").querySelectorAll("fieldset").length;
-    const answers = [];
-    for (let i = 0; i < count; i++) {
-      answers.push(Number(form.querySelector(`input[name="q${i}"]:checked`).value));
-    }
-    try {
-      const result = await Z.request("POST", "/v1/web/student/level-test", { answers });
-      Z.show($("levelTestForm"), false);
-      Z.show($("levelTestStart"), false);
-      $("levelNotice").textContent = Z.pick(`سطح شما تعیین شد: ${result.level} (${Z.LEVEL_FA[result.level]}). ${result.score} از ${result.total} پاسخ درست بود.`, `Your level is set: ${result.level} (${Z.LEVEL_FA[result.level]}). ${result.score} of ${result.total} answers were correct.`);
-      Z.show($("levelTestBox"), false);
-    } catch (err) {
-      Z.showError($("levelTestError"), err.message);
     }
   }
 
@@ -373,8 +325,6 @@
     $("startBtn").addEventListener("click", startLesson);
     $("programShowAll").addEventListener("click", () => showFullProgram(true));
     $("programHideAll").addEventListener("click", () => showFullProgram(false));
-    $("levelTestStart").addEventListener("click", startLevelTest);
-    $("levelTestForm").addEventListener("submit", submitLevelTest);
     document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => selectTab(tab.dataset.tab)));
 
     try {

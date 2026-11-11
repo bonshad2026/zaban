@@ -41,6 +41,10 @@ const Z = (() => {
     ["already used by another", "این ایمیل برای حساب دیگری استفاده شده است."],
     ["current password is not correct", "رمز فعلی درست نیست."],
     ["photo must be", "عکس باید از نوع JPG، PNG یا WebP باشد."],
+    ["This program is finished", "این برنامه‌ی یادگیری تمام شده است."],
+    ["This test is finished", "این آزمون تمام شده است."],
+    ["Level is already set", "سطح این دانش‌آموز قبلاً ثبت شده است."],
+    ["This part of the test is not running", "این بخش از آزمون در حال اجرا نیست."],
   ];
 
   // English messages for the same server errors, matched by the same keys, in the same order.
@@ -84,6 +88,10 @@ const Z = (() => {
     ["already used by another", "This email is already used by another account."],
     ["current password is not correct", "The current password is not correct."],
     ["photo must be", "The photo must be a JPG, PNG or WebP image."],
+    ["This program is finished", "This learning program is finished."],
+    ["This test is finished", "This test is finished."],
+    ["Level is already set", "The level is already set."],
+    ["This part of the test is not running", "This part of the test is not running."],
   ];
 
   function isEnglish() {
@@ -93,6 +101,21 @@ const Z = (() => {
   // Picks the message in the language the page is showing, so Persian pages stay Persian.
   function friendly(detail, status) {
     const english = isEnglish();
+    // The server lists the missing profile fields after the colon, for example "level, age".
+    if (typeof detail === "string" && detail.startsWith("Complete the profile")) {
+      const names = english
+        ? { level: "level", age: "age", gender: "gender" }
+        : { level: "سطح", age: "سن", gender: "جنسیت" };
+      const items = detail
+        .split(":")
+        .pop()
+        .split(",")
+        .map((key) => names[key.trim()] || key.trim())
+        .join(english ? ", " : "، ");
+      return english
+        ? `Before a lesson starts, complete: ${items}.`
+        : `برای شروع جلسه، ابتدا این موارد را کامل کنید: ${items}.`;
+    }
     if (typeof detail === "string") {
       const table = english ? ERROR_TEXT_EN : ERROR_TEXT;
       const match = table.find(([key]) => detail.includes(key));
@@ -488,7 +511,7 @@ const Z = (() => {
       showError(byId("accPwError"), "");
       show(byId("accPwOk"), false);
       if (byId("accPwNew").value !== byId("accPwRepeat").value) {
-        showError(byId("accPwError"), isEnglish() ? "The two new passwords do not match." : "دو رمز تازه یکسان نیست.");
+        showError(byId("accPwError"), isEnglish() ? "The two new passwords do not match." : "دو رمز جدید یکسان نیست.");
         return;
       }
       try {
@@ -497,7 +520,7 @@ const Z = (() => {
           new_password: byId("accPwNew").value,
         });
         event.target.reset();
-        byId("accPwOk").textContent = isEnglish() ? "Your new password is saved." : "رمز تازه ذخیره شد.";
+        byId("accPwOk").textContent = isEnglish() ? "Your new password is saved." : "رمز جدید ذخیره شد.";
         show(byId("accPwOk"), true);
       } catch (err) {
         showError(byId("accPwError"), err.message);
@@ -613,6 +636,14 @@ const Z = (() => {
       } catch (_) { /* not signed in to this area */ }
     }
     if (!signedIn.length) return;
+
+    // A signed-in visitor starts on the lesson page, not on the public home page. The logo and the home link go there too.
+    const memberHome = "/student";
+    if (location.pathname === "/") {
+      location.replace(memberHome);
+      return;
+    }
+    document.querySelectorAll('.site-brand, .site-nav a[href="/"]').forEach((link) => link.setAttribute("href", memberHome));
 
     let profile = { avatar: "" };
     try {

@@ -254,43 +254,168 @@
 
   // ----- Overview, learner detail, help content and settings -----
 
-  function kv(label, value) {
-    return Z.el("div", "kv", `${label}: ${value}`);
+  // Persian names for the stored values. A value that is not listed here is shown as it is.
+  const PAYMENT_LABELS = {
+    pending: "در انتظار پرداخت",
+    paid: "پرداخت شده، منتظر تأیید",
+    confirmed: "تأیید شده",
+    failed: "ناموفق",
+  };
+  const GENDER_LABELS = { male: "پسر", female: "دختر" };
+  const CONVERSATION_LABELS = { story: "داستان", quiz: "پرسش و پاسخ", mixed: "ترکیبی" };
+  const RESPONSE_LABELS = { playful: "شاد", gentle: "ملایم", direct: "مستقیم" };
+  const SELF_TEST_KIND_LABELS = { qa: "پرسش و پاسخ", conversation: "گفتگو", mixed: "ترکیبی", suggested: "پیشنهاد سیستم" };
+  const SELF_TEST_SKILL_LABELS = { writing: "نوشتن", listening: "شنیداری", speaking: "گفتار", mixed: "ترکیبی" };
+  const SELF_TEST_STATUS_LABELS = { active: "در جریان", finished: "تمام شده" };
+
+  function fa(number) {
+    return Number(number || 0).toLocaleString("fa-IR");
+  }
+
+  function sum(counts) {
+    return Object.values(counts).reduce((total, n) => total + n, 0);
+  }
+
+  // One card: a title, the big number, and a short note under it.
+  function statCard(label, value, note, chips = []) {
+    const card = Z.el("div", "stat-card");
+    card.append(Z.el("span", "stat-label", label), Z.el("span", "stat-value", value));
+    if (note) card.appendChild(Z.el("p", "stat-note", note));
+    if (chips.length) {
+      const row = Z.el("div", "chip-row");
+      chips.forEach((text) => row.appendChild(Z.el("span", "", text)));
+      card.appendChild(row);
+    }
+    return card;
+  }
+
+  // A block of the overview: a heading, one short line about it, and its cards.
+  function overviewSection(title, intro, cards) {
+    const section = Z.el("div", "overview-section");
+    section.append(Z.el("h3", "", title), Z.el("p", "muted", intro));
+    const grid = Z.el("div", "stat-grid");
+    grid.append(...cards);
+    section.appendChild(grid);
+    return section;
+  }
+
+  // Each status with its count, in the order the statuses are listed. Statuses with no rows are left out.
+  function statusChips(counts, labelOf) {
+    return Object.entries(counts).map(([status, n]) => `${labelOf(status)}: ${fa(n)}`);
+  }
+
+  function consultLabel(status) {
+    return statusLabel(REQUEST_KINDS.consult, status);
+  }
+
+  function cooperationLabel(status) {
+    return statusLabel(REQUEST_KINDS.cooperation, status);
+  }
+
+  function tokenCard(t) {
+    const note = `مصرف ${fa(t.used)} از ${fa(t.quota)} توکن، باقی‌مانده ${fa(t.remaining)}`
+      + (t.expires_at ? ` — انقضا ${Z.fmtDate(t.expires_at)}` : "");
+    return statCard(t.tenant, `${fa(t.percent_used)}٪ مصرف شد`, note);
   }
 
   async function loadOverview() {
+    loadLearnerChoices();
     const data = await Z.request("GET", `${API}/overview`);
     const box = $("overviewBox");
+    const payments = statusChips(data.payments, (s) => PAYMENT_LABELS[s] || s);
     box.replaceChildren(
-      kv("ثبت‌نام‌کنندگان بزرگسال", data.users.adults),
-      kv("دانش‌آموزان", data.users.learners),
-      kv("پلن‌های فعال", data.active_plans),
-      kv("پرداخت‌ها (بر اساس وضعیت)", JSON.stringify(data.payments)),
-      kv("درخواست‌های مشاوره", JSON.stringify(data.consults)),
-      kv("درخواست‌های همکاری", JSON.stringify(data.cooperations)),
-      kv("جلسه‌ها (کل / کامل‌شده)", `${data.lessons.total} / ${data.lessons.completed}`),
-      kv("آزمون‌های «خودت رو محک بزن»", data.self_tests),
+      overviewSection("کاربران", "ثبت‌نام‌ها و دانش‌آموزان در سیستم.", [
+        statCard("بزرگسالان ثبت‌نام‌شده", fa(data.users.adults), "والدین و بزرگسالانی که برای خودشان یاد می‌گیرند"),
+        statCard("دانش‌آموزان", fa(data.users.learners), "فرزندان و دانش‌آموزان مستقل"),
+        statCard("پلن‌های فعال", fa(data.active_plans), "بزرگسالانی که پلنشان هنوز تمام نشده است"),
+      ]),
+      overviewSection("پرداخت‌ها", "پرداخت‌هایی که ثبت شده‌اند. پرداخت‌های منتظر تأیید در بخش «مالی» دیده می‌شوند.", [
+        statCard("کل پرداخت‌ها", fa(sum(data.payments)), "", payments),
+      ]),
+      overviewSection("درخواست‌ها", "درخواست‌های مشاوره و همکاری که از سایت رسیده‌اند.", [
+        statCard("درخواست مشاوره", fa(sum(data.consults)), "", statusChips(data.consults, consultLabel)),
+        statCard("درخواست همکاری", fa(sum(data.cooperations)), "", statusChips(data.cooperations, cooperationLabel)),
+      ]),
+      overviewSection("جلسه‌ها", "جلسه‌های گفتگو و آزمون‌های «خودت رو محک بزن».", [
+        statCard("کل جلسه‌ها", fa(data.lessons.total), "هر جلسه‌ای که شروع شده است"),
+        statCard("جلسه‌های کامل‌شده", fa(data.lessons.completed), "جلسه‌هایی که تا پایان رفته‌اند"),
+        statCard("آزمون‌های «خودت رو محک بزن»", fa(data.self_tests), ""),
+      ]),
+      overviewSection("مصرف توکن",
+        "توکن واحد محاسبه‌ی مصرف هوش مصنوعی است. هر پاسخ مدل تعدادی توکن مصرف می‌کند. هر مشتری سقف توکن دارد و مصرف او از همان سقف کم می‌شود. "
+        + "این عددها نشان می‌دهند هر مشتری چقدر از سهمیه‌اش را مصرف کرده است.",
+        data.tokens.length ? data.tokens.map(tokenCard) : [statCard("هنوز مشتری‌ای نیست", "—", "مشتری‌ای با سقف توکن ثبت نشده است")]),
     );
-    data.tokens.forEach((t) => box.appendChild(kv(`توکن ${t.tenant}`,
-      `مصرف ${t.used} از ${t.quota} (${t.percent_used}٪) — باقی‌مانده ${t.remaining}`
-      + (t.expires_at ? ` — انقضا ${Z.fmtDate(t.expires_at)}` : ""))));
+  }
+
+  // Every learner in one list, with the parent for a child. The list is used to pick the learner for the details below.
+  async function loadLearnerChoices() {
+    const learners = await Z.request("GET", `${API}/learners`);
+    const select = $("learnerSelect");
+    const current = select.value;
+    fillSelect(select, learners.map((l) => [
+      l.id,
+      l.kind === "self" ? `${l.name} (یادگیری خود)` : `${l.name}${l.parent ? ` — والد: ${l.parent}` : ""}`,
+    ]));
+    if (current) select.value = current;
+  }
+
+  function factCard(label, value) {
+    const card = Z.el("div", "stat-card");
+    card.append(Z.el("span", "stat-label", label), Z.el("span", "stat-value", value));
+    return card;
   }
 
   async function loadLearner(event) {
     event.preventDefault();
-    const id = $("learnerId").value.trim();
+    const id = $("learnerSelect").value;
     const box = $("learnerBox");
     box.replaceChildren();
+    if (!id) return;
     try {
       const d = await Z.request("GET", `${API}/learners/${encodeURIComponent(id)}`);
-      box.append(
-        kv("نام", d.display_name || "—"),
-        kv("سن (گروه)", d.age_band),
-        kv("سطح", d.cefr_level || "تعیین نشده"),
-        kv("اطلاعات", JSON.stringify(d.details)),
-        kv("برنامه", d.progress.program ? `${d.progress.program.name} — ${d.progress.percent}٪` : "بدون برنامه"),
-        kv("ارزیابی‌ها", d.evaluations || "—"),
+      const details = d.details || {};
+      const program = d.progress.program;
+      const facts = Z.el("div", "learner-facts");
+      facts.append(
+        factCard("نام", d.display_name || "—"),
+        factCard("سن", details.age ? `${fa(details.age)} سال` : "—"),
+        factCard("جنسیت", GENDER_LABELS[details.gender] || "—"),
+        factCard("پایه‌ی تحصیلی", details.grade || "—"),
+        factCard("سطح", d.cefr_level || "تعیین نشده"),
+        factCard("سبک گفتگو", CONVERSATION_LABELS[details.conversation_style] || "—"),
+        factCard("سبک پاسخ", RESPONSE_LABELS[details.response_style] || "—"),
+        factCard("برنامه", program ? `${program.name} — ${fa(d.progress.percent)}٪` : "بدون برنامه"),
       );
+      box.appendChild(facts);
+
+      if (details.attributes || details.free_text) {
+        box.appendChild(Z.el("p", "muted", [details.attributes, details.free_text].filter(Boolean).join(" — ")));
+      }
+
+      const evaluations = Z.el("div", "overview-section");
+      evaluations.appendChild(Z.el("h3", "", "ارزیابی‌های اخیر"));
+      if (d.evaluations) {
+        d.evaluations.split("\n").filter(Boolean).forEach((line) => evaluations.appendChild(Z.el("p", "", line.replace(/^- /, ""))));
+      } else {
+        evaluations.appendChild(Z.el("p", "muted", "هنوز ارزیابی‌ای ثبت نشده است."));
+      }
+      box.appendChild(evaluations);
+
+      const tests = Z.el("div", "overview-section");
+      tests.appendChild(Z.el("h3", "", "آزمون‌های «خودت رو محک بزن»"));
+      if (d.self_tests.length) {
+        const grid = Z.el("div", "stat-grid");
+        d.self_tests.forEach((t) => grid.appendChild(statCard(
+          SELF_TEST_SKILL_LABELS[t.skill] || t.skill,
+          SELF_TEST_STATUS_LABELS[t.status] || t.status,
+          `نوع: ${SELF_TEST_KIND_LABELS[t.kind] || t.kind}`,
+        )));
+        tests.appendChild(grid);
+      } else {
+        tests.appendChild(Z.el("p", "muted", "هنوز آزمونی انجام نشده است."));
+      }
+      box.appendChild(tests);
     } catch (err) {
       box.appendChild(Z.el("p", "error", err.message));
     }
@@ -1426,6 +1551,7 @@
     $("connPayProvider").value = data.payment_provider;
     $("connMerchantHint").textContent = data.zarinpal_merchant_set ? `کد فعلی: ${data.zarinpal_merchant_masked}` : "کدی ثبت نشده است.";
     $("connCallback").textContent = data.callback_url;
+    $("connBaseUrl").value = data.public_base_url || "";
     $("connMerchant").value = "";
   }
 
@@ -1445,7 +1571,7 @@
 
   function savePayment() {
     return run(async () => {
-      const body = { payment_provider: $("connPayProvider").value };
+      const body = { payment_provider: $("connPayProvider").value, public_base_url: $("connBaseUrl").value.trim() };
       if ($("connMerchant").value.trim()) body.zarinpal_merchant_id = $("connMerchant").value.trim();
       await Z.request("POST", `${API}/connections`, body);
       $("payNotice").hidden = false;

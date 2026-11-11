@@ -9,7 +9,7 @@ from zaban.config import settings
 from zaban.db import get_db
 from zaban.models import BillingPlan, Payment, utcnow
 from zaban.services.payments import confirm_payment, get_gateway, has_active_plan, mark_failed, mark_paid
-from zaban.services.settings_store import PAYMENT_PROVIDER_KEY, ZARINPAL_MERCHANT_KEY, get_setting
+from zaban.services.settings_store import PAYMENT_PROVIDER_KEY, PUBLIC_BASE_URL_KEY, ZARINPAL_MERCHANT_KEY, get_setting
 from zaban.web import _guardian_from_cookie
 
 # Plans, checkout and payment status for adult accounts. The browser never decides that a payment succeeded.
@@ -126,6 +126,7 @@ def checkout(
     gateway = get_gateway(
         get_setting(db, PAYMENT_PROVIDER_KEY, settings.payment_gateway),
         get_setting(db, ZARINPAL_MERCHANT_KEY, settings.zarinpal_merchant_id or ""),
+        get_setting(db, PUBLIC_BASE_URL_KEY, settings.public_base_url),
     )
     payment = Payment(
         guardian_id=guardian.id,

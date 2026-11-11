@@ -1,3 +1,4 @@
+import re
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -36,6 +37,7 @@ from zaban.services.settings_store import (
     PROMPT_MODE_DEFAULT,
     PROMPT_MODE_KEY,
     MODE_LABELS,
+    PUBLIC_BASE_URL_KEY,
     SMS_API_KEY_KEY,
     SMS_PROVIDER_KEY,
     SMS_TEMPLATE_KEY,
@@ -126,6 +128,8 @@ def read_connections(db: DBSession = Depends(get_db)) -> dict:
     # Keys are returned masked. The panel never sends a full key back to the browser.
     sms_key = get_setting(db, SMS_API_KEY_KEY) or settings.kavenegar_api_key or ""
     merchant = get_setting(db, ZARINPAL_MERCHANT_KEY) or settings.zarinpal_merchant_id or ""
+    # The address is saved in the database, so a new release or a restart does not change it. The environment is only the default.
+    site = (get_setting(db, PUBLIC_BASE_URL_KEY) or settings.public_base_url).rstrip("/")
     return {
         "sms_provider": sms_provider_for(db),
         "sms_api_key_masked": _mask(sms_key),
@@ -134,7 +138,8 @@ def read_connections(db: DBSession = Depends(get_db)) -> dict:
         "payment_provider": get_setting(db, PAYMENT_PROVIDER_KEY, settings.payment_gateway),
         "zarinpal_merchant_masked": _mask(merchant),
         "zarinpal_merchant_set": bool(merchant),
-        "callback_url": f"{settings.public_base_url}/v1/web/billing/zarinpal/callback",
+        "public_base_url": site,
+        "callback_url": f"{site}/v1/web/billing/zarinpal/callback",
     }
 
 
@@ -145,6 +150,7 @@ class ConnectionsUpdate(BaseModel):
     sms_otp_template: str | None = Field(default=None, max_length=60)
     payment_provider: str | None = Field(default=None, pattern=r"^(fake|zarinpal)$")
     zarinpal_merchant_id: str | None = Field(default=None, max_length=100)
+    public_base_url: str | None = Field(default=None, max_length=200)
 
 
 @router.post("/connections")
@@ -161,8 +167,29 @@ def save_connections(body: ConnectionsUpdate, db: DBSession = Depends(get_db)) -
         set_setting(db, PAYMENT_PROVIDER_KEY, body.payment_provider)
     if body.zarinpal_merchant_id is not None and body.zarinpal_merchant_id.strip():
         set_setting(db, ZARINPAL_MERCHANT_KEY, body.zarinpal_merchant_id.strip())
+    if body.public_base_url is not None:
+        address = body.public_base_url.strip().rstrip("/")
+        if address and not re.fullmatch(r"https?://[^\s/]+(/[^\s]*)?", address):
+            raise HTTPException(status_code=400, detail="The site address must start with http:// or https://")
+        set_setting(db, PUBLIC_BASE_URL_KEY, address)
     db.commit()
     return {"ok": True}
+
+
+@router.get("/learners")
+def list_learners(db: DBSession = Depends(get_db)) -> list[dict]:
+    # Every learner, children of a parent included, so the panel can pick any of them by name.
+    students = db.query(Student).order_by(Student.display_name).all()
+    guardians = {g.id: g.full_name for g in db.query(Guardian).all()}
+    return [
+        {
+            "id": s.id,
+            "name": s.display_name or s.username or "—",
+            "kind": "self" if s.self_owner_id else "child",
+            "parent": guardians.get(s.guardian_id or s.self_owner_id, ""),
+        }
+        for s in students
+    ]
 
 
 @router.get("/learners/{student_id}")

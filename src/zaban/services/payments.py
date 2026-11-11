@@ -70,10 +70,11 @@ class ZarinPalGateway:
         return response.status_code == 200 and data.get("code") in (100, 101)
 
 
-def get_gateway(provider: str, merchant_id: str | None = None) -> PaymentGateway:
-    # The provider and the merchant ID are set in the admin panel. The merchant ID falls back to the environment.
+def get_gateway(provider: str, merchant_id: str | None = None, base_url: str | None = None) -> PaymentGateway:
+    # The provider, the merchant ID and the public address are set in the admin panel. Each falls back to the environment.
     if provider == "zarinpal":
-        return ZarinPalGateway(merchant_id or settings.zarinpal_merchant_id, f"{settings.public_base_url}/v1/web/billing/zarinpal/callback")
+        site = (base_url or settings.public_base_url).rstrip("/")
+        return ZarinPalGateway(merchant_id or settings.zarinpal_merchant_id, f"{site}/v1/web/billing/zarinpal/callback")
     if settings.environment == "production":
         raise HTTPException(status_code=503, detail="The payment gateway is not ready yet")
     return FakeGateway()

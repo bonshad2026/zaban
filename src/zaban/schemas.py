@@ -72,10 +72,6 @@ class AccentChoice(BaseModel):
     accent: Literal["en-US", "en-GB", "en-AU", "en-CA"]
 
 
-class LevelTestAnswers(BaseModel):
-    # One chosen option index per question, in the same order as the questions.
-    answers: list[int] = Field(min_length=6, max_length=6)
-
 
 class OtpRequest(BaseModel):
     phone: str = Field(min_length=6, max_length=24)

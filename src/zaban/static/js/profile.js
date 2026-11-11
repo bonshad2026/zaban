@@ -43,7 +43,7 @@
         new_password: $("pwNew").value,
       });
       $("passwordForm").reset();
-      flash("pwOk", english() ? "Your new password is saved." : "رمز تازه ذخیره شد.");
+      flash("pwOk", english() ? "Your new password is saved." : "رمز جدید ذخیره شد.");
     } catch (err) {
       Z.showError($("pwError"), err.message);
     }

@@ -289,6 +289,8 @@ def _parent_payment(client, monkeypatch, sent: list):
     test_settings = dataclasses.replace(payments_module.settings, zarinpal_merchant_id="merchant-test-id",
                                         public_base_url="http://site.test")
     monkeypatch.setattr(payments_module, "settings", test_settings)
+    from zaban import billing as billing_module
+    monkeypatch.setattr(billing_module, "settings", test_settings)
 
     def fake_post(url, json, timeout):
         sent.append((url, json))

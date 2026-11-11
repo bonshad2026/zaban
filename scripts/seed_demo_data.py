@@ -77,7 +77,6 @@ def main() -> None:
     from zaban.services.curriculum import seed_curriculum
     from zaban.services.passwords import hash_password
     from zaban.services.programs import ensure_progress, seed_programs
-    from zaban.services.self_test import DEFAULT_SELF_TEST_PROMPT, SELF_TEST_PROMPT_KEY
 
     Base.metadata.create_all(engine)
     with SessionLocal() as db:
@@ -291,11 +290,11 @@ def main() -> None:
         # ----- Help content: five local sample files, plus one link -----
         media = args.media
         samples = [
-            ("Morning podcast: greetings", "podcast", "T", "A1", "school, friends", "sample-podcast-morning.wav", "audio/wav"),
-            ("Story: the lost sound", "story", "T", "A1", "animals", "sample-story-sound.wav", "audio/wav"),
-            ("Animation cover", "animation", "K", "A1", "animals", "sample-animation-cover.png", "image/png"),
-            ("Vocabulary card", "sample", "T", "A2", "food", "sample-vocabulary-card.png", "image/png"),
-            ("Story worksheet", "sample", "T", "A1", "stories", "sample-story-worksheet.pdf", "application/pdf"),
+            ("Morning podcast: greetings", "podcast", "T", "A1", "school, friends", "podcast-sample.wav", "audio/wav"),
+            ("Story: the lost sound", "story", "T", "A1", "animals", "story-sample.pdf", "application/pdf"),
+            ("Animation cover", "animation", "K", "A1", "animals", "animation-sample.png", "image/png"),
+            ("Vocabulary card", "sample", "T", "A2", "food", "guide-sample.pdf", "application/pdf"),
+            ("Story worksheet", "sample", "T", "A1", "stories", "sample-worksheet.pdf", "application/pdf"),
         ]
         for title, category, band, level, interests, filename, mime in samples:
             db.add(HelpContent(title=title, category=category, age_band=band, level=level, interests=interests,
@@ -319,7 +318,6 @@ def main() -> None:
                                                        "Use pictures and stories from everyday life in the UK and US. Never rush the learner."))
         db.merge(AppSetting(key="expected_output",
                             value="Use the words from the last lesson. End each lesson with one short task."))
-        db.merge(AppSetting(key=SELF_TEST_PROMPT_KEY, value=DEFAULT_SELF_TEST_PROMPT))
         db.commit()
 
         counts = {

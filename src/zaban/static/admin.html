@@ -8,6 +8,8 @@
   <style>
     .admin-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
     .row > .full { flex: 0 0 100%; min-width: 0; }
+    /* A table that is wider than its card scrolls inside the card, and never runs past the card's border. */
+    .table-box { max-width: 100%; overflow-x: auto; }
     .admin-table { width: 100%; border-collapse: collapse; font-size: 14px; }
     .admin-table th, .admin-table td { text-align: start; padding: 10px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
     .admin-table th { color: var(--muted); font-weight: 600; }
@@ -27,9 +29,10 @@
     .app-side .admin-group-title:hover { background: var(--accent-soft); }
     .app-side .admin-group-title::after { content: "▾"; color: var(--muted); transition: transform .2s; }
     .app-side .admin-group.is-closed .admin-group-title::after { transform: rotate(-90deg); }
-    .app-side .admin-group > .tab { margin-inline-start: 14px; }
+    /* The submenu and the top item start at the same right edge as the group title. Their text is indented under the title. */
+    .app-side .admin-group > .tab { width: 100%; justify-content: flex-start; text-align: start; padding-inline-start: 28px; }
     .app-side .admin-group.is-closed > .tab { display: none; }
-    .app-side .top-tab { margin-top: 10px; }
+    .app-side .top-tab { width: 100%; justify-content: flex-start; text-align: start; margin-top: 10px; }
     /* Request lists: a short cut of long text, the full text on hover and in the details dialog. */
     .request-filter { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
     .request-filter select { width: auto; margin: 0; }
@@ -37,6 +40,25 @@
     .status-control { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
     .status-control select { width: auto; margin: 0; padding: 6px 8px; font-size: 13px; }
     .status-control button { margin: 0; padding: 6px 10px; font-size: 13px; }
+    /* Request tables: one line per request. The status and «اعمال» sit side by side; wide content scrolls inside the table box. */
+    #consultTable th, #consultTable td, #cooperationTable th, #cooperationTable td { white-space: nowrap; }
+    #consultTable .clip, #cooperationTable .clip { max-width: none; white-space: nowrap; }
+    #consultTable .status-control, #cooperationTable .status-control { flex-wrap: nowrap; }
+    /* Overview: one block per topic, with a card for each number and a short note under it. */
+    .overview-section { margin-top: 22px; }
+    .overview-section h3 { margin: 0 0 4px; }
+    .overview-section > .muted { margin: 0 0 12px; font-size: 13px; }
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+    .stat-card { border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; background: var(--card-raised); display: grid; gap: 6px; }
+    .stat-label { color: var(--muted); font-size: 13px; }
+    .stat-value { font-size: 26px; font-weight: 700; color: var(--text); }
+    .stat-note { color: var(--muted); font-size: 12px; line-height: 1.7; }
+    .chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+    .chip-row span { padding: 3px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-dark); font-size: 12px; }
+    .learner-picker { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 8px 0 14px; }
+    .learner-picker select { width: auto; min-width: 260px; margin: 0; }
+    .learner-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+    .learner-facts .stat-card { padding: 12px 14px; }
     .status-badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 13px; background: var(--accent-soft); color: var(--accent-dark); }
     .status-badge.is-new { background: var(--warn-soft); color: var(--warn); }
     .status-badge.is-closed { background: var(--card-raised); color: var(--muted); border: 1px solid var(--border); }
@@ -62,6 +84,8 @@
     .tag-chip button { margin: 0; padding: 0 8px; font-size: 13px; line-height: 1.6; border-radius: 999px; }
     .facet-card { margin: 10px 0; padding: 12px 14px; }
     .request-message { white-space: pre-wrap; max-height: 40vh; overflow-y: auto; margin: 0; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--card-raised); }
+    /* The admin console has its own side menu, so the public site menu (home, demo, consult...) is hidden here. */
+    .site-header .site-drawer, .site-header .menu-toggle { display: none !important; }
   </style>
 </head>
 <body>
@@ -146,12 +170,14 @@
       <section class="card" id="tab-overview" hidden>
         <h2>نمای کلی</h2>
         <div id="overviewBox"></div>
-        <h3>جزئیات یک دانش‌آموز</h3>
-        <form id="learnerForm" class="row">
-          <input id="learnerId" class="ltr-field" placeholder="شناسه‌ی دانش‌آموز" required>
-          <button type="submit" class="ghost">نمایش</button>
-        </form>
-        <div id="learnerBox"></div>
+        <div class="overview-section">
+          <h3>جزئیات یک دانش‌آموز</h3>
+          <form id="learnerForm" class="learner-picker">
+            <select id="learnerSelect" aria-label="انتخاب دانش‌آموز"></select>
+            <button type="submit" class="ghost">نمایش</button>
+          </form>
+          <div id="learnerBox"></div>
+        </div>
       </section>
 
       <section class="card" id="tab-helpcontent" hidden>
@@ -275,6 +301,9 @@
         <label for="connMerchant">کد پذیرنده‌ی زرین‌پال</label>
         <p class="muted" id="connMerchantHint"></p>
         <input id="connMerchant" type="password" class="ltr-field" autocomplete="off" placeholder="برای تغییر، کد تازه را وارد کنید">
+        <label for="connBaseUrl">آدرس سایت (از بیرون دیده می‌شود)</label>
+        <p class="muted">این آدرس را یک بار وارد کنید، مثلاً <span class="ltr-field">https://zaban.example.com</span>. با به‌روزرسانی برنامه یا ریستارت تغییر نمی‌کند. خالی بگذارید تا مقدار تنظیم‌شده در سرور استفاده شود.</p>
+        <input id="connBaseUrl" class="ltr-field" autocomplete="off" placeholder="https://zaban.example.com">
         <label>آدرس بازگشت برای ثبت در زرین‌پال</label>
         <p class="ltr-field" id="connCallback"></p>
         <p><button type="button" id="paySave">ذخیره‌ی درگاه پرداخت</button></p>
