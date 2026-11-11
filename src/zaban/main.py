@@ -57,7 +57,16 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="zaban", version="0.1.0", lifespan=lifespan)
+# The interactive API page and the API description are shown only in development. Production does not publish them.
+_docs_url = "/docs" if settings.environment == "development" else None
+app = FastAPI(
+    title="zaban",
+    version="0.1.0",
+    lifespan=lifespan,
+    docs_url=_docs_url,
+    redoc_url=None,
+    openapi_url="/openapi.json" if _docs_url else None,
+)
 # Other websites (for example the learner app on its own server) may call the conversation routes from the browser.
 # Only the sites listed in CONVERSATION_ALLOWED_ORIGINS are allowed; the list is comma separated.
 _conversation_origins = [origin.strip() for origin in os.getenv("CONVERSATION_ALLOWED_ORIGINS", "").split(",") if origin.strip()]

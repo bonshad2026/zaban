@@ -91,7 +91,7 @@
 <li>برای شروع درس باید طرح فعال، رضایت والد و مشخصات کامل (سطح، سن و جنسیت) باشد. سن و جنسیتی که بزرگسال در حسابش وارد کرده، در اولین شروع درس به مشخصات دانش‌آموز کپی می‌شود.</li>
 <li>محتوای کمک‌آموزشی تب‌های دسته‌بندی و یک پنجره‌ی فیلتر دارد. در پنجره، برای هر گروه برچسب یک فهرست انتخابی است.</li>
 <li>برنامه‌ی یادگیری: هر سرفصل تعداد دفعات تمرین و میانگین امتیاز خودش را نشان می‌دهد.</li>
-<li><strong>صفحه‌ی والد <code>/parent</code></strong> (<code>parent.html</code>)، <strong>طرح <code>/plan</code></strong> (<code>plan.html</code>)، <strong>تعیین سطح <code>/level</code></strong> (<code>level.html</code>)، <strong>پرداخت‌ها <code>/payments</code></strong> (<code>payments.html</code>)، <strong>پروفایل <code>/profile</code></strong> (<code>profile.html</code>)، و <strong>درخواست‌ها <code>/requests</code></strong> (<code>requests.html</code>؛ درخواست‌های مشاوره و همکاری خود کاربر).</li>
+<li><strong>ورود <code>/parent</code></strong> (<code>parent.html</code>؛ یک ورود برای همه، با شماره و رمز)، <strong>طرح <code>/plan</code></strong> (<code>plan.html</code>)، <strong>تعیین سطح <code>/level</code></strong> (<code>level.html</code>)، <strong>پرداخت‌ها <code>/payments</code></strong> (<code>payments.html</code>)، <strong>پروفایل <code>/profile</code></strong> (<code>profile.html</code>)، و <strong>درخواست‌ها <code>/requests</code></strong> (<code>requests.html</code>؛ درخواست‌های مشاوره و همکاری خود کاربر).</li>
 </ul>
 <hr />
 <h2>۳. پنل مدیریت <code>/admin</code></h2>
@@ -214,12 +214,13 @@
 </ul>
 <hr />
 <h2>۷. آزمون‌ها</h2>
-<p>دستور: <code>pytest</code> از پوشه‌ی پروژه (در ویندوز: <code>.venv\Scripts\python.exe -m pytest</code>). حدود ۱۵۵ آزمون وجود دارد. فایل‌های مهم:</p>
+<p>دستور: <code>pytest</code> از پوشه‌ی پروژه (در ویندوز: <code>.venv\Scripts\python.exe -m pytest</code>). حدود ۱۶۵ آزمون وجود دارد. فایل‌های مهم:</p>
 <ul>
 <li><code>tests/test_admin_menu_and_help.py</code>: ساختار منوی ادمین، دیالوگ‌های درخواست، برچسب‌ها و فیلترهای کمک‌آموزشی، پلن‌ها، موارد آموزشی، پرامپت آزمون، خروج ادمین و امتیاز از خط SCORE.</li>
 <li><code>tests/test_progress_order.py</code>: جلسه‌ی بعدی بعد از جابه‌جایی، گفتگوی مجدد که جایگاه را تغییر نمی‌دهد، و میانگین.</li>
 <li><code>tests/test_start_lesson_profile.py</code>: شروع درس با سن و جنسیت حساب بزرگسال.</li>
 <li><code>tests/test_missing_items.py</code>، <code>tests/test_full_scope.py</code>، <code>tests/test_programs.py</code>، <code>tests/test_api.py</code>: آزمون‌های قدیمی‌تر.</li>
+<li><code>tests/test_conversation.py</code>: ماژول گفتگو (توکن پرامپت، گفتگوی یک‌بار مصرف، استریم پاسخ، محدوده‌ی توکن، پایان گفتگو، مدت اعتبار و پاک‌سازی).</li>
 <li><code>tests/helpers_learner.py</code>: تابع <code>learner_login(client)</code> حساب بزرگسال نمونه را می‌سازد و کوکی دانش‌آموز را تنظیم می‌کند. <code>self_student(db)</code> بعد از آن پروفایل دانش‌آموز را می‌خواند.</li>
 </ul>
 <hr />
@@ -230,7 +231,27 @@
 <li><strong>امتیاز:</strong> فقط با کلید هوش مصنوعی ثبت می‌شود. بدون کلید، جلسه‌ها امتیاز ندارند.</li>
 <li><strong>برنامه‌های یادگیری:</strong> به تصمیم صاحب پروژه نگه داشته شده‌اند.</li>
 <li><strong>امنیت:</strong> رمز مشترک ادمین و جدول نشست‌ها (<code>web_sessions</code>) داده‌ی حساس هستند و نباید خارج از سیستم منتقل شوند.</li>
-<li><strong>وضعیت Git:</strong> تغییرات در شاخه‌ی <code>feature/zaban-next-2026-11-10</code> هستند. هر push به شاخه‌ی مشترک فقط با اجازه‌ی صاحب پروژه انجام می‌شود.</li>
+<li><strong>وضعیت Git:</strong> کارها روی <code>develop</code> و <code>main</code> ادغام شده‌اند (fast-forward) و روی ریموت هستند. کار جاری در <code>feature/zaban-login-start-2026-11-11</code> است. هر push به شاخه‌ی مشترک فقط با اجازه‌ی صاحب پروژه انجام می‌شود.</li>
+</ul>
+<hr />
+<h2>۹. ماژول گفتگو (API برای برنامه‌های دیگر)</h2>
+<p>بسته‌ی <code>src/zaban/conversation/</code> یک ماژول جدا است و می‌تواند در پروژه‌های دیگر هم استفاده شود. مسیرها زیر <code>/v1/conv</code> هستند.</p>
+<table>
+<thead><tr><th>مسیر</th><th>احراز هویت</th><th>کار</th></tr></thead>
+<tbody>
+<tr><td><code>POST /v1/conv/students/{id}/prompt</code></td><td>کلید مشتری (<code>X-API-Key</code>)</td><td>پرامپت درس را روی سرور می‌سازد و فقط یک توکن موقت برمی‌گرداند</td></tr>
+<tr><td><code>POST /v1/conv/conversations</code></td><td>کلید مشتری</td><td>با توکن پرامپت یک گفتگو باز می‌کند و توکن گفتگو می‌دهد. توکن پرامپت یک بار مصرف است</td></tr>
+<tr><td><code>POST /v1/conv/conversations/{id}/messages</code></td><td>توکن گفتگو (<code>Authorization: Bearer</code>)</td><td>پیام کاربر را می‌گیرد و پاسخ را به‌صورت استریم (SSE) می‌فرستد</td></tr>
+<tr><td><code>GET /v1/conv/conversations/{id}/messages</code></td><td>توکن گفتگو</td><td>پیام‌های گفتگو را برای نمایش دوباره برمی‌گرداند</td></tr>
+<tr><td><code>POST /v1/conv/conversations/{id}/end</code></td><td>توکن گفتگو</td><td>گفتگو را می‌بندد</td></tr>
+</tbody>
+</table>
+<ul>
+<li>مدت اعتبار توکن پرامپت در پنل مدیریت (تنظیمات پرامپت) تنظیم می‌شود و پیش‌فرض یک ساعت است.</li>
+<li>گفتگو و پیام‌هایش ۲۴ ساعت بعد از شروع پاک می‌شوند. پاک‌سازی هنگام باز شدن گفتگوی جدید انجام می‌شود.</li>
+<li>مصرف توکن گفتگو از سهمیه‌ی مشتری و از پلن بزرگسال کم می‌شود، مثل جلسه‌ها.</li>
+<li>برای اینکه صفحه‌ی یک وب‌سایت دیگر بتواند این مسیرها را صدا بزند، آدرس آن سایت را در متغیر <code>CONVERSATION_ALLOWED_ORIGINS</code> بگذارید (جدا شده با کاما).</li>
+<li>صفحه‌ی راهنمای API (<code>/docs</code>) فقط در حالت <code>development</code> باز است.</li>
 </ul>
 </main>
 </body>

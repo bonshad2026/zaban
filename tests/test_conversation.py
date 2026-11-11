@@ -136,3 +136,9 @@ def test_expired_conversations_are_removed(client):
         assert removed >= 1
         assert db.query(Conversation).filter(Conversation.id == conversation_id).count() == 0
         assert db.query(ConvMessage).filter(ConvMessage.conversation_id == conversation_id).count() == 0
+
+
+def test_api_page_is_shown_in_development(client):
+    # The tests run in development, so the interactive API page is available here.
+    assert client.get("/docs").status_code == 200
+    assert client.get("/openapi.json").status_code == 200
