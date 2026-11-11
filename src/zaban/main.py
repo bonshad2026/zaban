@@ -4,6 +4,7 @@ from html import escape
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -12,6 +13,8 @@ from zaban.api import router as api_router
 from zaban.admin import router as admin_router
 from zaban.billing import router as billing_router
 from zaban.config import settings
+from zaban.conversation import models as conversation_models  # noqa: F401  (registers the conversation tables)
+from zaban.conversation.api import router as conversation_router
 from zaban.db import Base, SessionLocal, add_missing_columns, engine
 from zaban.reports import router as reports_router
 from zaban.seed import ensure_default_plan, seed_demo_accounts, seed_demo_plans, seed_demo_tenant
@@ -55,7 +58,19 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="zaban", version="0.1.0", lifespan=lifespan)
+# Other websites (for example the learner app on its own server) may call the conversation routes from the browser.
+# Only the sites listed in CONVERSATION_ALLOWED_ORIGINS are allowed; the list is comma separated.
+_conversation_origins = [origin.strip() for origin in os.getenv("CONVERSATION_ALLOWED_ORIGINS", "").split(",") if origin.strip()]
+if _conversation_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_conversation_origins,
+        allow_credentials=False,
+        allow_methods=["GET", "POST"],
+        allow_headers=["Authorization", "Content-Type"],
+    )
 app.include_router(api_router, prefix="/v1")
+app.include_router(conversation_router, prefix="/v1")
 app.include_router(reports_router, prefix="/v1")
 app.include_router(web_router, prefix="/v1")
 app.include_router(account_router, prefix="/v1")

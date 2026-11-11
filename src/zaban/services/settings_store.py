@@ -35,3 +35,5 @@ def set_setting(db: DBSession, key: str, value: str) -> None:
     else:
         row.value = value
         row.updated_at = utcnow()
+# How long a prompt token stays valid, in seconds. The conversation module reads it when a token is made.
+PROMPT_TOKEN_TTL_KEY = "conversation_prompt_ttl_seconds"

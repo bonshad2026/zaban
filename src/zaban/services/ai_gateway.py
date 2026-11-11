@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from dataclasses import dataclass
 
 import anthropic
@@ -48,3 +49,29 @@ def _offline(messages: list[dict]) -> AIResult:
         output_tokens=len(text) // 4 + 1,
         mode="offline",
     )
+
+
+def stream_complete(system_prompt: str, messages: list[dict], usage: dict, max_tokens: int = 300) -> Iterator[str]:
+    # Same model and key as complete(), but the text is sent in pieces as it is written.
+    # The token counts are put in usage once the reply has ended.
+    if not messages or messages[0]["role"] != "user":
+        messages = [{"role": "user", "content": "Hi, I am ready to start."}] + messages
+
+    if not settings.anthropic_api_key:
+        result = _offline(messages)
+        usage.update(input_tokens=result.input_tokens, output_tokens=result.output_tokens)
+        for word in result.text.split(" "):
+            yield word + " "
+        return
+
+    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+    with client.messages.stream(
+        model=settings.model,
+        max_tokens=max_tokens,
+        system=system_prompt,
+        messages=messages,
+    ) as stream:
+        for piece in stream.text_stream:
+            yield piece
+        final = stream.get_final_message()
+    usage.update(input_tokens=final.usage.input_tokens, output_tokens=final.usage.output_tokens)

@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session as DBSession
 
 from zaban.admin import require_admin
 from zaban.config import settings
+from zaban.conversation.service import prompt_ttl_seconds
 from zaban.db import get_db
 from zaban.learning_aids import _progress_out
 from zaban.models import (
@@ -38,6 +39,7 @@ from zaban.services.settings_store import (
     PROMPT_MODE_KEY,
     MODE_LABELS,
     PUBLIC_BASE_URL_KEY,
+    PROMPT_TOKEN_TTL_KEY,
     SMS_API_KEY_KEY,
     SMS_PROVIDER_KEY,
     SMS_TEMPLATE_KEY,
@@ -90,6 +92,7 @@ def read_settings(db: DBSession = Depends(get_db)) -> dict:
         "prompt_mode": get_setting(db, PROMPT_MODE_KEY, PROMPT_MODE_DEFAULT),
         "prompt_mode_labels": MODE_LABELS,
         "expected_output": get_setting(db, EXPECTED_OUTPUT_KEY),
+        "conversation_prompt_ttl_seconds": prompt_ttl_seconds(db),
         "payment_provider": get_setting(db, PAYMENT_PROVIDER_KEY, settings.payment_gateway),
         "secrets": {
             "kavenegar_api_key_set": bool(settings.kavenegar_api_key),
@@ -104,6 +107,7 @@ class SettingsUpdate(BaseModel):
     prompt_mode: str | None = Field(default=None, pattern=r"^(student|general|student_db|all)$")
     expected_output: str | None = Field(default=None, max_length=2000)
     payment_provider: str | None = Field(default=None, pattern=r"^(fake|zarinpal)$")
+    conversation_prompt_ttl_seconds: int | None = Field(default=None, ge=60, le=86400)
 
 
 @router.post("/settings")
@@ -114,6 +118,8 @@ def save_settings(body: SettingsUpdate, db: DBSession = Depends(get_db)) -> dict
         set_setting(db, EXPECTED_OUTPUT_KEY, body.expected_output.strip())
     if body.payment_provider is not None:
         set_setting(db, PAYMENT_PROVIDER_KEY, body.payment_provider)
+    if body.conversation_prompt_ttl_seconds is not None:
+        set_setting(db, PROMPT_TOKEN_TTL_KEY, str(body.conversation_prompt_ttl_seconds))
     db.commit()
     return {"ok": True}
 

@@ -633,6 +633,7 @@
     const data = await Z.request("GET", `${API}/settings`);
     $("setMode").value = data.prompt_mode;
     $("setExpected").value = data.expected_output || "";
+    $("setPromptTtl").value = data.conversation_prompt_ttl_seconds;
     // Only the AI key belongs to the prompt settings. The SMS and payment keys are shown in their own sections.
     $("secretsList").replaceChildren(
       ...Object.entries(data.secrets)
@@ -646,6 +647,7 @@
       await Z.request("POST", `${API}/settings`, {
         prompt_mode: $("setMode").value,
         expected_output: $("setExpected").value,
+        conversation_prompt_ttl_seconds: Number($("setPromptTtl").value),
       });
       $("settingsNotice").hidden = false;
       $("settingsNotice").textContent = "تنظیمات ذخیره شد.";
