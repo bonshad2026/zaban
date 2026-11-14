@@ -17,6 +17,7 @@ ADDED_COLUMNS = [
     ("students", "repeat_topic_id", "VARCHAR(40)"),
     ("guardians", "referral_code", "VARCHAR(8)"),
     ("guardians", "referred_by_id", "VARCHAR(32)"),
+    ("guardians", "teacher_id", "VARCHAR(32)"),
     ("lesson_items", "item_id", "INTEGER"),
     ("sessions", "evaluation", "TEXT"),
     ("sessions", "start_prompt", "TEXT"),

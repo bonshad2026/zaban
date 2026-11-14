@@ -11,16 +11,32 @@
   <!-- Sign-in view: one sign-in for every adult, with a mobile number and a password -->
   <section id="loginView" class="hero" hidden>
     <div class="auth-wrap">
-      <form id="loginForm" class="auth-card" autocomplete="on">
+      <!-- Two ways in: the password chosen at sign-up, or a one-time code sent to the mobile by SMS -->
+      <form id="loginForm" class="auth-card" autocomplete="on" novalidate>
         <h1 data-fa="ورود" data-en="Sign in">ورود</h1>
         <label for="parentPhone" data-fa="شماره‌ی موبایل" data-en="Mobile number">شماره‌ی موبایل</label>
-        <input id="parentPhone" name="phone" type="tel" inputmode="tel" class="ltr-field" autocomplete="username" placeholder="09121234567" required autofocus>
-        <label for="parentPassword" data-fa="رمز عبور" data-en="Password">رمز عبور</label>
-        <input id="parentPassword" name="password" type="password" class="ltr-field" autocomplete="current-password" required>
-        <p></p>
-        <button type="submit" class="wide" data-fa="ورود" data-en="Sign in">ورود</button>
+        <input id="parentPhone" name="phone" type="tel" inputmode="tel" class="ltr-field" autocomplete="username" placeholder="09121234567" autofocus>
+
+        <div id="passwordPart">
+          <label for="parentPassword" data-fa="رمز عبور" data-en="Password">رمز عبور</label>
+          <input id="parentPassword" name="password" type="password" class="ltr-field" autocomplete="current-password">
+        </div>
+
+        <div id="codePart" hidden>
+          <p class="notice" id="loginDevHint" hidden></p>
+          <div class="field-action">
+            <div>
+              <label for="parentCode" data-fa="کد پیامکی" data-en="SMS code">کد پیامکی</label>
+              <input id="parentCode" name="code" inputmode="numeric" class="ltr-field" autocomplete="one-time-code" maxlength="8">
+            </div>
+            <button type="button" id="loginSendBtn" class="secondary" data-fa="ارسال کد پیامکی" data-en="Send SMS code">ارسال کد پیامکی</button>
+          </div>
+          <p class="muted" id="loginTimer" hidden></p>
+        </div>
+
+        <button type="submit" class="wide" id="loginSubmit" data-fa="ورود" data-en="Sign in">ورود</button>
         <p class="error" id="loginError" hidden></p>
-        <p class="links"><a href="#" id="forgotLink" data-fa="رمز عبور را فراموش کرده‌ام" data-en="I forgot my password">رمز عبور را فراموش کرده‌ام</a> · <a href="/signup" data-fa="ثبت‌نام" data-en="Sign up">ثبت‌نام</a></p>
+        <p class="links"><a href="#" id="codeModeLink" data-fa="ورود با کد پیامکی" data-en="Sign in with an SMS code">ورود با کد پیامکی</a> · <a href="#" id="forgotLink" data-fa="رمز عبور را فراموش کرده‌ام" data-en="I forgot my password">رمز عبور را فراموش کرده‌ام</a> · <a href="/signup" data-fa="ثبت‌نام" data-en="Sign up">ثبت‌نام</a></p>
       </form>
 
       <!-- Reset view: a one-time code is sent by SMS, then a new password is set -->

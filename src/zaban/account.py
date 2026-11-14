@@ -38,6 +38,8 @@ class ProfileUpdate(BaseModel):
     age: int | None = Field(default=None, ge=18, le=120)
     gender: Literal["female", "male"] | None = None
     avatar: str | None = Field(default=None, max_length=200_000)
+    # The learning goal. The same choices the sign-up form used to offer. None clears it.
+    goal: Literal["مکالمه‌ی روزمره", "سفر", "کار و شغل", "آزمون", "مدرسه"] | None = None
 
 
 class PasswordChange(BaseModel):
@@ -108,6 +110,8 @@ def update_profile(
         adult.age = body.age
     if "gender" in sent:
         adult.gender = body.gender
+    if "goal" in sent:
+        adult.goal = body.goal
     if "avatar" in sent:
         avatar = body.avatar or ""
         if avatar and not AVATAR_PATTERN.match(avatar):

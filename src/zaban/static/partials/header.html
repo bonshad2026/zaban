@@ -65,6 +65,15 @@
       <option value="female" data-fa="زن" data-en="Woman">زن</option>
       <option value="male" data-fa="مرد" data-en="Man">مرد</option>
     </select>
+    <label for="accGoal" data-fa="هدف از یادگیری" data-en="Your learning goal">هدف از یادگیری</label>
+    <select id="accGoal" name="goal">
+      <option value="" data-fa="انتخاب کنید" data-en="Choose">انتخاب کنید</option>
+      <option value="مکالمه‌ی روزمره" data-fa="مکالمه‌ی روزمره" data-en="Everyday conversation">مکالمه‌ی روزمره</option>
+      <option value="سفر" data-fa="سفر" data-en="Travel">سفر</option>
+      <option value="کار و شغل" data-fa="کار و شغل" data-en="Work">کار و شغل</option>
+      <option value="آزمون" data-fa="آزمون" data-en="Exams">آزمون</option>
+      <option value="مدرسه" data-fa="مدرسه" data-en="School">مدرسه</option>
+    </select>
     <div id="accLearnerBox" hidden>
       <h3 data-fa="اطلاعات یادگیری" data-en="Learning details">اطلاعات یادگیری</h3>
       <label for="accLevelListening" data-fa="سطح شنیداری" data-en="Listening level">سطح شنیداری</label>
@@ -111,6 +120,43 @@
   </form>
 </dialog>
 
+<dialog id="accTeacherDialog" class="account-dialog" aria-labelledby="teacherTitle">
+  <h2 id="teacherTitle" data-fa="تعیین مربی" data-en="Choose a teacher">تعیین مربی</h2>
+  <p class="muted" data-fa="کد مربی‌تان را وارد کنید. نام مربی را که دیدید تأیید کنید تا شاگرد او شوید. هر کس یک مربی دارد و می‌توانید هر زمان مربی‌تان را حذف کنید."
+     data-en="Enter your teacher's code. Check the name, then confirm to become their student. Each person has one teacher, and you can remove the teacher at any time.">کد مربی‌تان را وارد کنید. نام مربی را که دیدید تأیید کنید تا شاگرد او شوید. هر کس یک مربی دارد و می‌توانید هر زمان مربی‌تان را حذف کنید.</p>
+
+  <div id="accTeacherCurrent" hidden>
+    <p data-fa="مربی شما:" data-en="Your teacher:">مربی شما:</p>
+    <p><strong id="accTeacherName"></strong></p>
+    <div class="dialog-actions">
+      <button type="button" class="ghost" id="accTeacherRemove" data-fa="حذف مربی" data-en="Remove teacher">حذف مربی</button>
+    </div>
+  </div>
+
+  <div id="accTeacherChoose" hidden>
+    <label for="accTeacherCode" data-fa="کد مربی" data-en="Teacher code">کد مربی</label>
+    <div class="field-action">
+      <div>
+        <input id="accTeacherCode" class="ltr-field" maxlength="12" autocomplete="off" placeholder="ABC123">
+      </div>
+      <button type="button" class="secondary" id="accTeacherCheck" data-fa="بررسی کد" data-en="Check code">بررسی کد</button>
+    </div>
+    <div id="accTeacherFound" hidden>
+      <p><span data-fa="این مربی است:" data-en="This is your teacher:">این مربی است:</span> <strong id="accTeacherFoundName"></strong></p>
+      <label class="inline"><input type="checkbox" id="accTeacherConfirm"> <span data-fa="تأیید می‌کنم که این معلم من است." data-en="I confirm that this is my teacher.">تأیید می‌کنم که این معلم من است.</span></label>
+      <div class="dialog-actions">
+        <button type="button" id="accTeacherSave" disabled data-fa="ثبت مربی" data-en="Save teacher">ثبت مربی</button>
+      </div>
+    </div>
+  </div>
+
+  <p class="error" id="accTeacherError" hidden></p>
+  <p class="ok-msg" id="accTeacherOk" hidden></p>
+  <p class="muted"><span data-fa="کد شما:" data-en="Your code:">کد شما:</span> <strong id="accTeacherOwnCode" class="ltr-field"></strong></p>
+  <div class="dialog-actions">
+    <button type="button" class="ghost" data-close data-fa="بستن" data-en="Close">بستن</button>
+  </div>
+</dialog>
 <dialog id="accPasswordDialog" class="account-dialog" aria-labelledby="passwordTitle">
   <form id="accPasswordForm" novalidate>
     <h2 id="passwordTitle" data-fa="تغییر رمز عبور" data-en="Change password">تغییر رمز عبور</h2>

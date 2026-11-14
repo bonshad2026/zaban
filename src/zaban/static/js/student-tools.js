@@ -42,18 +42,23 @@
 
   // ----- Profile and level -----
 
-  // ----- Progress -----
+  // ----- Progress: one step per lesson, a path to scroll through, and the details of the lesson picked on it -----
 
-  function bar(percent) {
-    const span = el("span", "progress-fill");
-    span.style.width = `${Math.min(100, Math.max(0, percent))}%`;
-    const wrap = el("div", "bar");
-    wrap.appendChild(span);
-    return wrap;
-  }
+  let progress = null;
+  let picked = null; // the lesson number whose details are shown
 
   function el(tag, className, text) {
     return Z.el(tag, className, text);
+  }
+
+  function isRtl() {
+    return document.documentElement.dir === "rtl";
+  }
+
+  function statusText(status) {
+    if (status === "done") return Z.pick("انجام شد", "Done");
+    if (status === "current") return Z.pick("در این جلسه هستی", "You are here");
+    return Z.pick("هنوز نرسیده", "Not yet");
   }
 
   // Asks for a finished lesson to be played again in the next session. The place in the program stays the same.
@@ -66,62 +71,142 @@
     }
   }
 
+  function renderSummary() {
+    const data = progress;
+    $("progressSummary").textContent = data.program ? data.program.name : "";
+    $("progressStep").textContent = Z.pick(`مرحله‌ی ${data.current} از ${data.total}`, `Step ${data.current} of ${data.total}`);
+    $("progressPercent").textContent = `${data.percent}٪`;
+    $("progressBar").style.width = `${Math.min(100, Math.max(0, data.percent))}%`;
+    $("progressAverage").textContent = data.average_score === null || data.average_score === undefined
+      ? Z.tr("هنوز نمره‌ای ثبت نشده است.")
+      : Z.pick(`میانگین نمره‌ی همه‌ی جلسه‌ها: ${data.average_score} از ۱۰۰`, `Average score of all lessons: ${data.average_score} of 100`);
+    $("progressHowto").textContent = Z.pick(
+      "درصد پیشرفت یعنی میانگین نمره‌ی جلسه‌های انجام‌شده تقسیم بر تعداد کل جلسه‌ها. تکرار یک جلسه، میانگین آن را تغییر می‌دهد و جای شما در مسیر را عوض نمی‌کند.",
+      "Progress is the average score of the finished lessons divided by the number of lessons. Repeating a lesson changes its average, not your place on the path.",
+    );
+    $("pathBefore").textContent = Z.pick(`${data.current - 1} جلسه‌ی قبلی  ·  `, `${data.current - 1} earlier  ·  `);
+    $("pathAfter").textContent = Z.pick(`${data.total - data.current} جلسه‌ی بعدی`, `${data.total - data.current} later`);
+    $("pathPrev").setAttribute("aria-label", Z.pick("جلسه‌های قبلی", "Earlier lessons"));
+    $("pathNext").setAttribute("aria-label", Z.pick("جلسه‌های بعدی", "Later lessons"));
+  }
+
+  function renderPath() {
+    const track = $("pathTrack");
+    const lessons = progress.lessons;
+    track.replaceChildren(...lessons.map((lesson, index) => {
+      const next = lessons[index + 1];
+      const linked = lesson.done && next && next.done ? " link-done" : "";
+      const step = el("div", `path-step ${lesson.status}${linked}`);
+      const node = el("button", "path-node", lesson.done ? "✓" : String(lesson.number));
+      node.type = "button";
+      node.setAttribute("aria-label", `${lesson.number}. ${lesson.title} — ${statusText(lesson.status)}`);
+      node.setAttribute("aria-pressed", lesson.number === picked ? "true" : "false");
+      node.addEventListener("click", () => pick(lesson.number));
+      step.append(node, el("span", "path-label", lesson.title));
+      return step;
+    }));
+  }
+
+  function scrollPathTo(number) {
+    const node = $("pathTrack").querySelectorAll(".path-node")[number - 1];
+    if (node) node.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+  }
+
+  function miniStat(label, value) {
+    const box = el("div", "stat");
+    box.append(el("div", "label", label), el("div", "value", value));
+    return box;
+  }
+
+  function attemptCard(attempt) {
+    const card = el("article", "attempt");
+    const meta = [
+      attempt.minutes === null ? Z.pick("مدت ثبت نشده", "Time not recorded") : Z.pick(`${attempt.minutes} دقیقه`, `${attempt.minutes} min`),
+      attempt.score === null ? Z.pick("نمره ثبت نشده", "No score") : Z.pick(`نمره: ${attempt.score}`, `Score: ${attempt.score}`),
+    ];
+    card.append(
+      el("strong", "", Z.fmtDateTime(attempt.started_at)),
+      el("p", "muted", meta.join(" — ")),
+      el("p", "", attempt.evaluation || Z.tr("ارزیابی هنوز نوشته نشده است.")),
+    );
+    return card;
+  }
+
+  function renderDetail() {
+    const box = $("lessonDetail");
+    const lesson = progress.lessons.find((item) => item.number === picked);
+    if (!lesson) {
+      box.replaceChildren(el("p", "muted", Z.tr("هنوز برنامه‌ای برای شما تعیین نشده است.")));
+      return;
+    }
+    const head = el("div", "lesson-head");
+    head.append(
+      el("span", "lesson-no", Z.pick(`جلسه‌ی ${lesson.number} از ${progress.total}`, `Lesson ${lesson.number} of ${progress.total}`)),
+      el("span", `lesson-chip ${lesson.status}`, statusText(lesson.status)),
+    );
+    const stats = el("div", "lesson-stats");
+    stats.append(
+      miniStat(Z.pick("دفعات", "Times"), String(lesson.visits)),
+      miniStat(Z.pick("میانگین نمره", "Average score"), lesson.average === null ? "—" : String(lesson.average)),
+      miniStat(Z.pick("میانگین مدت", "Average time"), lesson.average_minutes === null ? "—" : Z.pick(`${lesson.average_minutes} دقیقه`, `${lesson.average_minutes} min`)),
+    );
+    box.replaceChildren(head, el("h3", "", lesson.title));
+    if (lesson.goal) box.appendChild(el("p", "muted", lesson.goal));
+    box.appendChild(stats);
+
+    if (lesson.status === "done") {
+      const action = el("div", "lesson-action");
+      const button = el("button", "ghost", lesson.repeat ? Z.tr("لغو تکرار") : Z.tr("تکرار این جلسه در جلسه‌ی بعد"));
+      button.type = "button";
+      button.addEventListener("click", () => requestRepeat(lesson.repeat ? null : lesson.item_id));
+      action.appendChild(button);
+      if (lesson.repeat) action.appendChild(el("p", "notice", Z.tr("در جلسه‌ی بعد این درس دوباره گرفته می‌شود.")));
+      box.appendChild(action);
+      box.appendChild(el("h3", "", Z.pick("همه‌ی دفعات", "All attempts")));
+      lesson.attempts.forEach((attempt) => box.appendChild(attemptCard(attempt)));
+      const link = el("a", "", Z.pick("دیدن گزارش کامل در صفحه‌ی گزارش من", "See the full report on My report"));
+      link.href = "/student?tab=report";
+      box.appendChild(el("p", "", "")).appendChild(link);
+    } else if (lesson.status === "current") {
+      box.appendChild(el("p", "notice", Z.tr("این جلسه‌ی فعلی توست. جلسه‌ی بعدی همین درس است.")));
+    } else {
+      box.appendChild(el("p", "muted", Z.tr("این جلسه هنوز نرسیده. اول جلسه‌های قبلی را طی کن. فعلاً فقط می‌توانی آن را ببینی.")));
+    }
+  }
+
+  function pick(number) {
+    picked = number;
+    $("pathTrack").querySelectorAll(".path-node").forEach((node, index) => {
+      node.setAttribute("aria-pressed", index + 1 === number ? "true" : "false");
+    });
+    renderDetail();
+  }
+
+  // Scrolls the path by most of a screen. In a right-to-left page the later lessons are on the left.
+  function scrollPath(forward) {
+    const track = $("pathTrack");
+    const direction = forward ? 1 : -1;
+    track.scrollBy({ left: direction * (isRtl() ? -1 : 1) * track.clientWidth * 0.8, behavior: "smooth" });
+  }
+
   async function loadProgress() {
     try {
-      const data = await Z.request("GET", "/v1/web/student/progress");
-      const stages = $("progressStages");
-      const sessions = $("progressSessions");
-      stages.replaceChildren();
-      sessions.replaceChildren();
-      if (!data.program) {
+      progress = await Z.request("GET", "/v1/web/student/progress");
+      Z.showError($("progressNotice"), "");
+      if (!progress.program) {
+        $("progressStep").textContent = "";
+        $("progressPercent").textContent = "";
         $("progressSummary").textContent = Z.tr("هنوز برنامه‌ای برای شما تعیین نشده است.");
         $("progressBar").style.width = "0%";
+        $("pathTrack").replaceChildren();
+        $("lessonDetail").replaceChildren();
         return;
       }
-      $("progressSummary").textContent =
-        Z.pick(`${data.program.name} — ${data.program.duration_months} ماه — جلسه‌ی ${data.session_number} — ${data.percent}٪ کامل شده`, `${data.program.name} — ${data.program.duration_months} months — lesson ${data.session_number} — ${data.percent}% complete`);
-      $("progressBar").style.width = `${data.percent}%`;
-      data.stages.forEach((stage) => {
-        const row = el("div", "stage");
-        row.append(el("strong", "", Z.pick(`${stage.name}: ${stage.done} از ${stage.total}`, `${stage.name}: ${stage.done} of ${stage.total}`)), bar(stage.percent));
-        stages.appendChild(row);
-      });
-      // Every lesson in order, grouped by stage: finished, current, and the ones still to come.
-      const average = data.average_score;
-      stages.appendChild(el("p", "muted", average === null || average === undefined
-        ? Z.tr("هنوز نمره‌ای ثبت نشده است.")
-        : Z.pick(`میانگین نمره‌ی جلسه‌ها: ${average} از ۱۰۰`, `Average lesson score: ${average} of 100`)));
-      let currentStage = null;
-      (data.lessons || []).forEach((lesson) => {
-        if (lesson.stage !== currentStage) {
-          currentStage = lesson.stage;
-          stages.appendChild(el("h3", "", currentStage));
-        }
-        const mark = lesson.status === "done" ? "✓" : lesson.status === "current" ? "▶" : "○";
-        const label = lesson.status === "done" ? Z.tr("انجام شد") : lesson.status === "current" ? Z.tr("در این جلسه هستی") : Z.tr("هنوز نرسیده");
-        const row = el("div", `lesson-row lesson-${lesson.status}`);
-        const details = [label];
-        if (lesson.average !== null && lesson.average !== undefined) details.push(Z.pick(`میانگین نمره: ${lesson.average}`, `Average score: ${lesson.average}`));
-        if (lesson.visits > 1) details.push(Z.pick(`دفعات: ${lesson.visits}`, `Times: ${lesson.visits}`));
-        row.append(el("strong", "", `${mark} ${lesson.position + 1}. ${lesson.title}`), el("p", "muted", details.join(" — ")));
-        if (lesson.repeat) row.appendChild(el("p", "notice", Z.tr("در جلسه‌ی بعد این درس دوباره گرفته می‌شود.")));
-        if (lesson.status === "done") {
-          const button = el("button", "ghost", lesson.repeat ? Z.tr("لغو تکرار") : Z.tr("تکرار این جلسه در جلسه‌ی بعد"));
-          button.type = "button";
-          button.addEventListener("click", () => requestRepeat(lesson.repeat ? null : lesson.item_id));
-          row.appendChild(button);
-        }
-        stages.appendChild(row);
-      });
-      if (data.sessions.length === 0) {
-        sessions.appendChild(el("p", "muted", Z.tr("هنوز جلسه‌ای کامل نشده است.")));
-      }
-      data.sessions.forEach((s) => {
-        const row = el("div", "stage");
-        const scoreText = s.score === null || s.score === undefined ? Z.tr("نمره ثبت نشده است") : Z.pick(`نمره: ${s.score} از ۱۰۰`, `Score: ${s.score} of 100`);
-        row.append(el("strong", "", Z.fmtDateTime(s.started_at)), el("p", "", scoreText), el("p", "", s.evaluation || Z.tr("ارزیابی هنوز نوشته نشده است.")));
-        sessions.appendChild(row);
-      });
+      if (picked === null) picked = progress.current;
+      renderSummary();
+      renderPath();
+      renderDetail();
+      scrollPathTo(picked);
     } catch (err) {
       Z.showError($("progressNotice"), err.message);
     }
@@ -429,6 +514,8 @@
     $("helpSearch").addEventListener("keydown", (event) => {
       if (event.key === "Enter") loadHelp();
     });
+    $("pathPrev").addEventListener("click", () => scrollPath(false));
+    $("pathNext").addEventListener("click", () => scrollPath(true));
     $("testStart").addEventListener("click", startTest);
     $("testSend").addEventListener("click", sendAnswer);
     $("testFinish").addEventListener("click", finishTest);

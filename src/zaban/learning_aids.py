@@ -234,8 +234,21 @@ def end_self_test(
 
 # ----- Learner details, level, progress and payments -----
 
+def _minutes_taken(session: TutorSession) -> float | None:
+    # How long the lesson really took, in minutes. None while the lesson is still open.
+    if session.ended_at is None or session.started_at is None:
+        return None
+    return round((session.ended_at - session.started_at).total_seconds() / 60, 1)
+
+
+def _mean(values: list[float]) -> float | None:
+    return round(sum(values) / len(values), 1) if values else None
+
+
 def _progress_out(db: DBSession, student: Student) -> dict:
-    # The learner's place in the lesson path (the curriculum topics in the admin order): what is done, what is current, and what comes next.
+    # The learner's place in the lesson path. Every lesson is one step. A finished lesson keeps every attempt,
+    # so its score and duration are averages over all attempts. Repeating a finished lesson changes those averages
+    # and the overall percent, but not the current step.
     completed = (
         db.query(TutorSession)
         .filter(TutorSession.student_id == student.id, TutorSession.status == "completed")
@@ -244,52 +257,67 @@ def _progress_out(db: DBSession, student: Student) -> dict:
     )
     scores = [s.score for s in completed if s.score is not None]
     path = path_topics(db, student)
-    visits: dict[str, int] = {}
-    topic_scores: dict[str, list[float]] = {}
+    attempts: dict[str, list[TutorSession]] = {}
     for session in completed:
         record = db.get(LessonTopic, session.id)
         if record is None:
             continue
-        visits[record.topic_id] = visits.get(record.topic_id, 0) + 1
-        if session.score is not None:
-            topic_scores.setdefault(record.topic_id, []).append(session.score)
+        attempts.setdefault(record.topic_id, []).append(session)
 
     lessons = []
     current_found = False
     for index, topic in enumerate(path):
-        count = visits.get(topic.id, 0)
-        if count:
+        runs = attempts.get(topic.id, [])
+        if runs:
             status = "done"
         elif not current_found:
             status = "current"
             current_found = True
         else:
             status = "upcoming"
-        values = topic_scores.get(topic.id, [])
+        scored = [s.score for s in runs if s.score is not None]
+        minutes = [m for m in (_minutes_taken(s) for s in runs) if m is not None]
         lessons.append(
             {
                 "item_id": topic.id,
                 "position": index,
+                "number": index + 1,
                 "title": topic.title,
+                "goal": topic.goal,
                 "stage": "برنامه‌ی آموزشی",
-                "visits": count,
-                "average": round(sum(values) / len(values), 1) if values else None,
-                "done": count > 0,
+                "visits": len(runs),
+                "average": _mean(scored),
+                "average_minutes": _mean(minutes),
+                "done": bool(runs),
                 "status": status,
                 "repeat": student.repeat_topic_id == topic.id,
+                "attempts": [
+                    {
+                        "id": s.id,
+                        "started_at": s.started_at.isoformat(),
+                        "minutes": _minutes_taken(s),
+                        "score": s.score,
+                        "evaluation": s.evaluation,
+                    }
+                    for s in runs
+                ],
             }
         )
     done_count = sum(1 for lesson in lessons if lesson["done"])
     total = len(lessons)
+    # Overall percent: each finished lesson counts its average score, each lesson not finished yet counts zero.
+    progress_points = sum((lesson["average"] or 0) for lesson in lessons if lesson["done"])
+    current = next((lesson["number"] for lesson in lessons if lesson["status"] == "current"), total)
     return {
         "program": {"name": "برنامه‌ی آموزشی", "duration_months": None, "status": "active"} if lessons else None,
         "stages": [],
         "lessons": lessons,
         "revisit_item_id": student.repeat_topic_id,
-        "average_score": round(sum(scores) / len(scores), 1) if scores else None,
+        "average_score": _mean(scores),
         "position": done_count,
+        "current": current,
         "total": total,
-        "percent": round(100 * done_count / total, 1) if total else 0.0,
+        "percent": round(progress_points / total, 1) if total else 0.0,
         "session_number": len(completed) + 1,
         "pace": {"sessions_per_week": None, "expected_week": None},
         "sessions": [

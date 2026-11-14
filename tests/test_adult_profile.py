@@ -14,7 +14,7 @@ def _adult(phone: str, name: str = "Profile Adult") -> TestClient:
     code = [c for n, c in dev_outbox() if n == phone][-1]
     created = adult.post(
         "/v1/web/user/signup",
-        json={"phone": phone, "code": code, "full_name": name, "password": "first-pass-1", "age_confirmed": True},
+        json={"phone": phone, "code": code, "full_name": name, "password": "first-pass-1"},
     )
     assert created.status_code == 201, created.text
     return adult
@@ -78,3 +78,16 @@ def test_password_change_checks_the_current_password(client):
     assert adult.post(
         "/v1/web/user/password", json={"current_password": "first-pass-1", "new_password": "second-pass-2"}
     ).status_code == 200
+
+
+def test_learning_goal_is_saved_in_personal_details_and_can_be_cleared(client):
+    adult = _adult("09121230209")
+    assert adult.get("/v1/web/user/profile").json()["goal"] is None
+
+    saved = adult.put("/v1/web/user/profile", json={"goal": "سفر"})
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["goal"] == "سفر"
+
+    # A goal outside the list is refused, and an empty goal clears the saved one.
+    assert adult.put("/v1/web/user/profile", json={"goal": "یک هدف دلخواه"}).status_code == 422
+    assert adult.put("/v1/web/user/profile", json={"goal": None}).json()["goal"] is None

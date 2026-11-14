@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>دانش‌آموزان من | گفتاریار</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body data-bilingual>
+  <!--site-header-->
+  <main class="page-main">
+    <div class="page-wrap">
+      <div class="page-stack">
+        <h1 class="page-title accent-title" data-fa="دانش‌آموزان من" data-en="My students">دانش‌آموزان من</h1>
+        <p class="error" id="studentsError" hidden></p>
+        <p class="muted" id="studentsEmpty" hidden data-fa="هنوز دانش‌آموزی ندارید. وقتی کسی کد مربی شما را وارد کند و تأیید کند، اینجا نشان داده می‌شود." data-en="You have no students yet. When someone enters your teacher code and confirms it, they appear here.">هنوز دانش‌آموزی ندارید. وقتی کسی کد مربی شما را وارد کند و تأیید کند، اینجا نشان داده می‌شود.</p>
+        <div class="students-grid" id="studentsGrid"></div>
+      </div>
+    </div>
+  </main>
+
+  <dialog id="studentDialog" class="account-dialog account-dialog-wide" aria-labelledby="studentTitle">
+    <h2 id="studentTitle"></h2>
+    <div class="student-tabs" role="tablist">
+      <button type="button" class="ghost" id="studentTabReport" role="tab" data-fa="گزارش" data-en="Report">گزارش</button>
+      <button type="button" class="ghost" id="studentTabProgress" role="tab" data-fa="پیشرفت" data-en="Progress">پیشرفت</button>
+    </div>
+    <p class="error" id="studentError" hidden></p>
+    <div id="studentBody"></div>
+    <div class="dialog-actions">
+      <button type="button" class="ghost" data-close data-fa="بستن" data-en="Close">بستن</button>
+    </div>
+  </dialog>
+
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/students.js"></script>
+</body>
+</html>

@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session as DBSession
 from zaban.config import settings
 from zaban.db import get_db
 from zaban.models import Consent, Guardian, Student, Tenant, VoiceSample, WebSession, utcnow
-from zaban.schemas import AccentChoice, OtpRequest, PasswordReset, SignUpCreate, UserLogin
+from zaban.schemas import AccentChoice, OtpLogin, OtpRequest, PasswordReset, SignUpCreate, UserLogin
 from zaban.security import WEB_COOKIE_NAMES, read_web_session, session_is_current
 from zaban.services.web_sessions import start_web_session
 from zaban.services.learner import get_accent, set_accent, set_learner_profile
@@ -21,6 +21,8 @@ from zaban.services.payments import has_active_plan, require_plan
 router = APIRouter(prefix="/web")
 
 WRONG_LOGIN = "Wrong phone number or password"
+# The same answer for a wrong code, an expired code and a number with no account, so the form reveals nothing.
+WRONG_CODE = "Invalid or expired code. Request a new one"
 MAX_PASSWORD_FAILURES = 5
 PASSWORD_LOCK_MINUTES = 15
 Role = Literal["student", "parent"]
@@ -67,12 +69,17 @@ def request_otp(body: OtpRequest, request: Request, db: DBSession = Depends(get_
     exists = db.query(Guardian).filter(Guardian.phone == phone).first() is not None
     if body.purpose == "signup" and exists:
         raise HTTPException(status_code=409, detail="This number is already registered. Sign in instead")
-    if body.purpose == "reset" and not exists:
-        # Same answer as a real reset, so the form does not reveal which numbers have accounts.
-        return {"ok": True, "resend_in_seconds": 60}
+    if body.purpose in ("reset", "login") and not exists:
+        # Same answer as a real code, so the form does not reveal which numbers have accounts.
+        return {"ok": True, "resend_in_seconds": 60, "expires_in_seconds": settings.otp_ttl_seconds}
     ip = request.client.host if request.client else None
     code = request_code(db, phone, ip)
-    return {"ok": True, "resend_in_seconds": 60, "dev_code": development_code(code, db)}
+    return {
+        "ok": True,
+        "resend_in_seconds": 60,
+        "expires_in_seconds": settings.otp_ttl_seconds,
+        "dev_code": development_code(code, db),
+    }
 
 
 @router.post("/user/signup", status_code=201)
@@ -81,8 +88,6 @@ def sign_up(body: SignUpCreate, response: Response, request: Request, db: DBSess
     phone = normalize_phone(body.phone)
     if phone is None:
         raise HTTPException(status_code=400, detail="Enter a valid mobile number")
-    if not body.age_confirmed:
-        raise HTTPException(status_code=400, detail="Only adults can create an account here")
     if db.query(Guardian).filter(Guardian.phone == phone).first():
         raise HTTPException(status_code=409, detail="This number is already registered. Sign in instead")
     tenant = db.query(Tenant).filter(Tenant.status == "active").order_by(Tenant.created_at).first()
@@ -100,7 +105,6 @@ def sign_up(body: SignUpCreate, response: Response, request: Request, db: DBSess
         phone=phone,
         full_name=body.full_name.strip()[:120],
         password_hash=hash_password(body.password),
-        goal=body.goal.strip()[:60] if body.goal else None,
         referral_code=new_code(db),
         referred_by_id=referrer.id if referrer else None,
     )
@@ -140,6 +144,28 @@ def adult_login(body: UserLogin, response: Response, request: Request, db: DBSes
 
     guardian.failed_logins = 0
     guardian.locked_until = None
+    return _start_adult_sign_in(response, request, guardian, db)
+
+
+@router.post("/user/otp/login")
+def adult_login_with_code(body: OtpLogin, response: Response, request: Request, db: DBSession = Depends(get_db)) -> dict:
+    # Sign-in with the one-time code sent to the adult's mobile. The code is single-use and expires in OTP_TTL_SECONDS.
+    phone = normalize_phone(body.phone)
+    if phone is None:
+        raise HTTPException(status_code=400, detail="Enter a valid mobile number")
+    guardian = db.query(Guardian).filter(Guardian.phone == phone).first()
+    if guardian is None:
+        raise HTTPException(status_code=401, detail=WRONG_CODE)
+
+    check_code(db, phone, body.code)
+    if guardian.suspended:
+        raise HTTPException(status_code=403, detail="This account is suspended")
+    guardian.failed_logins = 0
+    guardian.locked_until = None
+    return _start_adult_sign_in(response, request, guardian, db)
+
+
+def _start_adult_sign_in(response: Response, request: Request, guardian: Guardian, db: DBSession) -> dict:
     # One sign-in per account: a new sign-in ends the older ones on other devices, the adult's and their own learning.
     guardian.session_version += 1
     self_profile = _self_profile(db, guardian)
@@ -323,5 +349,7 @@ def me(
                 "name": guardian.full_name,
                 "has_own_learning": _self_profile(db, guardian) is not None,
                 "has_active_plan": has_active_plan(guardian),
+                # How many adults chose this adult as their teacher. The header shows "My students" from one.
+                "students": db.query(Guardian).filter(Guardian.teacher_id == guardian.id).count(),
             }
     raise HTTPException(status_code=401, detail="Please sign in")

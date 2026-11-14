@@ -85,15 +85,29 @@
       </section>
 
       <section id="tab-progress" class="tool-section" hidden>
-        <div class="card">
-          <h2>پیشرفت من</h2>
+        <div class="card progress-page">
+          <h2 data-fa="پیشرفت من" data-en="My progress">پیشرفت من</h2>
           <p class="notice" id="progressNotice" hidden></p>
-          <p id="progressSummary" class="muted"></p>
-          <div class="bar" aria-hidden="true"><span id="progressBar"></span></div>
-          <h3>مرحله‌ها</h3>
-          <div id="progressStages"></div>
-          <h3>جلسه‌های من</h3>
-          <div id="progressSessions"></div>
+
+          <div class="progress-top">
+            <div class="progress-headline">
+              <strong id="progressStep" class="progress-step"></strong>
+              <span id="progressPercent" class="progress-percent"></span>
+            </div>
+            <div class="bar" aria-hidden="true"><span id="progressBar"></span></div>
+            <p class="muted" id="progressSummary"></p>
+            <p class="muted" id="progressAverage"></p>
+            <p class="muted progress-howto" id="progressHowto"></p>
+          </div>
+
+          <div class="path-wrap">
+            <button type="button" class="path-nav" id="pathPrev">‹</button>
+            <div class="path-track" id="pathTrack"></div>
+            <button type="button" class="path-nav" id="pathNext">›</button>
+          </div>
+          <p class="path-counts muted"><span id="pathBefore"></span><span id="pathAfter"></span></p>
+
+          <article class="lesson-detail" id="lessonDetail" aria-live="polite"></article>
         </div>
       </section>
 

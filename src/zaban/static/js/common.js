@@ -18,6 +18,9 @@ const Z = (() => {
     ["not ready yet", "سرویس هنوز آماده نیست. کمی بعد دوباره تلاش کنید."],
     ["Choose a plan first", "برای ادامه، ابتدا یک پلن را انتخاب و پرداخت کنید."],
     ["Wrong phone number or password", "شماره موبایل یا رمز عبور درست نیست."],
+    ["This teacher code is not valid", "این کد مربی معتبر نیست."],
+    ["You cannot choose yourself as your teacher", "نمی‌توانید خودتان را مربی خود انتخاب کنید."],
+    ["Please confirm that this is your teacher", "لطفاً تأیید کنید که این مربی شماست."],
     ["Too many wrong passwords", "چند بار رمز اشتباه وارد شده است. ۱۵ دقیقه بعد دوباره تلاش کنید."],
     ["already registered", "این شماره قبلاً ثبت شده است. با همین شماره وارد شوید."],
     ["Only adults can create", "ثبت‌نام در این بخش فقط برای بزرگسالان است."],
@@ -66,6 +69,9 @@ const Z = (() => {
     ["not ready yet", "The service is not ready yet. Please try again later."],
     ["Choose a plan first", "Please choose and pay for a plan first."],
     ["Wrong phone number or password", "The phone number or password is wrong."],
+    ["This teacher code is not valid", "This teacher code is not valid."],
+    ["You cannot choose yourself as your teacher", "You cannot choose yourself as your teacher."],
+    ["Please confirm that this is your teacher", "Please confirm that this is your teacher."],
     ["Too many wrong passwords", "Too many wrong passwords. Please try again in 15 minutes."],
     ["already registered", "This number is already registered. Please sign in instead."],
     ["Only adults can create", "Only adults can create an account here."],
@@ -208,6 +214,29 @@ const Z = (() => {
   function showError(node, message) {
     node.textContent = message || "";
     node.hidden = !message;
+  }
+
+  // Shows how long a one-time code stays valid. texts.running(time) while it is valid, texts.done once it expires.
+  // Returns a function that stops the countdown.
+  function codeTimer(node, seconds, texts, onDone) {
+    const end = Date.now() + seconds * 1000;
+    const locale = isEnglish() ? "en-US" : "fa-IR";
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((end - Date.now()) / 1000));
+      if (left === 0) {
+        node.textContent = texts.done;
+        clearInterval(timerId);
+        if (onDone) onDone();
+        return;
+      }
+      const minutes = Math.floor(left / 60).toLocaleString(locale, { minimumIntegerDigits: 2 });
+      const rest = (left % 60).toLocaleString(locale, { minimumIntegerDigits: 2 });
+      node.textContent = texts.running(`${minutes}:${rest}`);
+    };
+    const timerId = setInterval(tick, 1000);
+    node.hidden = false;
+    tick();
+    return () => clearInterval(timerId);
   }
 
   const STATUS_FA = {
@@ -373,6 +402,7 @@ const Z = (() => {
       byId("accEmail").value = me.email;
       byId("accAge").value = me.age == null ? "" : me.age;
       byId("accGender").value = me.gender;
+      byId("accGoal").value = me.goal || "";
       setPhoto(me.avatar);
     } catch (err) {
       showError(byId("accInfoError"), err.message);
@@ -446,8 +476,87 @@ const Z = (() => {
   }
 
   // Wires the two account forms once, on the first page that shows them. onSaved gets the saved profile.
+  // ----- Choosing a teacher: the learner enters the teacher's code, checks the name, and confirms -----
+
+  async function loadTeacher() {
+    const state = await request("GET", "/v1/web/user/teacher");
+    const hasTeacher = Boolean(state.teacher);
+    show(byId("accTeacherCurrent"), hasTeacher);
+    show(byId("accTeacherChoose"), !hasTeacher);
+    if (hasTeacher) byId("accTeacherName").textContent = state.teacher.name;
+    const own = await request("GET", "/v1/web/user/referrals");
+    byId("accTeacherOwnCode").textContent = own.code;
+  }
+
+  async function openTeacherDialog() {
+    const dialog = byId("accTeacherDialog");
+    showError(byId("accTeacherError"), "");
+    show(byId("accTeacherOk"), false);
+    show(byId("accTeacherFound"), false);
+    byId("accTeacherCode").value = "";
+    byId("accTeacherConfirm").checked = false;
+    byId("accTeacherSave").disabled = true;
+    dialog.showModal();
+    try {
+      await loadTeacher();
+    } catch (err) {
+      showError(byId("accTeacherError"), err.message);
+    }
+  }
+
+  let foundTeacherCode = "";
+
+  async function checkTeacherCode() {
+    showError(byId("accTeacherError"), "");
+    show(byId("accTeacherFound"), false);
+    foundTeacherCode = byId("accTeacherCode").value.trim();
+    try {
+      const found = await request("POST", "/v1/web/user/teacher/lookup", { code: foundTeacherCode });
+      byId("accTeacherFoundName").textContent = found.teacher.name;
+      byId("accTeacherConfirm").checked = false;
+      byId("accTeacherSave").disabled = true;
+      show(byId("accTeacherFound"), true);
+    } catch (err) {
+      showError(byId("accTeacherError"), err.message);
+    }
+  }
+
+  async function saveTeacher() {
+    showError(byId("accTeacherError"), "");
+    try {
+      await request("PUT", "/v1/web/user/teacher", { code: foundTeacherCode, confirm: true });
+      show(byId("accTeacherOk"), true);
+      byId("accTeacherOk").textContent = isEnglish() ? "Your teacher is saved." : "مربی شما ثبت شد.";
+      await loadTeacher();
+    } catch (err) {
+      showError(byId("accTeacherError"), err.message);
+    }
+  }
+
+  async function removeTeacher() {
+    showError(byId("accTeacherError"), "");
+    try {
+      await request("DELETE", "/v1/web/user/teacher");
+      show(byId("accTeacherOk"), true);
+      byId("accTeacherOk").textContent = isEnglish() ? "You no longer have a teacher." : "مربی شما حذف شد.";
+      await loadTeacher();
+    } catch (err) {
+      showError(byId("accTeacherError"), err.message);
+    }
+  }
+
+  function setupTeacherForm() {
+    byId("accTeacherCheck").addEventListener("click", checkTeacherCode);
+    byId("accTeacherConfirm").addEventListener("change", (event) => {
+      byId("accTeacherSave").disabled = !event.target.checked;
+    });
+    byId("accTeacherSave").addEventListener("click", saveTeacher);
+    byId("accTeacherRemove").addEventListener("click", removeTeacher);
+  }
+
   function setupAccountForms(onSaved) {
-    document.querySelectorAll("#accInfoDialog [data-close], #accPasswordDialog [data-close], #accSignOutDialog [data-close]").forEach((button) => {
+    setupTeacherForm();
+    document.querySelectorAll("#accInfoDialog [data-close], #accPasswordDialog [data-close], #accSignOutDialog [data-close], #accTeacherDialog [data-close]").forEach((button) => {
       button.addEventListener("click", () => button.closest("dialog").close());
     });
     // A click on the grey area outside a dialog closes it. Clicks inside the box have another target.
@@ -493,6 +602,7 @@ const Z = (() => {
         email: byId("accEmail").value.trim(),
         age: byId("accAge").value ? Number(byId("accAge").value) : null,
         gender: byId("accGender").value || null,
+        goal: byId("accGoal").value || null,
       };
       if (photoChanged) body.avatar = photoDraft;
       try {
@@ -591,6 +701,7 @@ const Z = (() => {
       list.appendChild(item);
     };
     addItem("اطلاعات شخصی", "Personal details", openPersonalDetails);
+    addItem("تعیین مربی", "Choose a teacher", openTeacherDialog);
     addItem("تغییر رمز عبور", "Change password", () => byId("accPasswordDialog").showModal());
     addItem("درخواست‌های شما", "Your requests", () => { location.href = "/requests"; });
     addItem("کد معرف من", "My referral code", () => { location.href = "/referrals"; });
@@ -629,11 +740,13 @@ const Z = (() => {
     if (!box) return;
     const signedIn = [];
     let greeting = "";
+    let teaches = 0;
     for (const role of ["parent", "student"]) {
       try {
         const me = await request("GET", `/v1/web/me?role=${role}`);
         signedIn.push(role);
         greeting = greeting || me.name;
+        if (role === "parent") teaches = me.students || 0;
       } catch (_) { /* not signed in to this area */ }
     }
     if (!signedIn.length) return;
@@ -688,6 +801,10 @@ const Z = (() => {
     } else {
     }
     items.push({ href: "/student?tab=help", fa: "کمک‌آموزشی", en: "Help", active: onLearnerPage && tool === "help" });
+    // "My students" appears once at least one adult has chosen this account as their teacher.
+    if (signedIn.includes("parent") && teaches > 0) {
+      items.push({ href: "/students", fa: "دانش‌آموزان من", en: "My students", active: path === "/students" });
+    }
 
     const nav = document.getElementById("memberNav");
     const header = document.querySelector(".site-header");
@@ -803,7 +920,7 @@ const Z = (() => {
   }
 
   return {
-    request, friendly, pageRole, parseUtc, locale, currentLang, fmtDate, fmtDateTime, el, show, showError, showDevCode, initLang, initTheme, initReveal,
+    request, friendly, pageRole, parseUtc, locale, currentLang, fmtDate, fmtDateTime, el, show, showError, showDevCode, codeTimer, initLang, initTheme, initReveal,
     initSiteHeader, STATUS_FA, SUGGESTION_FA, LEVEL_FA, SESSION_FA,
   };
 })();

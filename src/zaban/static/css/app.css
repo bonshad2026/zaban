@@ -753,12 +753,23 @@ dialog.account-dialog { overflow-y: auto; }
 #accLearnerBox h3 { margin: 22px 0 0; font-size: 17px; }
 
 /* ---- Level page: one row per skill, and the test card ---- */
-.skill-rows { display: grid; gap: 12px; margin-top: 12px; }
-.skill-row { border: 1px solid var(--border); border-radius: 16px; padding: 14px 16px; display: grid; gap: 10px; }
-.skill-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.level-chip { font-weight: 700; padding: 4px 12px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-dark); }
-.skill-set { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.skill-set select { width: auto; min-width: 90px; }
+/* Four boxes in one row on a wide screen, two per row on a laptop, one per row on a phone. */
+.skill-rows { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 16px; }
+@media (max-width: 1100px) { .skill-rows { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .skill-rows { grid-template-columns: minmax(0, 1fr); } }
+.skill-card { border: 1px solid var(--border); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; background: var(--card-raised); }
+.skill-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.skill-icon { flex: 0 0 auto; width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+.skill-icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.skill-name { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.level-chip { flex: 0 0 auto; font-weight: 700; font-size: 13px; padding: 3px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-dark); }
+.skill-set { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.skill-set select { flex: 1 1 auto; width: auto; min-width: 0; }
+/* Compact buttons: the page should not stretch them to fill the space. */
+.skill-btn { padding: 9px 14px; font-size: 14px; white-space: nowrap; margin: 0; }
+.skill-set .skill-btn { flex: 0 0 auto; }
+.skill-test { align-self: flex-start; }
+.skill-note { font-size: 13px; margin: 0; }
 .test-text { font-size: 18px; line-height: 1.8; }
 .test-options { display: grid; gap: 8px; margin: 12px 0; }
 .test-option { text-align: start; background: transparent; color: var(--text); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; cursor: pointer; }
@@ -783,3 +794,59 @@ dialog.account-dialog { overflow-y: auto; }
 /* Admin: a lesson row can be dragged to a new place in the program */
 .admin-table tr.drag-row { cursor: grab; }
 .admin-table tr.drag-row:active { cursor: grabbing; }
+
+/* ---- Learner progress: the lesson path, one step per lesson, and the picked lesson's details ---- */
+.progress-page { display: flex; flex-direction: column; gap: 18px; }
+.progress-top { display: grid; gap: 8px; }
+.progress-headline { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.progress-step { font-size: 22px; }
+.progress-percent { font-weight: 700; font-size: 18px; color: var(--accent-dark); }
+.progress-top p { margin: 0; }
+.progress-howto { font-size: 13px; }
+
+.path-wrap { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.path-nav { flex: 0 0 auto; width: 38px; height: 38px; padding: 0; border-radius: 50%; font-size: 22px; line-height: 1; display: grid; place-items: center; }
+.path-track { flex: 1 1 auto; min-width: 0; display: flex; overflow-x: auto; padding: 10px 6px 14px; scroll-snap-type: x proximity; scrollbar-width: thin; }
+.path-step { position: relative; flex: 0 0 96px; display: flex; flex-direction: column; align-items: center; gap: 8px; scroll-snap-align: center; }
+/* The line between two steps is coloured once the earlier lesson is finished. */
+.path-step:not(:last-child)::after { content: ""; position: absolute; top: 21px; inset-inline-start: calc(50% + 24px); width: calc(100% - 48px); height: 2px; background: var(--border); }
+.path-step.link-done:not(:last-child)::after { background: var(--accent); }
+.path-node { width: 44px; height: 44px; min-width: 44px; padding: 0; border-radius: 50%; display: grid; place-items: center; font-weight: 700; position: relative; z-index: 1; background: var(--card); color: var(--muted); border: 2px solid var(--border); }
+.path-step.done .path-node { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.path-step.current .path-node { border: 3px solid var(--accent); color: var(--accent-dark); box-shadow: 0 0 0 5px var(--accent-soft); }
+/* Lessons not reached yet are grey. */
+.path-step.upcoming .path-node { background: var(--border); border-color: var(--border); color: var(--muted); }
+.path-node:hover { border-color: var(--accent); }
+.path-node[aria-pressed="true"] { outline: 2px solid var(--text); outline-offset: 3px; }
+.path-label { max-width: 96px; font-size: 12px; line-height: 1.4; text-align: center; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.path-step.current .path-label { color: var(--text); font-weight: 700; }
+.path-counts { display: flex; flex-wrap: wrap; gap: 4px; font-size: 13px; }
+
+.lesson-detail { border: 1px solid var(--border); border-radius: 18px; padding: 18px; display: grid; gap: 12px; background: var(--card-raised); min-width: 0; }
+.lesson-detail h3 { margin: 0; }
+.lesson-detail p { margin: 0; }
+.lesson-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.lesson-no { font-size: 13px; color: var(--muted); }
+.lesson-chip { font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-dark); }
+.lesson-chip.upcoming { background: var(--border); color: var(--muted); }
+.lesson-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.lesson-action { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.lesson-action button { padding: 9px 14px; font-size: 14px; margin: 0; }
+.attempt { border-top: 1px solid var(--border); padding-top: 10px; display: grid; gap: 4px; overflow-wrap: anywhere; }
+@media (max-width: 560px) {
+  .lesson-stats { grid-template-columns: 1fr; }
+  .path-step { flex-basis: 84px; }
+  .path-label { max-width: 84px; }
+}
+
+/* ---- My students: one box per student, and the profile dialog with two views ---- */
+.students-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 1100px) { .students-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .students-grid { grid-template-columns: minmax(0, 1fr); } }
+.student-card { border: 1px solid var(--border); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; min-width: 0; background: var(--card-raised); }
+.student-name { font-size: 17px; overflow-wrap: anywhere; min-width: 0; }
+.student-card button { padding: 9px 14px; font-size: 14px; margin: 0; }
+.student-tabs { display: flex; gap: 8px; margin: 12px 0 6px; flex-wrap: wrap; }
+.student-tabs button { padding: 8px 16px; font-size: 14px; margin: 0; }
+.student-tabs button.is-current { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.student-sessions { display: grid; gap: 10px; }

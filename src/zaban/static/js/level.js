@@ -11,6 +11,14 @@
     { key: "speaking_writing", fa: "گفتار و نوشتار", en: "Speaking and writing", test: false },
   ];
 
+  // Plain line icons, one per skill. They take the text colour, so they follow the theme.
+  const SKILL_ICONS = {
+    listening: '<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>',
+    reading: '<svg viewBox="0 0 24 24"><path d="M2 5h7a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H2z"/><path d="M22 5h-7a3 3 0 0 0-3 3v12a2 2 0 0 1 2-2h8z"/></svg>',
+    grammar: '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M14 6l4 4"/></svg>',
+    speaking_writing: '<svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>',
+  };
+
   let levels = {};
   let statuses = {}; // the latest attempt status of each skill: new, in_progress, done or skipped
   let totals = {}; // how many questions each skill has in the bank
@@ -47,21 +55,16 @@
     return label("تعیین سطح", "Set level");
   }
 
-  function skillRow(skill) {
-    const row = Z.el("div", "skill-row");
-    const head = Z.el("div", "skill-head");
-    head.appendChild(Z.el("strong", "", label(skill.fa, skill.en)));
-    head.appendChild(Z.el("span", "level-chip", levels[skill.key] || "A1"));
-    row.appendChild(head);
+  // One box per skill: its icon and current level, the level chooser with its save button, then the test button.
+  function skillCard(skill) {
+    const card = Z.el("article", "skill-card");
 
-    if (skill.test) {
-      const test = Z.el("button", "", testButtonLabel(skill));
-      test.type = "button";
-      test.addEventListener("click", () => openTest(skill));
-      row.appendChild(test);
-    } else {
-      row.appendChild(Z.el("p", "muted", label("این مهارت آزمون ندارد. سطح آن را خودتان انتخاب کنید.", "This skill has no test. Choose its level yourself.")));
-    }
+    const head = Z.el("div", "skill-head");
+    const icon = Z.el("span", "skill-icon");
+    icon.setAttribute("aria-hidden", "true");
+    icon.innerHTML = SKILL_ICONS[skill.key];
+    head.append(icon, Z.el("strong", "skill-name", label(skill.fa, skill.en)), Z.el("span", "level-chip", levels[skill.key] || "A1"));
+    card.appendChild(head);
 
     const set = Z.el("div", "skill-set");
     const select = document.createElement("select");
@@ -72,16 +75,25 @@
       option.selected = lvl === (levels[skill.key] || "A1");
       select.appendChild(option);
     });
-    const save = Z.el("button", "ghost", label("ذخیره‌ی سطح", "Save level"));
+    const save = Z.el("button", "ghost skill-btn", label("ذخیره‌ی سطح", "Save level"));
     save.type = "button";
     save.addEventListener("click", () => saveLevel(skill.key, select.value));
     set.append(select, save);
-    row.appendChild(set);
-    return row;
+    card.appendChild(set);
+
+    if (skill.test) {
+      const test = Z.el("button", "skill-btn skill-test", testButtonLabel(skill));
+      test.type = "button";
+      test.addEventListener("click", () => openTest(skill));
+      card.appendChild(test);
+    } else {
+      card.appendChild(Z.el("p", "skill-note muted", label("این مهارت آزمون ندارد. سطح آن را خودتان انتخاب کنید.", "This skill has no test. Choose its level yourself.")));
+    }
+    return card;
   }
 
   function renderRows() {
-    $("skillRows").replaceChildren(...SKILLS.map(skillRow));
+    $("skillRows").replaceChildren(...SKILLS.map(skillCard));
   }
 
   async function saveLevel(key, value) {

@@ -47,6 +47,8 @@ class Guardian(Base):
     # The adult's own 6-character referral code, and the adult whose code they used at sign-up (if any).
     referral_code: Mapped[str | None] = mapped_column(String(8), nullable=True, index=True)
     referred_by_id: Mapped[str | None] = mapped_column(String(32), ForeignKey("guardians.id"), nullable=True, index=True)
+    # The adult chosen as this adult's teacher, by their referral code. Empty means no teacher. Only one teacher at a time.
+    teacher_id: Mapped[str | None] = mapped_column(String(32), ForeignKey("guardians.id"), nullable=True, index=True)
     # Set at sign-up. Used with the phone number at sign-in. Forgotten passwords are reset with an SMS code.
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     failed_logins: Mapped[int] = mapped_column(Integer, default=0)

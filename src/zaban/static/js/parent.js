@@ -60,15 +60,95 @@
     }
   }
 
-  // ----- Sign-in with a mobile number and a password -----
+  // ----- Sign-in: with the password, or with a one-time code sent by SMS to the mobile -----
+
+  let codeMode = false;
+  let stopLoginTimer = () => {};
+  const t = (fa, en) => (document.documentElement.lang === "en" ? en : fa);
+
+  function setBilingual(node, fa, en) {
+    node.dataset.fa = fa;
+    node.dataset.en = en;
+    node.textContent = t(fa, en);
+  }
+
+  function showLoginMode(useCode) {
+    codeMode = useCode;
+    Z.show($("passwordPart"), !useCode);
+    Z.show($("codePart"), useCode);
+    Z.showError($("loginError"), "");
+    if (useCode) {
+      setBilingual($("codeModeLink"), "ورود با رمز عبور", "Sign in with a password");
+    } else {
+      stopLoginTimer();
+      Z.show($("loginTimer"), false);
+      Z.show($("loginDevHint"), false);
+      setBilingual($("codeModeLink"), "ورود با کد پیامکی", "Sign in with an SMS code");
+    }
+  }
+
+  // The code is valid for the time the server gives (2 minutes by default). When it runs out, the form says so.
+  function startLoginClock(seconds) {
+    stopLoginTimer();
+    stopLoginTimer = Z.codeTimer(
+      $("loginTimer"),
+      seconds,
+      {
+        running: (time) => t(`کد تا ${time} دیگر معتبر است.`, `The code is valid for ${time}.`),
+        done: t("کد منقضی شد. دوباره کد پیامکی بگیرید.", "The code has expired. Request a new SMS code."),
+      },
+    );
+  }
+
+  async function sendLoginCode() {
+    Z.showError($("loginError"), "");
+    const phone = $("parentPhone").value.trim();
+    if (!phone) {
+      Z.showError($("loginError"), t("ابتدا شماره‌ی موبایل را وارد کنید.", "Enter your mobile number first."));
+      $("parentPhone").focus();
+      return;
+    }
+    try {
+      const sent = await Z.request("POST", "/v1/web/user/otp/request", { phone, purpose: "login" });
+      Z.showDevCode($("loginDevHint"), $("parentCode"), sent.dev_code);
+      startLoginClock(sent.expires_in_seconds);
+      $("parentCode").focus();
+    } catch (err) {
+      Z.showError($("loginError"), err.message);
+    }
+  }
 
   async function login(event) {
     event.preventDefault();
     const form = event.target;
     Z.showError($("loginError"), "");
+    const phone = form.phone.value.trim();
+    if (!phone) {
+      Z.showError($("loginError"), t("شماره‌ی موبایل را وارد کنید.", "Enter your mobile number."));
+      return;
+    }
+    if (codeMode) {
+      const code = form.code.value.trim();
+      if (!code) {
+        Z.showError($("loginError"), t("کد پیامکی را وارد کنید.", "Enter the SMS code."));
+        return;
+      }
+      try {
+        await Z.request("POST", "/v1/web/user/otp/login", { phone, code });
+        stopLoginTimer();
+        location.href = "/";
+      } catch (err) {
+        Z.showError($("loginError"), err.message);
+      }
+      return;
+    }
+    if (!form.password.value) {
+      Z.showError($("loginError"), t("رمز عبور را وارد کنید.", "Enter your password."));
+      return;
+    }
     try {
       await Z.request("POST", "/v1/web/user/login", {
-        phone: form.phone.value.trim(),
+        phone,
         password: form.password.value,
       });
       form.password.value = "";
@@ -124,6 +204,8 @@
   async function boot() {
     Z.initLang();
     $("loginForm").addEventListener("submit", login);
+    $("codeModeLink").addEventListener("click", (event) => { event.preventDefault(); showLoginMode(!codeMode); });
+    $("loginSendBtn").addEventListener("click", sendLoginCode);
     $("forgotLink").addEventListener("click", (event) => { event.preventDefault(); showReset(true); });
     $("backToLogin").addEventListener("click", (event) => { event.preventDefault(); showReset(false); });
     $("resetSendBtn").addEventListener("click", sendResetCode);

@@ -13,7 +13,7 @@ def _adult(phone: str) -> TestClient:
     code = [c for n, c in dev_outbox() if n == phone][-1]
     created = adult.post(
         "/v1/web/user/signup",
-        json={"phone": phone, "code": code, "full_name": "Plan Adult", "password": "plan-pass-1", "age_confirmed": True},
+        json={"phone": phone, "code": code, "full_name": "Plan Adult", "password": "plan-pass-1"},
     )
     assert created.status_code == 201, created.text
     return adult

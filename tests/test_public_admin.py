@@ -66,7 +66,7 @@ def test_a_paid_plan_starts_at_once_and_the_admin_can_still_decide_a_pending_pay
     code = [c for n, c in dev_outbox() if n == phone][-1]
     adult.post(
         "/v1/web/user/signup",
-        json={"phone": phone, "code": code, "full_name": "Manual", "password": "manual-pass-1", "age_confirmed": True},
+        json={"phone": phone, "code": code, "full_name": "Manual", "password": "manual-pass-1"},
     )
     plans = adult.get("/v1/web/billing/plans").json()
     paid = adult.post("/v1/web/billing/checkout", json={"plan_id": plans[0]["id"]}).json()

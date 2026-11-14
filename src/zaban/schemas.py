@@ -75,7 +75,12 @@ class AccentChoice(BaseModel):
 
 class OtpRequest(BaseModel):
     phone: str = Field(min_length=6, max_length=24)
-    purpose: Literal["signup", "reset"] = "signup"
+    purpose: Literal["signup", "reset", "login"] = "signup"
+
+
+class OtpLogin(BaseModel):
+    phone: str = Field(min_length=6, max_length=24)
+    code: str = Field(min_length=4, max_length=8, pattern=r"^\d{4,8}$")
 
 
 class SignUpCreate(BaseModel):
@@ -83,8 +88,6 @@ class SignUpCreate(BaseModel):
     code: str = Field(min_length=4, max_length=8, pattern=r"^\d{4,8}$")
     full_name: str = Field(min_length=2, max_length=120)
     password: str = Field(min_length=8, max_length=100)
-    age_confirmed: bool
-    goal: str | None = Field(default=None, max_length=60)
     # Optional: the referral code of the adult who invited this one.
     referral_code: str | None = Field(default=None, max_length=12)
 

@@ -61,7 +61,7 @@ def load_settings() -> Settings:
         output_price_per_mtok=float(os.getenv("PRICE_OUTPUT_PER_MTOK", "5.0")),
         kavenegar_api_key=os.getenv("KAVENEGAR_API_KEY") or None,
         kavenegar_otp_template=os.getenv("KAVENEGAR_OTP_TEMPLATE", "zaban-otp"),
-        otp_ttl_seconds=int(os.getenv("OTP_TTL_SECONDS", "300")),
+        otp_ttl_seconds=int(os.getenv("OTP_TTL_SECONDS", "120")),
         payment_gateway=os.getenv("PAYMENT_GATEWAY", "fake"),
         zarinpal_merchant_id=os.getenv("ZARINPAL_MERCHANT_ID") or None,
         demo_api_key=os.getenv("ZABAN_DEMO_API_KEY") or None,

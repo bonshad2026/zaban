@@ -6,9 +6,8 @@ This note is for any developer or AI coding agent working on the website. It des
 
 - **Signed out:** the header shows the "ورود" menu (parent or learner) and the "ثبت‌نام" button.
 - **Signed in:** the header shows the signed-in person's name, the "پنل والد" link (for an adult), and a round profile button. The button shows the profile photo, or a plain silhouette when there is none. There is no "یادگیری من" link in the top row.
-- **Second header row (signed in only):** the person's own items, filled by `initSiteHeader` from `#memberNav`. For an adult: فرزندان, آموزش من, درخواست‌ها, پرداخت‌ها. For a learner: آموزش من, درخواست‌ها, پرداخت‌ها. The item for the current page gets `aria-current="page"` and a filled style.
+- **Second header row (signed in only):** the person's own items, filled by `initSiteHeader` from `#memberNav`. For an adult: آموزش من, پلن و اعتبار, تعیین سطح, کمک‌آموزشی, and «دانش‌آموزان من» once at least one adult has chosen them as a teacher. For a learner: آموزش من, درخواست‌ها, پرداخت‌ها. The item for the current page gets `aria-current="page"` and a filled style.
   - «آموزش من» always opens the learner page (`/student`). An adult with no learner sign-in first calls `POST /v1/web/user/self` (`startOwnLearning` in `common.js`), then the learner page opens. The parent page has no «یادگیری خودم» section any more.
-  - «فرزندان» opens `/parent#childrenCard`. That hash shows only the children area (list, add child, child details) and hides the plan section (`applyView` in `parent.js`).
   - «پرداخت‌ها» (adults) opens `/payments`, a plain list of the adult's payments from `GET /v1/web/billing/payments`. Learners keep their own payments tab.
   - «پلن و اعتبار» opens `/plan`. Its «خرید یا تمدید پلن» button does nothing yet; what it should do is still to be decided.
 - **Third header row (learner page only):** the learning tabs (جلسه, لهجه, گزارش من, پیشرفت, اطلاعات من, کمک‌آموزشی, خودت رو محک بزن). The payments tab is hidden here, because payments has its own main-row item. `initSiteHeader` moves the `.tabs` nav from `student.html` into `#memberSub`, and shows it only on `/student`. The tab buttons keep their click handlers because they are the same nodes.
@@ -92,3 +91,11 @@ The dialog controls use the `acc` prefix (`accName`, `accEmail`, `accAge`, `accG
 - The side menu (`nav#memberNav`, `app-side`, built by `initSiteHeader`) holds one level: آموزش من, درخواست‌ها, پلن و اعتبار, پرداخت‌ها. On the learner page, «آموزش من» has a collapsible list of the learning tabs. Each entry clicks the page's own tab, and the list follows the active tab.
 - On desktop the side menu is a column beside the content. On a phone (up to 760 px) it is a bar at the bottom, and the learning list opens above it.
 - Tenant API keys still manage students through `/v1/students` (`require_manager` accepts only API keys). The admin students list hides website children (`guardian_id` set).
+
+## Teacher and students
+
+- Each adult has one referral code (`guardians.referral_code`). The same code is the teacher code: anyone who enters it can choose that adult as their teacher.
+- Profile menu «تعیین مربی» (`accTeacherDialog` in `partials/header.html`, logic in `common.js`): shows the adult's own code, the current teacher, and lets them look up a code, confirm it, and save. Removing the teacher is immediate.
+- Choosing a teacher is stored in `guardians.teacher_id`. One teacher per adult, no limit on students per teacher.
+- Endpoints (`src/zaban/teaching.py`): `GET/PUT/DELETE /v1/web/user/teacher`, `POST /v1/web/user/teacher/lookup`, `GET /v1/web/user/students`, `GET /v1/web/user/students/{id}/progress` and `/report`. A teacher can read only the adults whose `teacher_id` is theirs; anyone else gets 404.
+- «دانش‌آموزان من» (`/students`, `static/students.html`, `static/js/students.js`) appears in the header only when `/v1/web/me` reports at least one student.

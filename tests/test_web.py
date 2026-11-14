@@ -1,11 +1,13 @@
 import os
 import secrets
+from datetime import timedelta
 
 from fastapi.testclient import TestClient
 
+from zaban.config import settings
 from zaban.db import SessionLocal
 from zaban.main import app
-from zaban.models import LearnerDetails, OtpCode, Student
+from zaban.models import LearnerDetails, OtpCode, Student, utcnow
 from zaban.services.otp import normalize_phone
 from zaban.services.passwords import hash_password, verify_password
 from zaban.services.sms import dev_outbox
@@ -49,7 +51,6 @@ def _sign_up(client, phone: str, name: str = "Test Adult", password: str = ADULT
             "code": _sms_code(phone),
             "full_name": name,
             "password": password,
-            "age_confirmed": True,
         },
     )
 
@@ -124,17 +125,10 @@ def test_adult_signs_up_then_signs_in_with_password(client):
     assert fresh.post("/v1/web/user/login", json={"phone": phone, "password": "wrong-pass-999"}).status_code == 401
 
 
-def test_signup_needs_age_confirmation_and_a_free_number(client):
+def test_signup_needs_a_free_number(client):
     phone = "09121230002"
-    _clear_codes(phone)
-    assert client.post("/v1/web/user/otp/request", json={"phone": phone, "purpose": "signup"}).status_code == 200
-    response = client.post(
-        "/v1/web/user/signup",
-        json={"phone": phone, "code": _sms_code(phone), "full_name": "Nima", "password": ADULT_PASSWORD, "age_confirmed": False},
-    )
-    assert response.status_code == 400
-    # The code was not used up, so the same code still works once the age is confirmed.
     assert _sign_up(client, phone, "Nima").status_code == 201
+    # The number now has an account, so a second sign-up is refused.
     assert client.post("/v1/web/user/otp/request", json={"phone": phone, "purpose": "signup"}).status_code == 409
 
 
@@ -151,7 +145,7 @@ def test_wrong_codes_are_rejected_and_run_out_after_five_tries(client):
     assert client.post("/v1/web/user/otp/request", json={"phone": phone, "purpose": "signup"}).status_code == 200
     real = _sms_code(phone)
     wrong = "999999" if real != "999999" else "000000"
-    body = {"phone": phone, "full_name": "Nima", "password": ADULT_PASSWORD, "age_confirmed": True}
+    body = {"phone": phone, "full_name": "Nima", "password": ADULT_PASSWORD}
     for _ in range(5):
         assert client.post("/v1/web/user/signup", json={**body, "code": wrong}).status_code == 401
     # Even the right code no longer works after five wrong tries. A new code is needed.
@@ -190,7 +184,7 @@ def test_development_returns_the_code_so_sign_up_can_be_tried_without_sms(client
     assert sent["dev_code"] == _sms_code(phone)
     created = client.post(
         "/v1/web/user/signup",
-        json={"phone": phone, "code": sent["dev_code"], "full_name": "No SMS", "password": ADULT_PASSWORD, "age_confirmed": True},
+        json={"phone": phone, "code": sent["dev_code"], "full_name": "No SMS", "password": ADULT_PASSWORD},
     )
     assert created.status_code == 201
 
@@ -318,3 +312,63 @@ def _complete_profile(student_id: str) -> None:
         student.cefr_level = student.cefr_level or "A2"
         db.merge(LearnerDetails(student_id=student_id, age=11, gender="female"))
         db.commit()
+
+
+def _request_login_code(client, phone: str) -> dict:
+    _clear_codes(phone)
+    response = client.post("/v1/web/user/otp/request", json={"phone": phone, "purpose": "login"})
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def test_adult_signs_in_with_the_sms_code_and_older_sign_ins_end(client):
+    phone = "09121230006"
+    _sign_up(client, phone, "Code Login")
+    old = TestClient(app)
+    assert old.post("/v1/web/user/login", json={"phone": phone, "password": ADULT_PASSWORD}).status_code == 200
+
+    _request_login_code(client, phone)
+    code = _sms_code(phone)
+    fresh = TestClient(app)
+    signed_in = fresh.post("/v1/web/user/otp/login", json={"phone": phone, "code": code})
+    assert signed_in.status_code == 200, signed_in.text
+    assert fresh.get("/v1/web/me?role=parent").status_code == 200
+    assert old.get("/v1/web/me?role=parent").status_code == 401
+    # A code works once. A second use is refused.
+    assert TestClient(app).post("/v1/web/user/otp/login", json={"phone": phone, "code": code}).status_code == 401
+
+
+def test_sign_in_code_is_refused_when_wrong_or_for_an_unknown_number_with_the_same_answer(client):
+    phone = "09121230007"
+    _sign_up(client, phone, "Wrong Code")
+    _request_login_code(client, phone)
+    real = _sms_code(phone)
+    wrong = "999999" if real != "999999" else "000000"
+    refused = client.post("/v1/web/user/otp/login", json={"phone": phone, "code": wrong})
+    assert refused.status_code == 401
+    assert refused.json()["detail"] == "Invalid or expired code. Request a new one"
+
+    # A number with no account gets the same request answer and the same refusal, so nothing is revealed.
+    unknown_phone = "09129990011"
+    sent = client.post("/v1/web/user/otp/request", json={"phone": unknown_phone, "purpose": "login"})
+    assert sent.status_code == 200
+    unknown = client.post("/v1/web/user/otp/login", json={"phone": unknown_phone, "code": real})
+    assert unknown.status_code == 401
+    assert unknown.json()["detail"] == refused.json()["detail"]
+
+
+def test_sign_in_code_expires_two_minutes_after_it_is_sent(client):
+    assert settings.otp_ttl_seconds == 120
+    phone = "09121230008"
+    _sign_up(client, phone, "Expiry")
+    sent = _request_login_code(client, phone)
+    assert sent["expires_in_seconds"] == settings.otp_ttl_seconds
+    with SessionLocal() as db:
+        record = db.query(OtpCode).filter(OtpCode.phone == phone).order_by(OtpCode.created_at.desc()).first()
+        # The two timestamps are set a few milliseconds apart, so allow a small margin.
+        assert abs((record.expires_at - record.created_at) - timedelta(seconds=120)) < timedelta(seconds=2)
+        record.expires_at = utcnow() - timedelta(seconds=1)
+        db.commit()
+    code = _sms_code(phone)
+    expired = client.post("/v1/web/user/otp/login", json={"phone": phone, "code": code})
+    assert expired.status_code == 401

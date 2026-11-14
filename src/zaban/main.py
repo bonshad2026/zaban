@@ -31,6 +31,7 @@ from zaban.learning_aids import parent_router as learning_parent_router
 from zaban.learning_aids import router as learning_aids_router
 from zaban.account import router as account_router
 from zaban.web import router as web_router
+from zaban.teaching import router as teaching_router
 
 STATIC_DIR = Path(__file__).parent / "static"
 PARTIALS_DIR = STATIC_DIR / "partials"
@@ -84,6 +85,7 @@ app.include_router(conversation_router, prefix="/v1")
 app.include_router(reports_router, prefix="/v1")
 app.include_router(web_router, prefix="/v1")
 app.include_router(account_router, prefix="/v1")
+app.include_router(teaching_router, prefix="/v1")
 app.include_router(learning_aids_router, prefix="/v1")
 app.include_router(learning_parent_router, prefix="/v1")
 app.include_router(ai_router, prefix="/v1")
@@ -172,6 +174,11 @@ def plan_page() -> HTMLResponse:
 @app.get("/level", include_in_schema=False)
 def level_page() -> HTMLResponse:
     return _page("level.html", "/level")
+
+
+@app.get("/students", include_in_schema=False)
+def students_page() -> HTMLResponse:
+    return _page("students.html", "/students")
 
 
 @app.get("/payments", include_in_schema=False)
