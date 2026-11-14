@@ -6,14 +6,14 @@ from sqlalchemy.orm import Session as DBSession
 
 from zaban.config import settings
 from zaban.db import get_db
-from zaban.models import Consent, Guardian, LearningProgram, ProgramItem, Student, Tenant, VoiceSample, WebSession, utcnow
+from zaban.models import Consent, Guardian, Student, Tenant, VoiceSample, WebSession, utcnow
 from zaban.schemas import AccentChoice, OtpRequest, PasswordReset, SignUpCreate, UserLogin
 from zaban.security import WEB_COOKIE_NAMES, read_web_session, session_is_current
 from zaban.services.web_sessions import start_web_session
 from zaban.services.learner import get_accent, set_accent, set_learner_profile
-from zaban.services.programs import advance_if_done, current_item, ensure_progress, item_stats, ordered_items
 from zaban.services.otp import check_code, development_code, normalize_phone, request_code
 from zaban.services.passwords import hash_password, verify_password
+from zaban.services.referrals import new_code, referral_summary
 from zaban.services.payments import has_active_plan, require_plan
 
 # Sign-in endpoints for the website. They set an HttpOnly cookie, so the browser never holds an API key.
@@ -90,18 +90,32 @@ def sign_up(body: SignUpCreate, response: Response, request: Request, db: DBSess
         raise HTTPException(status_code=503, detail="The service is not ready yet")
 
     check_code(db, phone, body.code)
+    referrer = None
+    if body.referral_code and body.referral_code.strip():
+        referrer = db.query(Guardian).filter(Guardian.referral_code == body.referral_code.strip().upper()).first()
+        if referrer is None:
+            raise HTTPException(status_code=400, detail="This referral code is not valid")
     guardian = Guardian(
         tenant_id=tenant.id,
         phone=phone,
         full_name=body.full_name.strip()[:120],
         password_hash=hash_password(body.password),
         goal=body.goal.strip()[:60] if body.goal else None,
+        referral_code=new_code(db),
+        referred_by_id=referrer.id if referrer else None,
     )
     db.add(guardian)
     db.commit()
     db.refresh(guardian)
     _set_adult_cookie(response, guardian, db, request)
     return _adult_out(guardian)
+
+
+@router.get("/user/referrals")
+def my_referrals(zaban_parent: str | None = Cookie(default=None), db: DBSession = Depends(get_db)) -> dict:
+    # The adult's own code, and who joined with it: names and counts only.
+    guardian = _guardian_from_cookie(db, zaban_parent)
+    return referral_summary(db, guardian)
 
 
 @router.post("/user/login")
@@ -311,47 +325,3 @@ def me(
                 "has_active_plan": has_active_plan(guardian),
             }
     raise HTTPException(status_code=401, detail="Please sign in")
-
-
-@router.get("/student/program")
-def student_program(zaban_student: str | None = Cookie(default=None), db: DBSession = Depends(get_db)) -> dict:
-    # The learner's place in their program: where they are, the lesson they are on, and the whole list with its state.
-    student = _student_from_cookie(db, zaban_student)
-    progress = ensure_progress(db, student)
-    if progress is None:
-        db.commit()
-        return {"program": None}
-    advance_if_done(db, student.id)
-    db.commit()
-    program = db.get(LearningProgram, progress.program_id)
-    stats = item_stats(db, student.id, program.id)
-    items = ordered_items(db, program.id)
-    done_count = sum(1 for row in stats if row["done"])
-    # The lesson for the next session: the item asked to repeat, otherwise the first item not yet covered.
-    current_row = current_item(db, progress) if progress.status == "active" else None
-    current_id = current_row.id if current_row is not None else None
-    return {
-        "program": {
-            "name": program.name,
-            "goal": program.goal,
-            "total": len(items),
-            "done": done_count,
-            "status": progress.status,
-        },
-        "current": (
-            {"number": current_row.position + 1, "title": current_row.title, "title_en": current_row.title_en, "activity": current_row.activity, "phrases": current_row.phrases}
-            if current_row is not None
-            else None
-        ),
-        "items": [
-            {
-                "number": row["position"] + 1,
-                "title": row["title"],
-                "title_en": row["title_en"],
-                "state": "current" if row["item_id"] == current_id else ("done" if row["done"] else "next"),
-                "visits": row["visits"],
-                "average": row["average"],
-            }
-            for row in stats
-        ],
-    }

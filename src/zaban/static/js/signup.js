@@ -27,6 +27,7 @@
         full_name: form.full_name.value.trim(),
         password: form.password.value,
         goal: form.goal.value || null,
+        referral_code: form.referral_code.value.trim() || null,
         age_confirmed: form.age_confirmed.checked,
       });
       // The account exists and the browser holds its sign-in. The plan page comes next.

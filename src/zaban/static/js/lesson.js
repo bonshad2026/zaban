@@ -163,7 +163,9 @@ const Lesson = (() => {
     if (!SpeechRec || S.phase !== "your_turn") return;
     S.lastError = "";
     const rec = new SpeechRec();
-    rec.lang = Accents.current;
+    const persian = $("persianMode").checked;
+    rec.lang = persian ? "fa-IR" : Accents.current;
+    $("msgInput").dir = persian ? "rtl" : "ltr";
     rec.continuous = true;
     rec.interimResults = true;
     const typed = $("msgInput").value.trimEnd();
@@ -181,6 +183,7 @@ const Lesson = (() => {
     };
     rec.onend = () => {
       S.recognizer = null;
+      stopMeter();
       if (S.phase !== "recording") return;
       setPhase("your_turn");
       if (S.pendingSend) {
@@ -191,12 +194,49 @@ const Lesson = (() => {
 
     S.recognizer = rec;
     setPhase("recording");
+    startMeter();
     try {
       rec.start();
     } catch (_) {
       S.recognizer = null;
+      stopMeter();
       setPhase("your_turn");
     }
+  }
+
+  // Shows the sound level while the microphone is on, so the learner can see that something is being recorded.
+  let meter = null;
+  async function startMeter() {
+    const box = $("voiceMeter");
+    const bars = box.querySelectorAll("span");
+    box.hidden = false;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const context = new (window.AudioContext || window.webkitAudioContext)();
+      const analyser = context.createAnalyser();
+      analyser.fftSize = 64;
+      context.createMediaStreamSource(stream).connect(analyser);
+      const data = new Uint8Array(analyser.frequencyBinCount);
+      let frame = null;
+      const draw = () => {
+        analyser.getByteFrequencyData(data);
+        bars.forEach((bar, i) => {
+          const value = data[(i * 2) % data.length] / 255;
+          bar.style.height = `${Math.max(6, Math.round(value * 34))}px`;
+        });
+        frame = requestAnimationFrame(draw);
+      };
+      draw();
+      meter = { stream, context, stop: () => { cancelAnimationFrame(frame); stream.getTracks().forEach((t) => t.stop()); context.close(); } };
+    } catch (_) {
+      // Without the level bars the recording still works; the blue microphone shows that it is on.
+    }
+  }
+
+  function stopMeter() {
+    if (meter) meter.stop();
+    meter = null;
+    $("voiceMeter").hidden = true;
   }
 
   function toggleMic() {
@@ -207,16 +247,22 @@ const Lesson = (() => {
   async function endLesson(automatic, customNote) {
     if (!S.sessionId || S.phase === "ended") return;
     if (S.recognizer) S.recognizer.abort();
+    stopMeter();
     if (canSpeak) window.speechSynthesis.cancel();
     clearInterval(S.tickTimer);
     const sessionId = S.sessionId;
     S.sessionId = null;
+    note(Z.tr("در حال ساختن ارزیابی این جلسه… چند لحظه صبر کن."));
+    let scoreText = "";
     try {
-      await Z.request("POST", `/v1/sessions/${sessionId}/end`);
-    } catch (_) { /* the lesson still closes on screen */ }
+      const ended = await Z.request("POST", `/v1/sessions/${sessionId}/end`);
+      if (ended.score !== null && ended.score !== undefined) {
+        scoreText = Z.pick(` نمره‌ی این جلسه: ${ended.score} از ۱۰۰.`, ` Your score for this lesson: ${ended.score} of 100.`);
+      }
+    } catch (_) { /* the lesson still closes on screen; the score is made later */ }
     setPhase("ended");
     $("timeLeft").textContent = "";
-    note(customNote || (automatic ? Z.tr("زمان جلسه تمام شد. کار خوبی بود!") : Z.tr("جلسه تمام شد. آفرین!")));
+    note((customNote || (automatic ? Z.tr("زمان جلسه تمام شد. کار خوبی بود!") : Z.tr("جلسه تمام شد. آفرین!"))) + scoreText);
     if (S.onEnded) S.onEnded();
   }
 
@@ -251,6 +297,9 @@ const Lesson = (() => {
     $("micBtn").addEventListener("click", toggleMic);
     $("sendBtn").addEventListener("click", send);
     $("endBtn").addEventListener("click", () => endLesson(false));
+    $("helpUnderstood").addEventListener("click", () => {
+      if (S.phase === "your_turn") ask("I did not understand. Please explain it again, more simply.", true);
+    });
     $("msgInput").addEventListener("input", render);
     $("msgInput").addEventListener("keydown", (event) => {
       if (event.key === "Enter" && !event.shiftKey) {

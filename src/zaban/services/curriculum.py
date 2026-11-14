@@ -13,7 +13,75 @@ _TOPIC_ORDER = {row[0]: index for index, row in enumerate(TOPICS)}
 
 
 def ordered_topics(db: DBSession) -> list[CurriculumTopic]:
-    return sorted(db.query(CurriculumTopic).all(), key=lambda t: _TOPIC_ORDER.get(t.id, len(_TOPIC_ORDER)))
+    # The lesson path: the order set in the admin panel, with the built-in order as the tie-breaker.
+    return sorted(
+        db.query(CurriculumTopic).all(),
+        key=lambda t: (t.position or 0, _TOPIC_ORDER.get(t.id, len(_TOPIC_ORDER)), t.id),
+    )
+
+
+def ensure_topic_positions(db: DBSession) -> None:
+    # Topics that have no saved position get one, following the built-in order. Runs at startup.
+    topics = ordered_topics(db)
+    if topics and all((t.position or 0) == 0 for t in topics):
+        for index, topic in enumerate(topics, start=1):
+            topic.position = index
+        db.commit()
+
+
+def set_topic_order(db: DBSession, topic_ids: list[str]) -> None:
+    # Saves the order dragged in the admin panel. The listed topics come first, in that order; the rest follow.
+    listed = {tid: index for index, tid in enumerate(topic_ids, start=1)}
+    topics = ordered_topics(db)
+    next_position = len(listed) + 1
+    for topic in topics:
+        if topic.id in listed:
+            topic.position = listed[topic.id]
+        else:
+            topic.position = next_position
+            next_position += 1
+    db.commit()
+
+
+def path_topics(db: DBSession, student: Student) -> list[CurriculumTopic]:
+    # The topics of the lesson path for this learner: the ones that fit their age band and level and have a written version, in order.
+    band = band_code(student.age_band)
+    if band is None:
+        return []
+    level = student.cefr_level or DEFAULT_LEVEL
+    return [
+        topic
+        for topic in ordered_topics(db)
+        if _fits(topic, band, level) and variant_for(db, topic.id, band, level) is not None
+    ]
+
+
+def next_topic(db: DBSession, student: Student) -> tuple[int, int, CurriculumTopic] | None:
+    # The topic of the next lesson in the lesson path: its number, the path length, and the topic.
+    # A topic the learner asked to repeat comes first. Otherwise it is the first topic not yet covered.
+    path = path_topics(db, student)
+    if not path:
+        return None
+    if student.repeat_topic_id:
+        for index, topic in enumerate(path):
+            if topic.id == student.repeat_topic_id:
+                return index + 1, len(path), topic
+    covered = covered_topic_ids(db, student.id)
+    for index, topic in enumerate(path):
+        if topic.id not in covered:
+            return index + 1, len(path), topic
+    return len(path), len(path), path[-1]
+
+
+def covered_topic_ids(db: DBSession, student_id: str) -> set[str]:
+    # Every topic a learner has had a lesson on, in any lesson.
+    rows = (
+        db.query(LessonTopic.topic_id)
+        .join(TutorSession, TutorSession.id == LessonTopic.session_id)
+        .filter(TutorSession.student_id == student_id)
+        .all()
+    )
+    return {row[0] for row in rows}
 
 
 def band_code(age_band: str) -> str | None:
@@ -89,6 +157,9 @@ def choose_topic(
     if band is None:
         return None
     level = student.cefr_level or DEFAULT_LEVEL
+    # A topic the learner asked to play again comes first, when no other topic was asked for.
+    if requested is None and student.repeat_topic_id:
+        requested = student.repeat_topic_id
 
     if requested:
         topic = db.get(CurriculumTopic, requested)
@@ -97,18 +168,18 @@ def choose_topic(
         variant = variant_for(db, topic.id, band, level)
         return (topic, variant) if variant else None
 
-    recent = _recent_topic_ids(db, student.id)
-    fallback = None
+    covered = covered_topic_ids(db, student.id)
+    first = None
     for topic in ordered_topics(db):
         if not _fits(topic, band, level):
             continue
         variant = variant_for(db, topic.id, band, level)
         if variant is None:
             continue
-        if topic.id not in recent:
+        if topic.id not in covered:
             return topic, variant
-        fallback = fallback or (topic, variant)
-    return fallback
+        first = first or (topic, variant)
+    return first
 
 
 def record_lesson_topic(db: DBSession, session_id: str, topic: CurriculumTopic, variant: CurriculumVariant) -> None:

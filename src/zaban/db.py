@@ -12,11 +12,14 @@ SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
 # Columns added after a table was first created. create_all does not add columns to an existing table.
 ADDED_COLUMNS = [
     ("self_tests", "score", "FLOAT"),
+    ("usage", "model", "VARCHAR(120)"),
+    ("curriculum_topics", "position", "INTEGER NOT NULL DEFAULT 0"),
+    ("students", "repeat_topic_id", "VARCHAR(40)"),
+    ("guardians", "referral_code", "VARCHAR(8)"),
+    ("guardians", "referred_by_id", "VARCHAR(32)"),
     ("lesson_items", "item_id", "INTEGER"),
-    ("student_progress", "revisit_item_id", "INTEGER"),
     ("sessions", "evaluation", "TEXT"),
     ("sessions", "start_prompt", "TEXT"),
-    ("program_items", "title_en", "VARCHAR(160)"),
     ("billing_plans", "name_en", "VARCHAR(80)"),
     ("consult_requests", "last_name", "VARCHAR(120) NOT NULL DEFAULT ''"),
     ("consult_requests", "subject", "VARCHAR(160) NOT NULL DEFAULT ''"),

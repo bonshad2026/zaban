@@ -238,6 +238,7 @@
     "پلن‌های فعال": "Active plans",
     "پیام کامل": "Full message",
     "پیامک": "SMS",
+    "مدل هوش مصنوعی": "AI model",
     "پیشنهاد سیستم": "System suggestion",
     "چند مهارت (نوشتن، شنیداری، گفتاری)": "Several skills (writing, listening, speaking)",
     "کاربران": "Users",

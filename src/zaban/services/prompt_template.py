@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session as DBSession
 from zaban.models import LearnerDetails, Student, TutorProfile
 from zaban.services.learner import get_accent, get_global_prompt
 from zaban.services.learner_details import details_out
+from zaban.services.curriculum import next_topic
 from zaban.services.settings_store import get_setting, set_setting
 
 # The administrator writes a template once. The prompt is then built by filling its placeholders with stored values.
@@ -29,6 +30,10 @@ DEFAULT_TEMPLATE = """[پرامپت کلی]
 نمونه‌ی انگلیسی دانش‌آموز: {{learner.level_sample}}
 یادداشت مدیر: {{learner.instructions}}
 
+[این جلسه]
+درس: {{lesson.number}} {{lesson.title}}
+موضوع این جلسه: {{lesson.topic}}
+
 [پرامپت شخصی]
 {{personal_text}}
 """
@@ -41,6 +46,10 @@ PLACEHOLDERS = [
     ("learner.gender", "جنسیت"),
     ("learner.level", "سطح انگلیسی"),
     ("learner.accent", "لهجه‌ی تمرین"),
+    ("learner.level_listening", "سطح شنیداری"),
+    ("learner.level_reading", "سطح خواندن"),
+    ("learner.level_speaking_writing", "سطح گفتار و نوشتار"),
+    ("learner.level_grammar", "سطح دستور و واژگان"),
     ("learner.grade", "کلاس یا پایه"),
     ("learner.conversation_style", "سبک گفتگوی مورد علاقه"),
     ("learner.response_style", "سبک پاسخ معلم"),
@@ -49,6 +58,9 @@ PLACEHOLDERS = [
     ("learner.motivation", "انگیزه"),
     ("learner.level_sample", "نمونه‌ی انگلیسی دانش‌آموز"),
     ("learner.instructions", "یادداشت مدیر"),
+    ("lesson.number", "شماره‌ی درس فعلی در برنامه"),
+    ("lesson.title", "عنوان درس فعلی"),
+    ("lesson.topic", "موضوع این جلسه (از موارد آموزشی درس)"),
     ("personal_text", "پرامپت شخصی (هرچه معلم باید بداند)"),
     ("duration", "مدت کلاس"),
 ]
@@ -87,7 +99,11 @@ def learner_values(db: DBSession, student: Student, duration_minutes: int = 0) -
     # Every value is text. Empty means the information is not stored yet.
     details = details_out(db.get(LearnerDetails, student.id))
     profile = db.get(TutorProfile, student.id)
+    upcoming = next_topic(db, student)
     return {
+        "lesson.number": str(upcoming[0]) if upcoming else "",
+        "lesson.title": upcoming[2].title if upcoming else "",
+        "lesson.topic": upcoming[2].goal if upcoming else "",
         "duration": f"{duration_minutes} دقیقه" if duration_minutes else "",
         "general": get_global_prompt(db),
         "personal_text": details["free_text"] or "",
@@ -99,6 +115,10 @@ def learner_values(db: DBSession, student: Student, duration_minutes: int = 0) -
             f"دستور و واژگان {student.level_grammar or 'A1'}، گفتار و نوشتار {student.level_speaking_writing or 'A1'}"
         ),
         "learner.accent": get_accent(db, student.id),
+        "learner.level_listening": student.level_listening or "",
+        "learner.level_reading": student.level_reading or "",
+        "learner.level_grammar": student.level_grammar or "",
+        "learner.level_speaking_writing": student.level_speaking_writing or "",
         "learner.grade": details["grade"] or "",
         "learner.conversation_style": STYLE_FA.get(details["conversation_style"] or "", ""),
         "learner.response_style": STYLE_FA.get(details["response_style"] or "", ""),
@@ -112,14 +132,19 @@ def learner_values(db: DBSession, student: Student, duration_minutes: int = 0) -
 
 def render(template: str, values: dict[str, str]) -> tuple[str, list[str]]:
     # Fills every placeholder. Returns the text and the placeholder names that the values do not know.
+    # A line whose placeholders are all empty is left out, so the prompt only says what is known about the learner.
     unknown: list[str] = []
-
-    def fill(match: re.Match) -> str:
-        key = match.group(1)
-        if key not in values:
-            if key not in unknown:
+    kept: list[str] = []
+    for line in template.split("\n"):
+        keys = PLACEHOLDER_PATTERN.findall(line)
+        for key in keys:
+            if key not in values and key not in unknown:
                 unknown.append(key)
-            return ""
-        return values[key]
+        if keys and all(not values.get(key, "") for key in keys):
+            continue
 
-    return PLACEHOLDER_PATTERN.sub(fill, template), unknown
+        def fill(match: re.Match) -> str:
+            return values.get(match.group(1), "")
+
+        kept.append(PLACEHOLDER_PATTERN.sub(fill, line))
+    return "\n".join(kept), unknown

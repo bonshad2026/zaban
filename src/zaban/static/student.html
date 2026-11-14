@@ -23,29 +23,6 @@
 
     <main class="wrap">
       <section id="tab-lesson">
-        <div class="card" id="programBox" hidden>
-          <h2>برنامه‌ی من</h2>
-          <p class="muted" id="programName"></p>
-          <p class="notice" id="programNotice" hidden></p>
-          <div id="programCurrent" hidden>
-            <p>جلسه‌ی بعدی شما: <strong id="programTitle"></strong></p>
-            <p class="muted" id="programActivity"></p>
-            <p class="ltr-field" id="programPhrases"></p>
-          </div>
-          <h3>مسیر من</h3>
-          <p class="legend muted">
-            <span class="legend-dot is-done"></span> انجام شده
-            <span class="legend-dot is-current"></span> جلسه‌ی فعلی
-            <span class="legend-dot is-next"></span> جلسه‌های بعدی
-          </p>
-          <ol class="program-list" id="programWindow"></ol>
-          <p><button type="button" id="programShowAll" class="ghost">نمایش کامل برنامه</button></p>
-          <div id="programFullBox" hidden>
-            <h3>همه‌ی جلسه‌های برنامه</h3>
-            <ol class="program-list" id="programList"></ol>
-            <p><button type="button" id="programHideAll" class="ghost">بازگشت به مسیر من</button></p>
-          </div>
-        </div>
         <div class="card" id="setupBox" hidden>
           <h2>شروع یک جلسه</h2>
           <p class="muted">معلم انگلیسی‌ات، منتظر توست. مدت جلسه را انتخاب کن و شروع کن.</p>
@@ -79,11 +56,16 @@
             <textarea id="msgInput" class="ltr-field" rows="2" maxlength="500" placeholder="Type or speak your English here..."></textarea>
             <button id="sendBtn" class="send" type="button">ارسال</button>
           </div>
+          <div class="voice-meter" id="voiceMeter" hidden aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
           <p class="hint" id="composerHint"></p>
 
           <div class="options">
             <label class="inline"><input type="checkbox" id="autoSpeak" checked> پاسخ صوتی معلم</label>
             <label class="inline"><input type="checkbox" id="autoListen" checked> بعد از جواب معلم، میکروفون خودکار باز شود</label>
+            <label class="inline"><input type="checkbox" id="persianMode"> فارسی صحبت می‌کنم (به فارسی شنیده و تایپ می‌شود)</label>
+          </div>
+          <div class="lesson-help">
+            <button id="helpUnderstood" class="ghost" type="button">متوجه نشدم</button>
           </div>
           <p class="notice" id="voiceNotice" hidden></p>
         </div>

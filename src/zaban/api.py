@@ -27,15 +27,6 @@ from zaban.services.evaluation import course_note, evaluate_session, past_evalua
 from zaban.services.learner_details import details_out, save_details
 from zaban.services.settings_store import EXPECTED_OUTPUT_KEY, PROMPT_MODE_DEFAULT, PROMPT_MODE_KEY, get_setting
 from zaban.services.curriculum import choose_topic, record_lesson_topic, session_topic, topic_note
-from zaban.services.programs import (
-    advance_if_done,
-    current_item,
-    ensure_progress,
-    lesson_item_for,
-    program_note,
-    record_lesson,
-    total_items,
-)
 from zaban.services.learner import get_accent, get_global_prompt, set_learner_profile
 from zaban.services.metering import ensure_quota, record_usage
 from zaban.services.payments import charge_plan_tokens, has_active_plan, require_plan
@@ -143,11 +134,6 @@ def _session_out(session: TutorSession, now) -> dict:
 
 
 def _lesson_note(db: DBSession, session_id: str) -> str:
-    # The lesson's program item comes first. A curriculum topic is used only when no program fits.
-    program_item = lesson_item_for(db, session_id)
-    if program_item is not None:
-        program, item = program_item
-        return program_note(program, item, total_items(db, program.id))
     chosen = session_topic(db, session_id)
     return topic_note(*chosen) if chosen else ""
 
@@ -452,18 +438,15 @@ def start_session(
             raise HTTPException(status_code=409, detail="A lesson is already running")
 
     score_pending_sessions(db, student.id)
-    progress = ensure_progress(db, student)
-    if progress is not None:
-        advance_if_done(db, student.id)
-        db.commit()
-        if progress.status == "finished":
-            raise HTTPException(status_code=409, detail="This program is finished")
 
     plan = _active_plan(db, student)
-    # A learning program decides the lesson when one fits. Otherwise the curriculum topic is used.
-    chosen = None if progress is not None else choose_topic(db, student, body.topic_id)
-    if body.topic_id and progress is None and chosen is None:
+    # The next topic of the lesson path decides the lesson, unless the learner asked to play a finished topic again.
+    chosen = choose_topic(db, student, body.topic_id)
+    if body.topic_id and chosen is None:
         raise HTTPException(status_code=400, detail="No written version of this topic fits this learner's age and level")
+    if chosen and student.repeat_topic_id:
+        # The repeat request is used up by this lesson.
+        student.repeat_topic_id = None
     session = TutorSession(
         student_id=student.id,
         plan_id=plan.id if plan else None,
@@ -477,12 +460,6 @@ def start_session(
     out = _session_out(session, now)
     out["topic"] = None
     out["program"] = None
-    if progress is not None:
-        item = current_item(db, progress)
-        if item is not None:
-            record_lesson(db, session.id, progress, item)
-            db.commit()
-            out["program"] = {"title": item.title, "position": item.position + 1, "total": total_items(db, progress.program_id)}
     if chosen:
         topic, variant = chosen
         record_lesson_topic(db, session.id, topic, variant)
@@ -594,4 +571,9 @@ def end_session(session_id: str, auth: Auth = Depends(get_auth), db: DBSession =
     if session.status == "active":
         finish_session(session, now)
     db.commit()
+    # Score the lesson now, so the learner sees it at once. If the model cannot be reached, the score is made later.
+    try:
+        evaluate_session(db, session)
+    except Exception:
+        db.rollback()
     return _session_out(session, now)

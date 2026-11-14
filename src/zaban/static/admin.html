@@ -44,6 +44,9 @@
     #consultTable th, #consultTable td, #cooperationTable th, #cooperationTable td { white-space: nowrap; }
     #consultTable .clip, #cooperationTable .clip { max-width: none; white-space: nowrap; }
     #consultTable .status-control, #cooperationTable .status-control { flex-wrap: nowrap; }
+    .drag-row { cursor: grab; }
+    .drag-row.dragging { opacity: 0.4; }
+    .ai-block { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--border); }
     /* Overview: one block per topic, with a card for each number and a short note under it. */
     .overview-section { margin-top: 22px; }
     .overview-section h3 { margin: 0 0 4px; }
@@ -123,12 +126,10 @@
           <button type="button" class="admin-group-title" aria-expanded="true">مالی</button>
           <button type="button" class="tab" data-tab="payments">پرداخت‌ها</button>
           <button type="button" class="tab" data-tab="plans">پلن‌ها</button>
-          <button type="button" class="tab" data-tab="payment">درگاه پرداخت</button>
         </div>
         <div class="admin-group">
           <button type="button" class="admin-group-title" aria-expanded="true">آموزش</button>
           <button type="button" class="tab" data-tab="curriculum">برنامه‌ی آموزشی</button>
-          <button type="button" class="tab" data-tab="programs">برنامه‌های یادگیری</button>
           <button type="button" class="tab" data-tab="placementbank">بانک آزمون سطح</button>
           <button type="button" class="tab" data-tab="helpcontent">محتوای کمک‌آموزشی</button>
           <button type="button" class="tab" data-tab="voices">نمونه صدا</button>
@@ -144,6 +145,8 @@
         <div class="admin-group">
           <button type="button" class="admin-group-title" aria-expanded="true">تنظیمات</button>
           <button type="button" class="tab" data-tab="connections">پیامک</button>
+          <button type="button" class="tab" data-tab="ai">مدل هوش مصنوعی</button>
+          <button type="button" class="tab" data-tab="payment">درگاه پرداخت</button>
         </div>
       </nav>
 
@@ -311,6 +314,7 @@
         <p><button type="button" id="paySave">ذخیره‌ی درگاه پرداخت</button></p>
       </section>
 
+
       <section class="card" id="tab-connections" hidden>
         <h2>پیامک</h2>
         <p class="muted">این بخش فقط سرویس پیامک کد ورود را تنظیم می‌کند. درگاه پرداخت در بخش خودش است.</p>
@@ -326,6 +330,28 @@
         <label for="connSmsTemplate">نام الگوی پیامک کد ورود</label>
         <input id="connSmsTemplate" class="ltr-field" maxlength="60">
         <p><button type="button" id="smsSave">ذخیره‌ی پیامک</button></p>
+      </section>
+
+      <section class="card" id="tab-ai" hidden>
+        <h2>مدل هوش مصنوعی</h2>
+        <p class="muted">مدلی که پاسخ معلم را می‌سازد. می‌توانید Claude را مستقیم استفاده کنید، یا هر سرویسی که با API مربوط به OpenAI سازگار است (مثلاً یک واسطه). اگر یک بخش خالی بماند، مقدار تنظیم‌شده در سرور استفاده می‌شود.</p>
+        <p class="notice" id="aiNotice" hidden></p>
+        <label for="aiProvider">نوع سرویس</label>
+        <select id="aiProvider">
+          <option value="anthropic">Claude (مستقیم از Anthropic)</option>
+          <option value="openai">سازگار با OpenAI (OpenAI یا واسطه)</option>
+        </select>
+        <label for="aiBaseUrl">آدرس API (فقط برای سرویس سازگار با OpenAI)</label>
+        <input id="aiBaseUrl" class="ltr-field" autocomplete="off" placeholder="https://api.openai.com/v1">
+        <label for="aiModelSelect">مدل</label>
+        <select id="aiModelSelect"></select>
+        <p class="muted" id="aiModelPrice"></p>
+        <label for="aiModel">نام مدل (می‌توانید هر نام دیگری را هم وارد کنید)</label>
+        <input id="aiModel" class="ltr-field" autocomplete="off" placeholder="نام دقیق مدل از سرویس شما">
+        <label for="aiKey">کلید API</label>
+        <p class="muted" id="aiKeyHint"></p>
+        <input id="aiKey" type="password" class="ltr-field" autocomplete="off" placeholder="برای تغییر، کلید تازه را وارد کنید">
+        <p><button type="button" id="aiSave">ذخیره‌ی مدل هوش مصنوعی</button></p>
       </section>
 
       <section class="card" id="tab-sessions" hidden>
@@ -479,43 +505,9 @@
         </form>
       </dialog>
 
-      <section class="card" id="tab-programs" hidden>
-        <h2>برنامه‌های یادگیری</h2>
-        <p class="muted" id="programVersion"></p>
-        <div class="row">
-          <div><label for="progSelect">برنامه</label><select id="progSelect"></select></div>
-        </div>
-        <div class="table-box"><table class="admin-table" id="progItemsTable"></table></div>
-        <h2 style="margin-top:20px">ویرایش یک جلسه</h2>
-        <form id="progDurationForm" class="row">
-          <div><label for="progDuration">مدت دوره (ماه)</label><input id="progDuration" type="number" min="1" max="60"></div>
-          <div><button type="submit" class="ghost">ذخیره‌ی مدت دوره</button></div>
-        </form>
-        <form id="progItemForm" class="row">
-          <div class="full"><label for="progStage">مرحله‌ی دوره (اختیاری)</label><input id="progStage" maxlength="80"></div>
-          <div class="full"><label for="progConcepts">مفاهیم این جلسه (هر خط یک مفهوم)</label><textarea id="progConcepts" rows="3" maxlength="800"></textarea></div>
-          <div><label for="progNumber">شماره‌ی جلسه</label><input id="progNumber" type="number" min="1" readonly></div>
-          <div class="full"><label for="progTitle">عنوان</label><input id="progTitle" maxlength="160"></div>
-          <div class="full"><label for="progTitleEn">عنوان انگلیسی (برای صفحه‌ی انگلیسی)</label><input id="progTitleEn" maxlength="160" class="ltr-field"></div>
-          <div class="full"><label for="progActivity">فعالیت</label><textarea id="progActivity" rows="2" maxlength="600"></textarea></div>
-          <div class="full"><label for="progPhrases">عبارت‌های هدف (هر خط یک عبارت)</label><textarea id="progPhrases" rows="4" maxlength="1200" class="ltr-field"></textarea></div>
-          <div class="full"><button type="submit">ذخیره‌ی جلسه</button></div>
-        </form>
-        <p class="error" id="progError" hidden></p>
-        <p class="ok-msg" id="progOk" hidden></p>
-        <p class="muted">برای جابه‌جایی جلسه‌ها، ردیف آن را با ماوس بکشید و در جای تازه رها کنید. دانش‌آموزان فعلی از اولین جلسه‌ای ادامه می‌دهند که در ترتیب جدید هنوز انجام نشده است.</p>
-        <h2 style="margin-top:20px">پیشرفت دانش‌آموز</h2>
-        <p class="muted">تعداد دفعات هر جلسه و میانگین امتیاز آن. با «گفتگوی مجدد» همان جلسه در جلسه‌ی بعدی دوباره گرفته می‌شود و جایگاه اصلی برنامه تغییر نمی‌کند.</p>
-        <div class="row">
-          <div><label for="progLearner">دانش‌آموز</label><select id="progLearner"></select></div>
-        </div>
-        <p class="notice" id="progressNotice" hidden></p>
-        <div class="table-box"><table class="admin-table" id="progressTable"></table></div>
-      </section>
-
       <section class="card" id="tab-curriculum" hidden>
         <h2>برنامه‌ی آموزشی</h2>
-        <p class="muted">برای هر موضوع، شناسه، عنوان و هدف گفتگو را ببینید و موارد آموزشی آن را فهرست کنید. با «مشاهده» همه‌ی متن و موارد باز می‌شود.</p>
+        <p class="muted">ترتیب موضوع‌ها، مسیر درس‌های همه‌ی دانش‌آموزان است. هر سطر را با ماوس بکشید و در جای دیگری رها کنید. برای دیدن متن کامل و موارد آموزشی، «مشاهده» را بزنید.</p>
         <div class="table-box"><table class="admin-table" id="topicTable"></table></div>
       </section>
 

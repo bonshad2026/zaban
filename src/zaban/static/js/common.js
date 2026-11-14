@@ -593,6 +593,7 @@ const Z = (() => {
     addItem("اطلاعات شخصی", "Personal details", openPersonalDetails);
     addItem("تغییر رمز عبور", "Change password", () => byId("accPasswordDialog").showModal());
     addItem("درخواست‌های شما", "Your requests", () => { location.href = "/requests"; });
+    addItem("کد معرف من", "My referral code", () => { location.href = "/referrals"; });
     addItem("پرداخت‌های شما", "Your payments", () => {
       location.href = signedIn.includes("parent") ? "/payments" : "/student?tab=payments";
     });

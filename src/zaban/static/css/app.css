@@ -267,7 +267,20 @@ button.secondary:hover:not(:disabled) { background: var(--accent); color: var(--
   background: var(--accent);
 }
 .mic svg { width: 26px; height: 26px; fill: currentColor; }
-.mic.is-recording { background: var(--accent); color: var(--on-accent); animation: pulse 1.2s infinite; }
+.mic.is-recording { background: #2563eb; color: #fff; animation: pulse-blue 1.2s infinite; }
+.chip.turn-recording { background: #2563eb; color: #fff; }
+@keyframes pulse-blue {
+  0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.55); }
+  70% { box-shadow: 0 0 0 14px rgba(37, 99, 235, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+}
+.lesson-help { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.lesson-row { border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; margin: 6px 0; }
+.lesson-row.lesson-current { border-color: #2563eb; background: var(--accent-soft); }
+.lesson-row.lesson-upcoming { opacity: 0.6; }
+/* Live level bars shown while the microphone is listening. */
+.voice-meter { display: flex; align-items: center; justify-content: center; gap: 4px; height: 34px; margin: 6px 0; }
+.voice-meter span { display: block; width: 5px; height: 6px; border-radius: 3px; background: #2563eb; transition: height 0.06s linear; }
 @keyframes pulse {
   0% { box-shadow: 0 0 0 0 rgba(180, 35, 24, 0.45); }
   70% { box-shadow: 0 0 0 16px rgba(180, 35, 24, 0); }

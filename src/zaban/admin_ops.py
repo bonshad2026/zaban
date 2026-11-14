@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session as DBSession
 from zaban.admin import require_admin
 from zaban.config import settings
 from zaban.conversation.service import prompt_ttl_seconds
+from zaban.services.ai_models import CHAT_MODELS
 from zaban.db import get_db
 from zaban.learning_aids import _progress_out
 from zaban.models import (
@@ -18,9 +19,6 @@ from zaban.models import (
     CooperationRequest,
     Guardian,
     LearnerDetails,
-    LearningProgram,
-    ProgramItem,
-    StudentProgress,
     Payment,
     SelfTest,
     Student,
@@ -30,7 +28,6 @@ from zaban.models import (
     utcnow,
 )
 from zaban.services.evaluation import past_evaluations
-from zaban.services.programs import current_item, item_stats, reorder_items
 from zaban.services.learner_details import details_out
 from zaban.services.settings_store import (
     EXPECTED_OUTPUT_KEY,
@@ -40,6 +37,10 @@ from zaban.services.settings_store import (
     MODE_LABELS,
     PUBLIC_BASE_URL_KEY,
     PROMPT_TOKEN_TTL_KEY,
+    AI_API_KEY_KEY,
+    AI_BASE_URL_KEY,
+    AI_MODEL_KEY,
+    AI_PROVIDER_KEY,
     SMS_API_KEY_KEY,
     SMS_PROVIDER_KEY,
     SMS_TEMPLATE_KEY,
@@ -49,6 +50,7 @@ from zaban.services.settings_store import (
 )
 from zaban.services.prompt_template import DEFAULT_TEMPLATE, PLACEHOLDERS, get_template, learner_values, render, save_template
 from zaban.services.sms import sms_provider_for
+from zaban.services.metering import session_usage
 from zaban.services.payments import has_active_plan
 
 # Everything the operator panel needs that is not part of the lesson itself.
@@ -146,6 +148,12 @@ def read_connections(db: DBSession = Depends(get_db)) -> dict:
         "zarinpal_merchant_set": bool(merchant),
         "public_base_url": site,
         "callback_url": f"{site}/v1/web/billing/zarinpal/callback",
+        "ai_provider": get_setting(db, AI_PROVIDER_KEY, settings.ai_provider),
+        "ai_base_url": get_setting(db, AI_BASE_URL_KEY, settings.openai_base_url),
+        "ai_model": get_setting(db, AI_MODEL_KEY, settings.model if settings.ai_provider != "openai" else settings.openai_model),
+        "ai_model_catalog": CHAT_MODELS,
+        "ai_api_key_set": bool(get_setting(db, AI_API_KEY_KEY, settings.anthropic_api_key or settings.openai_api_key or "")),
+        "ai_api_key_masked": _mask(get_setting(db, AI_API_KEY_KEY, settings.anthropic_api_key or settings.openai_api_key or "")),
     }
 
 
@@ -157,6 +165,10 @@ class ConnectionsUpdate(BaseModel):
     payment_provider: str | None = Field(default=None, pattern=r"^(fake|zarinpal)$")
     zarinpal_merchant_id: str | None = Field(default=None, max_length=100)
     public_base_url: str | None = Field(default=None, max_length=200)
+    ai_provider: str | None = Field(default=None, pattern=r"^(anthropic|openai)$")
+    ai_base_url: str | None = Field(default=None, max_length=200)
+    ai_model: str | None = Field(default=None, max_length=120)
+    ai_api_key: str | None = Field(default=None, max_length=300)
 
 
 @router.post("/connections")
@@ -173,6 +185,17 @@ def save_connections(body: ConnectionsUpdate, db: DBSession = Depends(get_db)) -
         set_setting(db, PAYMENT_PROVIDER_KEY, body.payment_provider)
     if body.zarinpal_merchant_id is not None and body.zarinpal_merchant_id.strip():
         set_setting(db, ZARINPAL_MERCHANT_KEY, body.zarinpal_merchant_id.strip())
+    if body.ai_provider is not None:
+        set_setting(db, AI_PROVIDER_KEY, body.ai_provider)
+    if body.ai_base_url is not None:
+        base = body.ai_base_url.strip().rstrip("/")
+        if base and not re.fullmatch(r"https?://[^\s]+", base):
+            raise HTTPException(status_code=400, detail="The AI address must start with http:// or https://")
+        set_setting(db, AI_BASE_URL_KEY, base)
+    if body.ai_model is not None:
+        set_setting(db, AI_MODEL_KEY, body.ai_model.strip())
+    if body.ai_api_key is not None and body.ai_api_key.strip():
+        set_setting(db, AI_API_KEY_KEY, body.ai_api_key.strip())
     if body.public_base_url is not None:
         address = body.public_base_url.strip().rstrip("/")
         if address and not re.fullmatch(r"https?://[^\s/]+(/[^\s]*)?", address):
@@ -198,6 +221,27 @@ def list_learners(db: DBSession = Depends(get_db)) -> list[dict]:
     ]
 
 
+def _lesson_rows(db: DBSession, student: Student) -> list[dict]:
+    # Each lesson with its score, and the tokens and cost its replies used.
+    lessons = (
+        db.query(TutorSession)
+        .filter(TutorSession.student_id == student.id)
+        .order_by(TutorSession.started_at.desc())
+        .limit(20)
+        .all()
+    )
+    return [
+        {
+            "id": s.id,
+            "started_at": s.started_at.isoformat(),
+            "status": s.status,
+            "score": s.score,
+            **session_usage(db, s.id),
+        }
+        for s in lessons
+    ]
+
+
 @router.get("/learners/{student_id}")
 def learner_detail(student_id: str, db: DBSession = Depends(get_db)) -> dict:
     student = db.get(Student, student_id)
@@ -214,77 +258,8 @@ def learner_detail(student_id: str, db: DBSession = Depends(get_db)) -> dict:
         "progress": _progress_out(db, student),
         "evaluations": past_evaluations(db, student.id, limit=10),
         "self_tests": [{"id": t.id, "kind": t.kind, "skill": t.skill, "status": t.status, "result": t.result} for t in tests],
+        "sessions": _lesson_rows(db, student),
     }
-
-
-class ProgramDuration(BaseModel):
-    duration_months: int = Field(ge=1, le=60)
-
-
-class ProgramOrder(BaseModel):
-    # Every lesson id of the program, in the new order.
-    item_ids: list[int] = Field(min_length=1, max_length=500)
-
-
-@router.post("/programs/{program_id}/order")
-def save_program_order(program_id: str, body: ProgramOrder, db: DBSession = Depends(get_db)) -> dict:
-    # Learners continue at the first lesson the new order has not covered yet. Lessons already done stay done.
-    if db.get(LearningProgram, program_id) is None:
-        raise HTTPException(status_code=404, detail="Not found")
-    try:
-        reorder_items(db, program_id, body.item_ids)
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc))
-    db.commit()
-    return {"ok": True}
-
-
-@router.get("/students/{student_id}/program-progress")
-def student_program_progress(student_id: str, db: DBSession = Depends(get_db)) -> dict:
-    # Each lesson of the learner's program with the number of times it was played and its average score.
-    progress = db.get(StudentProgress, student_id)
-    if progress is None:
-        raise HTTPException(status_code=404, detail="This learner has no program yet")
-    program = db.get(LearningProgram, progress.program_id)
-    next_item = current_item(db, progress) if progress.status == "active" else None
-    return {
-        "program": program.name,
-        "status": progress.status,
-        "next_item_id": next_item.id if next_item else None,
-        "revisit_item_id": progress.revisit_item_id,
-        "items": item_stats(db, student_id, program.id),
-    }
-
-
-class RevisitRequest(BaseModel):
-    # The lesson to play again in the next session. None cancels the request.
-    item_id: int | None = None
-
-
-@router.post("/students/{student_id}/revisit")
-def request_revisit(student_id: str, body: RevisitRequest, db: DBSession = Depends(get_db)) -> dict:
-    # Plays one lesson again in the next session. The learner's place in the program does not change.
-    progress = db.get(StudentProgress, student_id)
-    if progress is None:
-        raise HTTPException(status_code=404, detail="This learner has no program yet")
-    if body.item_id is not None:
-        item = db.get(ProgramItem, body.item_id)
-        if item is None or item.program_id != progress.program_id:
-            raise HTTPException(status_code=404, detail="Not found")
-    progress.revisit_item_id = body.item_id
-    db.commit()
-    return {"ok": True}
-
-
-@router.post("/programs/{program_id}/duration")
-def set_program_duration(program_id: str, body: ProgramDuration, db: DBSession = Depends(get_db)) -> dict:
-    program = db.get(LearningProgram, program_id)
-    if program is None:
-        raise HTTPException(status_code=404, detail="Not found")
-    program.duration_months = body.duration_months
-    program.version += 1
-    db.commit()
-    return {"ok": True, "version": program.version}
 
 
 @router.get("/sessions")

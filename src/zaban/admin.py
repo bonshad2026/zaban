@@ -22,12 +22,9 @@ from zaban.models import (
     Guardian,
     HelpContent,
     LearnerDetails,
-    LearningProgram,
     Payment,
     Plan,
-    ProgramItem,
     Student,
-    StudentProgress,
     TutorProfile,
     VoiceSample,
 )
@@ -35,7 +32,6 @@ from zaban.services.evaluation import course_note, past_evaluations
 from zaban.services.help_content import delete_facet, delete_tag, facet_tree, set_content_tags, tags_by_content
 from zaban.services.learner import get_accent, get_global_prompt, set_global_prompt, set_learner_profile
 from zaban.services.settings_store import EXPECTED_OUTPUT_KEY, PROMPT_MODE_DEFAULT, PROMPT_MODE_KEY, get_setting, set_setting
-from zaban.services.programs import current_item, program_note, total_items
 from zaban.services.sessions import compose_start_prompt, join_prompt
 from zaban.schemas import HelpContentCreate, VoiceSampleCreate
 from zaban.services.self_test_prompt import (
@@ -50,8 +46,11 @@ from zaban.services.self_test_prompt import (
     DEFAULT_TEMPLATE as DEFAULT_SELF_TEST_TEMPLATE,
 )
 from zaban.services.payments import confirm_payment
-from zaban.program_data import GOALS
 from zaban.services.curriculum import (
+    choose_topic,
+    topic_note,
+    ordered_topics,
+    set_topic_order,
     bump_catalog_version,
     catalog_version,
     catalog_view,
@@ -351,12 +350,9 @@ def preview_start_prompt(student_id: str, db: DBSession = Depends(get_db)) -> di
         .order_by(Plan.start_date.desc())
         .first()
     )
-    lesson = ""
-    progress = db.get(StudentProgress, student.id)
-    if progress is not None:
-        item = current_item(db, progress)
-        if item is not None:
-            lesson = program_note(db.get(LearningProgram, progress.program_id), item, total_items(db, progress.program_id))
+    # The lesson the preview shows: the topic the next lesson would use.
+    chosen = choose_topic(db, student)
+    lesson = topic_note(*chosen) if chosen else ""
     parts = compose_start_prompt(
         student,
         plan,
@@ -488,7 +484,7 @@ class PointCreate(BaseModel):
 @router.get("/curriculum/topics", dependencies=[Depends(require_admin)])
 def list_curriculum_topics(db: DBSession = Depends(get_db)) -> list[dict]:
     # The topic, its conversation goal and the points to talk about. Bands, levels and versions are not shown here.
-    topics = db.query(CurriculumTopic).order_by(CurriculumTopic.id).all()
+    topics = ordered_topics(db)
     points = db.query(CurriculumPoint).order_by(CurriculumPoint.sort_order, CurriculumPoint.created_at).all()
     by_topic: dict[str, list[dict]] = {}
     for point in points:
@@ -497,6 +493,21 @@ def list_curriculum_topics(db: DBSession = Depends(get_db)) -> list[dict]:
         {"id": t.id, "title": t.title, "goal": t.goal, "points": by_topic.get(t.id, [])}
         for t in topics
     ]
+
+
+class TopicOrder(BaseModel):
+    # Every topic id in the lesson order, as dragged in the panel.
+    ids: list[str] = Field(min_length=1, max_length=500)
+
+
+@router.put("/curriculum/order", dependencies=[Depends(require_admin)])
+def save_topic_order(body: TopicOrder, db: DBSession = Depends(get_db)) -> dict:
+    known = {row[0] for row in db.query(CurriculumTopic.id).all()}
+    unknown = [tid for tid in body.ids if tid not in known]
+    if unknown:
+        raise HTTPException(status_code=404, detail="Unknown topic")
+    set_topic_order(db, body.ids)
+    return {"ok": True}
 
 
 @router.put("/curriculum/topics/{topic_id}", dependencies=[Depends(require_admin)])
@@ -530,68 +541,6 @@ def remove_curriculum_point(point_id: str, db: DBSession = Depends(get_db)) -> d
     db.delete(point)
     db.commit()
     return {"ok": True}
-
-
-# ----- Learning programs: the lessons in order, with their text. Edits are saved in the database. -----
-
-class ProgramItemSave(BaseModel):
-    title: str = Field(min_length=1, max_length=160)
-    title_en: str = Field(default="", max_length=160)
-    # The course stage this lesson belongs to. Empty means no stage.
-    stage: str = Field(default="", max_length=80)
-    concepts: list[str] = Field(default_factory=list, max_length=12)
-    activity: str = Field(default="", max_length=600)
-    phrases: list[str] = Field(default_factory=list, max_length=12)
-
-
-@router.get("/programs", dependencies=[Depends(require_admin)])
-def list_programs(db: DBSession = Depends(get_db)) -> dict:
-    programs = []
-    for program in db.query(LearningProgram).order_by(LearningProgram.id).all():
-        items = (
-            db.query(ProgramItem)
-            .filter(ProgramItem.program_id == program.id)
-            .order_by(ProgramItem.position)
-            .all()
-        )
-        programs.append(
-            {
-                "id": program.id,
-                "name": program.name,
-                "band": program.band,
-                "level": program.level,
-                "goal": program.goal,
-                "duration_months": program.duration_months,
-                "version": program.version,
-                "items": [
-                    {"id": i.id, "position": i.position + 1, "title": i.title, "title_en": i.title_en or "", "stage": i.stage, "concepts": i.concepts or [], "activity": i.activity, "phrases": i.phrases}
-                    for i in items
-                ],
-            }
-        )
-    return {"goals": [{"key": k, "label": label} for k, label in GOALS], "programs": programs}
-
-
-@router.put("/programs/{program_id}/items/{number}", dependencies=[Depends(require_admin)])
-def save_program_item(program_id: str, number: int, body: ProgramItemSave, db: DBSession = Depends(get_db)) -> dict:
-    # number is the lesson number as the administrator sees it (1 is the first lesson).
-    item = (
-        db.query(ProgramItem)
-        .filter(ProgramItem.program_id == program_id, ProgramItem.position == number - 1)
-        .first()
-    )
-    if item is None:
-        raise HTTPException(status_code=404, detail="Not found")
-    item.title = body.title.strip()
-    item.title_en = body.title_en.strip() or None
-    item.stage = body.stage.strip()
-    item.concepts = [c.strip() for c in body.concepts if c.strip()]
-    item.activity = body.activity.strip()
-    item.phrases = [p.strip() for p in body.phrases if p.strip()]
-    program = db.get(LearningProgram, program_id)
-    program.version += 1
-    db.commit()
-    return {"ok": True, "version": program.version}
 
 
 # ----- Cooperation requests (people who want to work with the company, not learners) -----

@@ -2,7 +2,7 @@ import base64
 import os
 
 from zaban.db import SessionLocal
-from zaban.models import Guardian, LearnerDetails, Student, StudentProgress
+from zaban.models import Guardian, LearnerDetails, Student
 from zaban.services.sessions import build_system_prompt
 from helpers_learner import learner_login, self_student
 
@@ -133,28 +133,12 @@ def test_admin_reads_a_learner_detail(client):
 
 # ----- Progress, stages and evaluations -----
 
-def test_learner_progress_is_shown_with_stages(client):
-    student_id = _student(client)
+def test_learner_progress_is_shown_with_the_lesson_path(client):
+    _student(client)
     response = client.get("/v1/web/student/progress")
     assert response.status_code == 200
     data = response.json()
-    assert "stages" in data and "percent" in data and "session_number" in data
-    with SessionLocal() as db:
-        progress = db.get(StudentProgress, student_id)
-        assert progress is None or progress.position >= 0
-
-
-def test_admin_sets_course_duration_and_stage(client):
-    _admin(client)
-    programs = client.get("/v1/admin/api/programs").json()["programs"]
-    program = programs[0]
-    assert client.post(f"/v1/admin/api/programs/{program['id']}/duration", json={"duration_months": 24}).status_code == 200
-    assert client.post(f"/v1/admin/api/programs/{program['id']}/duration", json={"duration_months": 0}).status_code == 422
-    body = {"title": program["items"][0]["title"], "stage": "Stage 1", "activity": "", "phrases": []}
-    assert client.put(f"/v1/admin/api/programs/{program['id']}/items/1", json=body).status_code == 200
-    refreshed = client.get("/v1/admin/api/programs").json()["programs"][0]
-    assert refreshed["duration_months"] == 24
-    assert refreshed["items"][0]["stage"] == "Stage 1"
+    assert "lessons" in data and "percent" in data and "session_number" in data
 
 
 # ----- Self-test: owner-only and the admin prompt -----
@@ -246,15 +230,6 @@ def test_lesson_is_refused_until_the_profile_is_complete(client):
 
 
 # ----- One item is one lesson: its concepts, and the pace set by the learner's plan -----
-
-def test_admin_saves_the_concepts_of_one_lesson(client):
-    _admin(client)
-    program = client.get("/v1/admin/api/programs").json()["programs"][0]
-    body = {"title": "Greetings", "stage": "Stage 1", "concepts": ["hello", "good morning"], "activity": "", "phrases": []}
-    assert client.put(f"/v1/admin/api/programs/{program['id']}/items/1", json=body).status_code == 200
-    item = client.get("/v1/admin/api/programs").json()["programs"][0]["items"][0]
-    assert item["concepts"] == ["hello", "good morning"]
-
 
 def test_progress_shows_the_expected_week_from_the_plan_pace(client):
     _student(client)

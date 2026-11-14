@@ -10,6 +10,12 @@ class Settings:
     secret_key: str
     anthropic_api_key: str | None
     model: str
+    # Which company answers the lessons: "anthropic" or "openai". The key and model of the chosen one are used.
+    ai_provider: str
+    openai_api_key: str | None
+    openai_model: str
+    # The address of the OpenAI-compatible API. Leave the default for OpenAI itself, or set another provider's address.
+    openai_base_url: str
     session_token_ttl_seconds: int
     web_session_ttl_seconds: int
     input_price_per_mtok: float
@@ -44,6 +50,10 @@ def load_settings() -> Settings:
         secret_key=os.getenv("SECRET_KEY") or secrets.token_urlsafe(32),
         anthropic_api_key=os.getenv("ANTHROPIC_API_KEY") or None,
         model=os.getenv("ZABAN_MODEL", "claude-haiku-5-5"),
+        ai_provider=os.getenv("AI_PROVIDER", "anthropic").strip().lower(),
+        openai_api_key=os.getenv("OPENAI_API_KEY") or None,
+        openai_model=os.getenv("OPENAI_MODEL", ""),
+        openai_base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/"),
         session_token_ttl_seconds=int(os.getenv("SESSION_TOKEN_TTL", "900")),
         web_session_ttl_seconds=int(os.getenv("WEB_SESSION_TTL", "43200")),
         # Placeholder prices in USD per million tokens. Set the real values from Anthropic's price list.

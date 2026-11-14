@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session as DBSession
 from zaban.db import get_db
 from zaban.models import Plan, Student, Tenant, TutorSession, Usage, utcnow
 from zaban.security import Auth, get_auth, get_student_for_auth, require_manager, require_tenant
-from zaban.services.programs import lesson_item_for
+from zaban.services.curriculum import session_topic
 from zaban.services.progress import actual_percent, planned_percent, progress_status
 from zaban.services.sessions import finish_if_due
 
@@ -64,15 +64,14 @@ def _session_rows(db: DBSession, student: Student) -> list[dict]:
     )
     rows = []
     for s in sessions:
-        # A lesson of the learning program is titled with its program item. A free talk has no program item.
-        found = lesson_item_for(db, s.id)
-        # The number and title are sent apart, so the page can write the words "Lesson" or "جلسه" in its own language.
+        # A lesson on a curriculum topic is titled with that topic. A free talk has no topic.
+        found = session_topic(db, s.id)
         rows.append(
             {
                 "id": s.id,
-                "lesson_number": found[1].position + 1 if found else None,
-                "lesson_title": found[1].title if found else None,
-                "lesson_title_en": found[1].title_en if found else None,
+                "lesson_number": None,
+                "lesson_title": found[0].title if found else None,
+                "lesson_title_en": None,
                 "started_at": s.started_at.isoformat(),
                 "duration_minutes": s.duration_minutes,
                 "status": s.status,

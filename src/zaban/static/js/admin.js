@@ -67,6 +67,7 @@
     helpcontent: loadHelpSection,
     settings: loadSettings,
     connections: loadSms,
+    ai: loadAi,
     payment: loadPayment,
     sessions: loadSessions,
     promptgen: loadPromptGen,
@@ -79,12 +80,11 @@
     global: loadGlobalPrompt,
     voices: loadVoices,
     curriculum: loadCurriculum,
-    programs: loadPrograms,
   };
 
   function openTab(name) {
     document.querySelectorAll(".admin-tabs .tab").forEach((t) => t.classList.toggle("is-active", t.dataset.tab === name));
-    ["overview", "consults", "cooperations", "helpcontent", "settings", "connections", "payment", "sessions", "promptgen", "promptview", "selftest", "placementbank", "adults", "payments", "plans", "curriculum", "programs", "global", "voices"]
+    ["overview", "consults", "cooperations", "helpcontent", "settings", "connections", "ai", "payment", "sessions", "promptgen", "promptview", "selftest", "placementbank", "adults", "payments", "plans", "curriculum", "global", "voices"]
       .forEach((n) => show(`tab-${n}`, n === name));
     return run(loaders[name]);
   }
@@ -416,6 +416,21 @@
         tests.appendChild(Z.el("p", "muted", "هنوز آزمونی انجام نشده است."));
       }
       box.appendChild(tests);
+
+      const lessons = Z.el("div", "overview-section");
+      lessons.appendChild(Z.el("h3", "", "جلسه‌ها، نمره و مصرف توکن"));
+      if (d.sessions.length) {
+        const grid = Z.el("div", "stat-grid");
+        d.sessions.forEach((s) => grid.appendChild(statCard(
+          Z.fmtDateTime(s.started_at),
+          s.score === null || s.score === undefined ? "بدون نمره" : `نمره ${fa(s.score)} از ۱۰۰`,
+          `مصرف ${fa(s.tokens)} توکن — هزینه حدود ${s.cost_usd.toFixed(4)} دلار`,
+        )));
+        lessons.appendChild(grid);
+      } else {
+        lessons.appendChild(Z.el("p", "muted", "هنوز جلسه‌ای ثبت نشده است."));
+      }
+      box.appendChild(lessons);
     } catch (err) {
       box.appendChild(Z.el("p", "error", err.message));
     }
@@ -994,7 +1009,7 @@
 
   // ----- Curriculum: topic, conversation goal and the points to talk about -----
 
-  // Used by the programs tab as well: keeps the current choice when it still exists.
+  // Keeps the current choice of a select when it still exists after the list is refilled.
   function fillSelect(select, pairs) {
     const current = select.value;
     select.innerHTML = "";
@@ -1019,6 +1034,47 @@
         String(t.points.length),
         actions(button("مشاهده", () => openTopic(t.id))),
       ]));
+    enableTopicDrag();
+  }
+
+  // The rows can be dragged up and down. The order saved here is the order of the lessons for every learner.
+  function enableTopicDrag() {
+    const rows = [...$("topicTable").querySelectorAll("tr")].slice(1);
+    let dragId = null;
+    rows.forEach((row, index) => {
+      const topicId = curTopics[index] && curTopics[index].id;
+      if (!topicId) return;
+      row.dataset.topicId = topicId;
+      row.draggable = true;
+      row.classList.add("drag-row");
+      row.addEventListener("dragstart", (event) => {
+        dragId = topicId;
+        event.dataTransfer.effectAllowed = "move";
+        row.classList.add("dragging");
+      });
+      row.addEventListener("dragend", () => {
+        dragId = null;
+        row.classList.remove("dragging");
+      });
+      row.addEventListener("dragover", (event) => {
+        if (dragId) event.preventDefault();
+      });
+      row.addEventListener("drop", (event) => {
+        event.preventDefault();
+        if (!dragId || dragId === topicId) return;
+        moveTopic(dragId, topicId);
+      });
+    });
+  }
+
+  function moveTopic(fromId, toId) {
+    const ids = curTopics.map((t) => t.id);
+    ids.splice(ids.indexOf(fromId), 1);
+    ids.splice(ids.indexOf(toId), 0, fromId);
+    return run(async () => {
+      await Z.request("PUT", `${API}/curriculum/order`, { ids });
+      await loadCurriculum();
+    });
   }
 
   async function loadCurriculum() {
@@ -1086,158 +1142,7 @@
     });
   }
 
-  // ----- Learning programs -----
-
-  let programs = null;
-
-  function selectedProgram() {
-    return programs ? programs.programs.find((p) => p.id === $("progSelect").value) : null;
-  }
-
-  function showProgramItem(number) {
-    const program = selectedProgram();
-    const item = program && program.items.find((i) => i.position === number);
-    if (!item) return;
-    $("progNumber").value = item.position;
-    $("progTitle").value = item.title;
-    $("progTitleEn").value = item.title_en || "";
-    $("progStage").value = item.stage || "";
-    $("progConcepts").value = (item.concepts || []).join("\n");
-    $("progDuration").value = program.duration_months;
-    $("progActivity").value = item.activity;
-    $("progPhrases").value = item.phrases.join("\n");
-    setError("progError", "");
-    Z.show($("progOk"), false);
-  }
-
-  function renderProgramItems() {
-    const program = selectedProgram();
-    $("programVersion").textContent = program ? `نسخه‌ی برنامه: ${program.version} — هر ذخیره نسخه را بالا می‌برد.` : "";
-    fill($("progItemsTable"), ["جلسه", "عنوان", "فعالیت", "عبارت‌ها", "عملیات"],
-      program ? program.items.map((i) => [
-        i.position,
-        i.title,
-        i.activity,
-        i.phrases.join(" · "),
-        actions(button("ویرایش", () => showProgramItem(i.position))),
-      ]) : []);
-    if (program) enableLessonDrag(program);
-  }
-
-  // Dragging a lesson row to another place saves the new order. The rows are in the same order as program.items.
-  function enableLessonDrag(program) {
-    let from = null;
-    [...$("progItemsTable").querySelectorAll("tr")].slice(1).forEach((row, index) => {
-      row.draggable = true;
-      row.classList.add("drag-row");
-      row.addEventListener("dragstart", (event) => {
-        from = index;
-        event.dataTransfer.effectAllowed = "move";
-        event.dataTransfer.setData("text/plain", String(index));
-      });
-      row.addEventListener("dragover", (event) => event.preventDefault());
-      row.addEventListener("drop", (event) => {
-        event.preventDefault();
-        if (from === null || from === index) return;
-        saveLessonOrder(program, from, index);
-        from = null;
-      });
-    });
-  }
-
-  function saveLessonOrder(program, from, to) {
-    const ids = program.items.map((item) => item.id);
-    const [moved] = ids.splice(from, 1);
-    ids.splice(to, 0, moved);
-    return run(async () => {
-      await Z.request("POST", `${API}/programs/${program.id}/order`, { item_ids: ids });
-      await loadPrograms();
-    });
-  }
-
-  // ----- Learner progress in the program: plays and averages, and a request to repeat one lesson -----
-
-  async function loadLearnerProgress() {
-    const studentId = $("progLearner").value;
-    if (!studentId) return;
-    try {
-      const data = await Z.request("GET", `${API}/students/${studentId}/program-progress`);
-      const pending = data.items.find((row) => row.item_id === data.revisit_item_id);
-      Z.show($("progressNotice"), Boolean(pending));
-      if (pending) $("progressNotice").textContent = `برای جلسه‌ی بعد درخواست گفتگوی مجدد دارد: ${pending.position + 1} — ${pending.title}`;
-      fill($("progressTable"), ["جلسه", "عنوان", "دفعات", "میانگین امتیاز", "وضعیت", "عملیات"],
-        data.items.map((row) => [
-          row.position + 1,
-          row.title,
-          row.visits,
-          row.average == null ? "—" : String(row.average),
-          row.item_id === data.revisit_item_id ? "گفتگوی مجدد در جلسه‌ی بعد" : row.done ? "انجام شده" : "انجام نشده",
-          actions(
-            button("گفتگوی مجدد در جلسه‌ی بعد", () => requestRevisit(studentId, row.item_id)),
-            ...(data.revisit_item_id === row.item_id ? [button("لغو", () => requestRevisit(studentId, null))] : []),
-          ),
-        ]));
-    } catch (err) {
-      setError("progError", err.message);
-    }
-  }
-
-  function requestRevisit(studentId, itemId) {
-    return run(async () => {
-      await Z.request("POST", `${API}/students/${studentId}/revisit`, { item_id: itemId });
-      await loadLearnerProgress();
-    });
-  }
-
-  async function loadPrograms() {
-    programs = await Z.request("GET", `${API}/programs`);
-    const current = $("progSelect").value;
-    fillSelect($("progSelect"), programs.programs.map((p) => [p.id, p.name]));
-    if (current) $("progSelect").value = current;
-    const learners = await Z.request("GET", `${API}/students`);
-    const learner = $("progLearner").value;
-    fillSelect($("progLearner"), learners.map((l) => [l.id, `${l.name || "—"}${l.kind === "self" ? " (یادگیری خود)" : ""}`]));
-    if (learner) $("progLearner").value = learner;
-    await loadLearnerProgress();
-    renderProgramItems();
-    if (programs.programs.length) showProgramItem(1);
-  }
-
-  async function saveProgramDuration(event) {
-    event.preventDefault();
-    const program = selectedProgram();
-    if (!program) return;
-    await run(async () => {
-      await Z.request("POST", `${API}/programs/${program.id}/duration`, { duration_months: Number($("progDuration").value) });
-      await loadPrograms();
-    });
-  }
-
-  async function saveProgramItem(event) {
-    event.preventDefault();
-    setError("progError", "");
-    const program = selectedProgram();
-    if (!program) return;
-    try {
-      const number = Number($("progNumber").value);
-      const result = await Z.request("PUT", `${API}/programs/${program.id}/items/${number}`, {
-        title: $("progTitle").value,
-        title_en: $("progTitleEn").value.trim(),
-        stage: $("progStage").value.trim(),
-        concepts: $("progConcepts").value.split("\n").map((c) => c.trim()).filter(Boolean),
-        activity: $("progActivity").value,
-        phrases: $("progPhrases").value.split("\n").map((p) => p.trim()).filter(Boolean),
-      });
-      await loadPrograms();
-      showProgramItem(number);
-      $("progOk").textContent = `جلسه ذخیره شد. نسخه‌ی برنامه: ${result.version}`;
-      Z.show($("progOk"), true);
-    } catch (err) {
-      setError("progError", err.message);
-    }
-  }
-
-  // ----- Sign-in and boot -----
+// ----- Sign-in and boot -----
 
   async function signIn(event) {
     event.preventDefault();
@@ -1571,6 +1476,54 @@
     });
   }
 
+  // Estimated cost of one 45-minute lesson, using the same rough token assumptions as the planning notes.
+  const LESSON_INPUT_MTOK = 0.48;
+  const LESSON_OUTPUT_MTOK = 0.012;
+
+  function showModelPrice(model) {
+    const entry = (aiCatalog || []).find((m) => m.id === model);
+    if (!entry) {
+      $("aiModelPrice").textContent = "قیمت این مدل در فهرست نیست. قیمت آن را از سرویس بررسی کنید.";
+      return;
+    }
+    const perLesson = entry.input * LESSON_INPUT_MTOK + entry.output * LESSON_OUTPUT_MTOK;
+    $("aiModelPrice").textContent = `${entry.provider}: ورودی ${entry.input} دلار و خروجی ${entry.output} دلار در هر یک میلیون توکن. برآورد تقریبی یک جلسه‌ی ۴۵ دقیقه‌ای: حدود ${perLesson.toFixed(2)} دلار.`;
+  }
+
+  let aiCatalog = [];
+
+  // The language model: provider, address, model, and the key shown masked.
+  async function loadAi() {
+    const data = await loadConnections();
+    aiCatalog = data.ai_model_catalog || [];
+    $("aiProvider").value = data.ai_provider;
+    $("aiBaseUrl").value = data.ai_base_url || "";
+    $("aiModel").value = data.ai_model || "";
+    $("aiModelSelect").replaceChildren(
+      option("", "— انتخاب از فهرست —"),
+      ...aiCatalog.map((m) => option(m.id, `${m.id} (${m.provider})`)),
+    );
+    $("aiModelSelect").value = aiCatalog.some((m) => m.id === data.ai_model) ? data.ai_model : "";
+    showModelPrice(data.ai_model || "");
+    $("aiKeyHint").textContent = data.ai_api_key_set ? `کلید فعلی: ${data.ai_api_key_masked}` : "کلیدی ثبت نشده است.";
+    $("aiKey").value = "";
+  }
+
+  function saveAi() {
+    return run(async () => {
+      const body = {
+        ai_provider: $("aiProvider").value,
+        ai_base_url: $("aiBaseUrl").value.trim(),
+        ai_model: $("aiModel").value.trim(),
+      };
+      if ($("aiKey").value.trim()) body.ai_api_key = $("aiKey").value.trim();
+      await Z.request("POST", `${API}/connections`, body);
+      $("aiNotice").hidden = false;
+      $("aiNotice").textContent = "تنظیمات مدل هوش مصنوعی ذخیره شد.";
+      await loadAi();
+    });
+  }
+
   function savePayment() {
     return run(async () => {
       const body = { payment_provider: $("connPayProvider").value, public_base_url: $("connBaseUrl").value.trim() };
@@ -1602,6 +1555,14 @@
     $("adminLoginForm").addEventListener("submit", signIn);
     $("smsSave").addEventListener("click", saveSms);
     $("paySave").addEventListener("click", savePayment);
+    $("aiSave").addEventListener("click", saveAi);
+    $("aiModelSelect").addEventListener("change", () => {
+      if (!$("aiModelSelect").value) return;
+      $("aiModel").value = $("aiModelSelect").value;
+      showModelPrice($("aiModel").value);
+    });
+    $("aiModel").addEventListener("input", () => showModelPrice($("aiModel").value.trim()));
+
     $("planForm").addEventListener("submit", savePlan);
     $("planAddOpen").addEventListener("click", () => openPlanDialog(null));
     $("planClose").addEventListener("click", () => $("planDialog").close());
@@ -1622,10 +1583,6 @@
     $("genCopy").addEventListener("click", () => navigator.clipboard.writeText($("genOutput").value));
     $("globalForm").addEventListener("submit", saveGlobalPrompt);
     $("voiceForm").addEventListener("submit", addVoice);
-    $("progItemForm").addEventListener("submit", saveProgramItem);
-    $("progDurationForm").addEventListener("submit", saveProgramDuration);
-    $("progSelect").addEventListener("change", () => { renderProgramItems(); showProgramItem(1); });
-    $("progLearner").addEventListener("change", loadLearnerProgress);
     $("globalText").addEventListener("input", updateGlobalCount);
     $("learnerForm").addEventListener("submit", loadLearner);
     $("helpForm").addEventListener("submit", addHelpContent);

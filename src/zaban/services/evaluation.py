@@ -1,7 +1,8 @@
 from sqlalchemy.orm import Session as DBSession
 
-from zaban.models import Student, StudentProgress, Tenant, TutorSession, ProgramItem, LearningProgram
+from zaban.models import Student, Tenant, TutorSession
 from zaban.services.ai_gateway import complete
+from zaban.services.curriculum import next_topic
 from zaban.services.metering import record_usage
 from zaban.services.self_test import split_score
 
@@ -57,14 +58,9 @@ def past_evaluations(db: DBSession, student_id: str, limit: int = 3) -> str:
 
 
 def course_note(db: DBSession, student: Student) -> str:
-    progress = db.get(StudentProgress, student.id)
-    if progress is None:
+    # Where the learner is in the lesson path, for the evaluation of the lesson.
+    upcoming = next_topic(db, student)
+    if upcoming is None:
         return ""
-    program = db.get(LearningProgram, progress.program_id)
-    total = db.query(ProgramItem).filter(ProgramItem.program_id == program.id).count()
-    item = db.query(ProgramItem).filter(ProgramItem.program_id == program.id, ProgramItem.position == progress.position).first()
-    stage = f", stage: {item.stage}" if item and item.stage else ""
-    return (
-        f"Course: {program.name} ({program.duration_months} months). "
-        f"Next lesson {progress.position + 1} of {total}{stage}.\n"
-    )
+    number, total, topic = upcoming
+    return f"Next lesson {number} of {total}: {topic.title}.\n"

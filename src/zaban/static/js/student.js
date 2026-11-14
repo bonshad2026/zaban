@@ -107,7 +107,6 @@
     }
     selectTab("lesson");
     const { session } = await Z.request("GET", `/v1/students/${me.id}/sessions/active`);
-    loadProgram();
     if (session) {
       showLesson(true);
       Lesson.resume(session);
@@ -123,78 +122,6 @@
   function showLesson(on) {
     Z.show($("setupBox"), !on);
     Z.show($("lessonBox"), on);
-    Z.show($("programBox"), !on);
-    if (!on) loadProgram();
-  }
-
-  // The learner's place in their program: the lesson they are on, and the whole list with what is done.
-  async function loadProgram() {
-    const data = await Z.request("GET", "/v1/web/student/program").catch(() => null);
-    if (!data || !data.program) {
-      Z.show($("programBox"), false);
-      return;
-    }
-    const program = data.program;
-    Z.show($("programBox"), true);
-    $("programName").textContent = Z.pick(`${program.name}: ${program.done} از ${program.total} جلسه انجام شده`, `${program.name}: ${program.done} of ${program.total} lessons done`);
-    const notice = $("programNotice");
-    if (program.status === "finished") {
-      notice.textContent = Z.tr("برنامه‌ی شما تمام شد. آفرین!");
-    }
-    Z.show(notice, Boolean(notice.textContent));
-    Z.show($("programCurrent"), Boolean(data.current));
-    if (data.current) {
-      const currentTitle = Z.pick(data.current.title, data.current.title_en || data.current.title);
-      $("programTitle").textContent = Z.pick(`جلسه ${data.current.number}: ${data.current.title}`, `Lesson ${data.current.number}: ${currentTitle}`);
-      $("programActivity").textContent = data.current.activity;
-      $("programPhrases").textContent = data.current.phrases.join("  ·  ");
-    }
-    programItems = data.items;
-    showFullProgram(false);
-    renderProgramWindow();
-    renderProgramList();
-  }
-
-  // The learner's path: a few lessons before the current one, the current one, and the next few.
-  // Done lessons are green, the current lesson is gold, and the rest are grey.
-  const PROGRAM_BEFORE = 2;
-  const PROGRAM_AFTER = 3;
-  let programItems = [];
-
-  function programRow(item) {
-    const mark = item.state === "done" ? "✓ " : item.state === "current" ? "➜ " : "";
-    const title = Z.pick(item.title, item.title_en || item.title);
-    const row = Z.el("li", `plan-item is-${item.state}`, `${mark}${Z.pick("جلسه", "Lesson")} ${item.number}: ${title}`);
-    // How many times this lesson was played, and its average score when the AI has scored it.
-    if (item.visits) {
-      const times = Z.pick(`${item.visits} بار`, `${item.visits} time${item.visits === 1 ? "" : "s"}`);
-      const score = item.average == null ? "" : Z.pick(` — میانگین ${item.average}`, ` — average ${item.average}`);
-      row.appendChild(Z.el("span", "plan-meta muted", ` (${times}${score})`));
-    }
-    return row;
-  }
-
-  function renderProgramWindow() {
-    const list = $("programWindow");
-    list.replaceChildren();
-    if (programItems.length === 0) return;
-    const current = programItems.findIndex((item) => item.state === "current");
-    // A finished program has no current lesson, so the window ends at the last lesson.
-    const index = current === -1 ? programItems.length - 1 : current;
-    const start = Math.max(0, index - PROGRAM_BEFORE);
-    const end = Math.min(programItems.length, index + PROGRAM_AFTER + 1);
-    programItems.slice(start, end).forEach((item) => list.appendChild(programRow(item)));
-  }
-
-  function renderProgramList() {
-    const list = $("programList");
-    list.replaceChildren(...programItems.map(programRow));
-  }
-
-  function showFullProgram(on) {
-    Z.show($("programWindow"), !on);
-    Z.show($("programShowAll"), !on);
-    Z.show($("programFullBox"), on);
   }
 
   async function startLesson() {
@@ -323,8 +250,6 @@
     Z.initLang();
     Lesson.init({ onEnded: () => { showLesson(false); } });
     $("startBtn").addEventListener("click", startLesson);
-    $("programShowAll").addEventListener("click", () => showFullProgram(true));
-    $("programHideAll").addEventListener("click", () => showFullProgram(false));
     document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => selectTab(tab.dataset.tab)));
 
     try {

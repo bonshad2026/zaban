@@ -17,7 +17,7 @@ class StudentCreate(BaseModel):
     # Optional facts the lessons use to choose topics. A parent fills these in when creating a child's account.
     interests: str | None = Field(default=None, max_length=300)
     motivation: str | None = Field(default=None, max_length=60)
-    # The learning goal from the fixed list (see program_data.GOALS). Empty means the everyday conversation program.
+    # The learning goal of the learner. Empty means the everyday conversation goal.
     goal: Literal["daily_conversation", "school", "travel", "work", "hobbies"] | None = None
 
 
@@ -85,6 +85,8 @@ class SignUpCreate(BaseModel):
     password: str = Field(min_length=8, max_length=100)
     age_confirmed: bool
     goal: str | None = Field(default=None, max_length=60)
+    # Optional: the referral code of the adult who invited this one.
+    referral_code: str | None = Field(default=None, max_length=12)
 
 
 class UserLogin(BaseModel):

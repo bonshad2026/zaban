@@ -7,14 +7,11 @@ from zaban.models import (
     BillingPlan,
     HelpContent,
     LearnerDetails,
-    LearningProgram,
     Payment,
     Plan,
-    ProgramItem,
     SelfTest,
     SelfTestMessage,
     Student,
-    StudentProgress,
     TutorSession,
 )
 from zaban.schemas import DetailsUpdate, LevelUpdate, SelfTestAnswer, SelfTestCreate
@@ -22,6 +19,8 @@ from zaban.services.learner_details import details_out, save_details
 from zaban.services.curriculum import band_code
 from zaban.services.help_content import GENDERS, LEVELS, facet_tree, tags_by_content
 from zaban.services.self_test import answer_test, finish_test, owned_test, start_test
+from zaban.services.curriculum import covered_topic_ids, path_topics
+from zaban.models import LessonTopic
 from zaban.web import _guardian_from_cookie, _student_from_cookie
 
 # Student-facing learning aids: the help content library and the self-test ("خودت رو محک بزن").
@@ -236,54 +235,84 @@ def end_self_test(
 # ----- Learner details, level, progress and payments -----
 
 def _progress_out(db: DBSession, student: Student) -> dict:
-    progress = db.get(StudentProgress, student.id)
-    sessions = (
+    # The learner's place in the lesson path (the curriculum topics in the admin order): what is done, what is current, and what comes next.
+    completed = (
         db.query(TutorSession)
         .filter(TutorSession.student_id == student.id, TutorSession.status == "completed")
         .order_by(TutorSession.started_at.desc())
-        .limit(20)
         .all()
     )
-    out = {
-        "program": None,
+    scores = [s.score for s in completed if s.score is not None]
+    path = path_topics(db, student)
+    visits: dict[str, int] = {}
+    topic_scores: dict[str, list[float]] = {}
+    for session in completed:
+        record = db.get(LessonTopic, session.id)
+        if record is None:
+            continue
+        visits[record.topic_id] = visits.get(record.topic_id, 0) + 1
+        if session.score is not None:
+            topic_scores.setdefault(record.topic_id, []).append(session.score)
+
+    lessons = []
+    current_found = False
+    for index, topic in enumerate(path):
+        count = visits.get(topic.id, 0)
+        if count:
+            status = "done"
+        elif not current_found:
+            status = "current"
+            current_found = True
+        else:
+            status = "upcoming"
+        values = topic_scores.get(topic.id, [])
+        lessons.append(
+            {
+                "item_id": topic.id,
+                "position": index,
+                "title": topic.title,
+                "stage": "برنامه‌ی آموزشی",
+                "visits": count,
+                "average": round(sum(values) / len(values), 1) if values else None,
+                "done": count > 0,
+                "status": status,
+                "repeat": student.repeat_topic_id == topic.id,
+            }
+        )
+    done_count = sum(1 for lesson in lessons if lesson["done"])
+    total = len(lessons)
+    return {
+        "program": {"name": "برنامه‌ی آموزشی", "duration_months": None, "status": "active"} if lessons else None,
         "stages": [],
-        "position": 0,
-        "total": 0,
-        "percent": 0.0,
-        "session_number": len(sessions) + 1,
+        "lessons": lessons,
+        "revisit_item_id": student.repeat_topic_id,
+        "average_score": round(sum(scores) / len(scores), 1) if scores else None,
+        "position": done_count,
+        "total": total,
+        "percent": round(100 * done_count / total, 1) if total else 0.0,
+        "session_number": len(completed) + 1,
         "pace": {"sessions_per_week": None, "expected_week": None},
         "sessions": [
             {"id": s.id, "started_at": s.started_at.isoformat(), "score": s.score, "evaluation": s.evaluation}
-            for s in sessions
+            for s in completed[:20]
         ],
     }
-    if progress is None:
-        return out
-    program = db.get(LearningProgram, progress.program_id)
-    items = db.query(ProgramItem).filter(ProgramItem.program_id == program.id).order_by(ProgramItem.position).all()
-    stages: dict[str, dict] = {}
-    for item in items:
-        name = item.stage or "Lessons"
-        entry = stages.setdefault(name, {"name": name, "total": 0, "done": 0})
-        entry["total"] += 1
-        if item.position < progress.position:
-            entry["done"] += 1
-    for entry in stages.values():
-        entry["percent"] = round(100 * entry["done"] / entry["total"], 1) if entry["total"] else 0.0
-    total = len(items)
-    # Pace is set by the learner's plan (sessions per week). The expected week follows from it.
-    plan = db.query(Plan).filter(Plan.student_id == student.id, Plan.status == "active").first()
-    per_week = plan.sessions_per_week if plan else None
-    expected_week = (progress.position // per_week + 1) if per_week else None
-    out.update(
-        program={"name": program.name, "duration_months": program.duration_months, "status": progress.status},
-        pace={"sessions_per_week": per_week, "expected_week": expected_week},
-        stages=list(stages.values()),
-        position=progress.position,
-        total=total,
-        percent=round(100 * progress.position / total, 1) if total else 0.0,
-    )
-    return out
+
+
+class LessonRepeat(BaseModel):
+    # One finished topic to play again in the next lesson. None cancels the request.
+    item_id: str | None = None
+
+
+@router.post("/progress/repeat")
+def request_repeat(body: LessonRepeat, zaban_student: str | None = Cookie(default=None), db: DBSession = Depends(get_db)) -> dict:
+    # The learner can ask to play a finished topic again. Their place in the lesson path does not change.
+    student = _student_from_cookie(db, zaban_student)
+    if body.item_id is not None and body.item_id not in covered_topic_ids(db, student.id):
+        raise HTTPException(status_code=409, detail="Only a finished lesson can be played again")
+    student.repeat_topic_id = body.item_id
+    db.commit()
+    return {"revisit_item_id": student.repeat_topic_id}
 
 
 @router.get("/details")

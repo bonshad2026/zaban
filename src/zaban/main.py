@@ -21,9 +21,9 @@ from zaban.seed import ensure_default_plan, seed_demo_accounts, seed_demo_plans,
 from zaban.placement_web import router as placement_router
 from zaban.services.placement_test import ensure_bank as ensure_placement_bank
 from zaban.public import router as public_router
-from zaban.services.curriculum import seed_curriculum
+from zaban.services.curriculum import ensure_topic_positions, seed_curriculum
+from zaban.services.referrals import ensure_referral_codes
 from zaban.services.help_content import seed_help_facets, seed_help_samples
-from zaban.services.programs import seed_programs
 from zaban.services.sms import dev_outbox
 from zaban.admin_ops import router as admin_ops_router
 from zaban.ai_api import router as ai_router
@@ -44,7 +44,8 @@ async def lifespan(_: FastAPI):
     add_missing_columns()
     with SessionLocal() as db:
         seed_curriculum(db)
-        seed_programs(db)
+        ensure_topic_positions(db)
+        ensure_referral_codes(db)
         seed_help_facets(db)
         seed_help_samples(db)
     if settings.environment == "development":
@@ -156,6 +157,11 @@ def profile_page() -> HTMLResponse:
 @app.get("/requests", include_in_schema=False)
 def requests_page() -> HTMLResponse:
     return _page("requests.html", "/requests")
+
+
+@app.get("/referrals", include_in_schema=False)
+def referrals_page() -> HTMLResponse:
+    return _page("referrals.html", "/referrals")
 
 
 @app.get("/plan", include_in_schema=False)

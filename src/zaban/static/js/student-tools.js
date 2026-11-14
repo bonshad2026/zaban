@@ -56,6 +56,16 @@
     return Z.el(tag, className, text);
   }
 
+  // Asks for a finished lesson to be played again in the next session. The place in the program stays the same.
+  async function requestRepeat(itemId) {
+    try {
+      await Z.request("POST", "/v1/web/student/progress/repeat", { item_id: itemId });
+      await loadProgress();
+    } catch (err) {
+      Z.showError($("progressNotice"), err.message);
+    }
+  }
+
   async function loadProgress() {
     try {
       const data = await Z.request("GET", "/v1/web/student/progress");
@@ -76,12 +86,40 @@
         row.append(el("strong", "", Z.pick(`${stage.name}: ${stage.done} از ${stage.total}`, `${stage.name}: ${stage.done} of ${stage.total}`)), bar(stage.percent));
         stages.appendChild(row);
       });
+      // Every lesson in order, grouped by stage: finished, current, and the ones still to come.
+      const average = data.average_score;
+      stages.appendChild(el("p", "muted", average === null || average === undefined
+        ? Z.tr("هنوز نمره‌ای ثبت نشده است.")
+        : Z.pick(`میانگین نمره‌ی جلسه‌ها: ${average} از ۱۰۰`, `Average lesson score: ${average} of 100`)));
+      let currentStage = null;
+      (data.lessons || []).forEach((lesson) => {
+        if (lesson.stage !== currentStage) {
+          currentStage = lesson.stage;
+          stages.appendChild(el("h3", "", currentStage));
+        }
+        const mark = lesson.status === "done" ? "✓" : lesson.status === "current" ? "▶" : "○";
+        const label = lesson.status === "done" ? Z.tr("انجام شد") : lesson.status === "current" ? Z.tr("در این جلسه هستی") : Z.tr("هنوز نرسیده");
+        const row = el("div", `lesson-row lesson-${lesson.status}`);
+        const details = [label];
+        if (lesson.average !== null && lesson.average !== undefined) details.push(Z.pick(`میانگین نمره: ${lesson.average}`, `Average score: ${lesson.average}`));
+        if (lesson.visits > 1) details.push(Z.pick(`دفعات: ${lesson.visits}`, `Times: ${lesson.visits}`));
+        row.append(el("strong", "", `${mark} ${lesson.position + 1}. ${lesson.title}`), el("p", "muted", details.join(" — ")));
+        if (lesson.repeat) row.appendChild(el("p", "notice", Z.tr("در جلسه‌ی بعد این درس دوباره گرفته می‌شود.")));
+        if (lesson.status === "done") {
+          const button = el("button", "ghost", lesson.repeat ? Z.tr("لغو تکرار") : Z.tr("تکرار این جلسه در جلسه‌ی بعد"));
+          button.type = "button";
+          button.addEventListener("click", () => requestRepeat(lesson.repeat ? null : lesson.item_id));
+          row.appendChild(button);
+        }
+        stages.appendChild(row);
+      });
       if (data.sessions.length === 0) {
         sessions.appendChild(el("p", "muted", Z.tr("هنوز جلسه‌ای کامل نشده است.")));
       }
       data.sessions.forEach((s) => {
         const row = el("div", "stage");
-        row.append(el("strong", "", Z.fmtDateTime(s.started_at)), el("p", "", s.evaluation || Z.tr("ارزیابی هنوز نوشته نشده است.")));
+        const scoreText = s.score === null || s.score === undefined ? Z.tr("نمره ثبت نشده است") : Z.pick(`نمره: ${s.score} از ۱۰۰`, `Score: ${s.score} of 100`);
+        row.append(el("strong", "", Z.fmtDateTime(s.started_at)), el("p", "", scoreText), el("p", "", s.evaluation || Z.tr("ارزیابی هنوز نوشته نشده است.")));
         sessions.appendChild(row);
       });
     } catch (err) {

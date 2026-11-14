@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>کد معرف من | گفتاریار</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body data-bilingual>
+  <!--site-header-->
+  <main class="page-main">
+    <div class="page-wrap">
+      <div class="page-stack">
+        <h1 class="page-title accent-title" data-fa="کد معرف من" data-en="My referral code">کد معرف من</h1>
+        <p class="error" id="referralError" hidden></p>
+        <section class="page-card">
+          <h2 data-fa="کد شما" data-en="Your code">کد شما</h2>
+          <p class="stat-value ltr-field" id="referralCode"></p>
+          <p class="muted" data-fa="کسانی که با این کد ثبت‌نام کنند، در این فهرست دیده می‌شوند." data-en="People who sign up with this code appear in this list.">کسانی که با این کد ثبت‌نام کنند، در این فهرست دیده می‌شوند.</p>
+        </section>
+        <section class="page-card">
+          <h2 data-fa="آمار" data-en="Statistics">آمار</h2>
+          <div class="stat-grid">
+            <div class="stat-card"><span class="stat-label" data-fa="ثبت‌نام‌شده با کد شما" data-en="Signed up with your code">ثبت‌نام‌شده با کد شما</span><span class="stat-value" id="referralTotal">—</span></div>
+            <div class="stat-card"><span class="stat-label" data-fa="پلن خریده‌اند" data-en="Bought a plan">پلن خریده‌اند</span><span class="stat-value" id="referralPaid">—</span></div>
+          </div>
+        </section>
+        <section class="page-card">
+          <h2 data-fa="افرادی که با کد شما آمده‌اند" data-en="People who joined with your code">افرادی که با کد شما آمده‌اند</h2>
+          <ul class="plain" id="referralList"></ul>
+          <p class="muted" id="referralEmpty" hidden data-fa="هنوز کسی با کد شما ثبت‌نام نکرده است." data-en="Nobody has signed up with your code yet.">هنوز کسی با کد شما ثبت‌نام نکرده است.</p>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/referrals.js"></script>
+</body>
+</html>

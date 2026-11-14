@@ -37,3 +37,9 @@ def set_setting(db: DBSession, key: str, value: str) -> None:
         row.updated_at = utcnow()
 # How long a prompt token stays valid, in seconds. The conversation module reads it when a token is made.
 PROMPT_TOKEN_TTL_KEY = "conversation_prompt_ttl_seconds"
+
+# The language model the admin panel chooses. Empty values fall back to the environment.
+AI_PROVIDER_KEY = "ai_provider"  # anthropic or openai (any OpenAI-compatible service)
+AI_BASE_URL_KEY = "ai_base_url"  # only for the OpenAI-compatible provider
+AI_MODEL_KEY = "ai_model"
+AI_API_KEY_KEY = "ai_api_key"  # secret: shown masked only

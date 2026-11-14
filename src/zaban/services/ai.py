@@ -12,10 +12,10 @@ class TutorReply:
     mode: str  # "live" when Claude answered, "offline" when no API key is configured
 
 
-def estimate_cost(input_tokens: int, output_tokens: int) -> float:
-    return (
-        input_tokens * settings.input_price_per_mtok + output_tokens * settings.output_price_per_mtok
-    ) / 1_000_000
+def estimate_cost(input_tokens: int, output_tokens: int, prices: tuple[float, float] | None = None) -> float:
+    # prices are (input, output) per million tokens of the model that answered. Without them the environment prices are used.
+    input_price, output_price = prices or (settings.input_price_per_mtok, settings.output_price_per_mtok)
+    return (input_tokens * input_price + output_tokens * output_price) / 1_000_000
 
 
 def tutor_reply(system_prompt: str, messages: list[dict]) -> TutorReply:

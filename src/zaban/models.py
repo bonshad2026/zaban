@@ -44,6 +44,9 @@ class Guardian(Base):
     gender: Mapped[str | None] = mapped_column(String(20), nullable=True)
     # A small square photo as a data URL, resized in the browser before upload. Empty means no photo.
     avatar_data: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # The adult's own 6-character referral code, and the adult whose code they used at sign-up (if any).
+    referral_code: Mapped[str | None] = mapped_column(String(8), nullable=True, index=True)
+    referred_by_id: Mapped[str | None] = mapped_column(String(32), ForeignKey("guardians.id"), nullable=True, index=True)
     # Set at sign-up. Used with the phone number at sign-in. Forgotten passwords are reset with an SMS code.
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     failed_logins: Mapped[int] = mapped_column(Integer, default=0)
@@ -141,6 +144,8 @@ class Student(Base):
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
     tenant_id: Mapped[str] = mapped_column(ForeignKey("tenants.id"), index=True)
     external_user_id: Mapped[str] = mapped_column(String(120))
+    # A finished topic the learner asked to play again in the next lesson. Cleared once that lesson has started.
+    repeat_topic_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
     display_name: Mapped[str] = mapped_column(String(120), default="")
     username: Mapped[str | None] = mapped_column(String(60), unique=True, nullable=True)
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -269,6 +274,8 @@ class Usage(Base):
     input_tokens: Mapped[int] = mapped_column(Integer)
     output_tokens: Mapped[int] = mapped_column(Integer)
     cost_usd: Mapped[float] = mapped_column(Float)
+    # The model that answered, so the cost can be read against its price.
+    model: Mapped[str | None] = mapped_column(String(120), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
@@ -294,6 +301,8 @@ class CurriculumTopic(Base):
     first_level: Mapped[str] = mapped_column(String(2))
     last_level: Mapped[str] = mapped_column(String(2))
     bands: Mapped[str] = mapped_column(String(10))
+    # The order of the topics in the lesson path. Set by dragging in the admin panel.
+    position: Mapped[int] = mapped_column(Integer, default=0)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
 
@@ -333,76 +342,12 @@ class LessonTopic(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
-class LearningProgram(Base):
-    # A program the administrator writes once: an ordered list of lessons for one age band, level and goal.
-    __tablename__ = "learning_programs"
-
-    id: Mapped[str] = mapped_column(String(40), primary_key=True)
-    name: Mapped[str] = mapped_column(String(160))
-    band: Mapped[str] = mapped_column(String(1))
-    level: Mapped[str] = mapped_column(String(2))
-    goal: Mapped[str] = mapped_column(String(40))
-    # Not used any more: there is no approval step. The column stays so existing databases keep working.
-    block_size: Mapped[int] = mapped_column(Integer, default=24)
-    # The length of the whole course, in months (for example 24 for two years).
-    duration_months: Mapped[int] = mapped_column(Integer, default=24)
-    # Goes up on every change, so the lessons that were already played keep their own version.
-    version: Mapped[int] = mapped_column(Integer, default=1)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
-
-
-class ProgramItem(Base):
-    __tablename__ = "program_items"
-    __table_args__ = (UniqueConstraint("program_id", "position"),)
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    program_id: Mapped[str] = mapped_column(ForeignKey("learning_programs.id"), index=True)
-    position: Mapped[int] = mapped_column(Integer)
-    title: Mapped[str] = mapped_column(String(160))
-    # The English title. Empty means the Persian title is shown.
-    title_en: Mapped[str | None] = mapped_column(String(160), nullable=True)
-    activity: Mapped[str] = mapped_column(Text, default="")
-    # The course stage this lesson belongs to, such as "Stage 1: greetings". Empty means no stage.
-    stage: Mapped[str] = mapped_column(String(80), default="")
-    # The concepts this one lesson covers. One item is one lesson, so its concepts belong to that lesson only.
-    concepts: Mapped[list] = mapped_column(JSON, default=list)
-    phrases: Mapped[list] = mapped_column(JSON, default=list)
-
-
 class StudentGoal(Base):
     # The goal a parent chose for a child, from the fixed list. Used to pick the learning program.
     __tablename__ = "student_goals"
 
     student_id: Mapped[str] = mapped_column(ForeignKey("students.id"), primary_key=True)
     goal: Mapped[str] = mapped_column(String(40))
-
-
-class StudentProgress(Base):
-    # Where a learner is in their program. position is the next lesson to play (0 is the first).
-    __tablename__ = "student_progress"
-
-    student_id: Mapped[str] = mapped_column(ForeignKey("students.id"), primary_key=True)
-    program_id: Mapped[str] = mapped_column(ForeignKey("learning_programs.id"))
-    position: Mapped[int] = mapped_column(Integer, default=0)
-    # An item the administrator asked to play again in the next lesson. The place in the program does not move.
-    revisit_item_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    # active: lessons can start. finished: no items left.
-    status: Mapped[str] = mapped_column(String(20), default="active")
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
-
-
-class LessonItem(Base):
-    # The program item a lesson played, and whether that lesson's completion has moved the learner forward yet.
-    __tablename__ = "lesson_items"
-
-    session_id: Mapped[str] = mapped_column(ForeignKey("sessions.id"), primary_key=True)
-    program_id: Mapped[str] = mapped_column(ForeignKey("learning_programs.id"))
-    position: Mapped[int] = mapped_column(Integer)
-    # The item itself. It stays right when the order of the items is changed; position alone does not.
-    item_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    program_version: Mapped[int] = mapped_column(Integer)
-    counted: Mapped[bool] = mapped_column(default=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
 class CooperationRequest(Base):

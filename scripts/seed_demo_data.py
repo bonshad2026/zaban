@@ -58,17 +58,13 @@ def main() -> None:
         Guardian,
         HelpContent,
         LearnerDetails,
-        LearningProgram,
-        LessonItem,
         Message,
         Payment,
         Plan,
-        ProgramItem,
         SelfTest,
         SelfTestMessage,
         Student,
         StudentGoal,
-        StudentProgress,
         TutorProfile,
         TutorSession,
         utcnow,
@@ -76,12 +72,10 @@ def main() -> None:
     from zaban.seed import seed_demo_accounts, seed_demo_plans, seed_demo_tenant
     from zaban.services.curriculum import seed_curriculum
     from zaban.services.passwords import hash_password
-    from zaban.services.programs import ensure_progress, seed_programs
-
+    
     Base.metadata.create_all(engine)
     with SessionLocal() as db:
         seed_curriculum(db)
-        seed_programs(db)
         tenant = seed_demo_tenant(db, settings.demo_api_key)
         seed_demo_plans(db)
         seed_demo_accounts(db, tenant, settings)
@@ -161,25 +155,6 @@ def main() -> None:
         ))
         db.flush()
 
-        # Sara's program: she has finished six lessons, so she is on lesson 7.
-        progress = ensure_progress(db, sara)
-        if progress is not None:
-            progress.position = 6  # six program lessons are done
-            progress.status = "active"
-
-        # Stage and concepts for the first lessons of the first program (one lesson = one item).
-        first = db.query(LearningProgram).order_by(LearningProgram.id).first()
-        if first is not None:
-            first.duration_months = 24
-            stages = {range(0, 6): "Stage 1: greetings", range(6, 12): "Stage 2: family"}
-            for item in db.query(ProgramItem).filter(ProgramItem.program_id == first.id).order_by(ProgramItem.position):
-                if item.position >= 12:
-                    break
-                for span, name in stages.items():
-                    if item.position in span:
-                        item.stage = name
-                item.concepts = [f"concept {item.position + 1}a", f"concept {item.position + 1}b"]
-
         # Two finished lessons with messages and evaluations for Sara.
         # Sara's lessons belong to her plan, so her progress and report count them.
         sara_plan_id = db.query(Plan.id).filter(Plan.student_id == sara.id).scalar()
@@ -209,26 +184,15 @@ def main() -> None:
         ]
         history_days = [28, 24, 20, 16, 12, 8]
         history_scores = [68.0, 72.0, 75.0, 77.0, 80.0, 83.0]
-        program_items = []
-        sara_program = None
-        if progress is not None:
-            sara_program = db.get(LearningProgram, progress.program_id)
-            program_items = (
-                db.query(ProgramItem).filter(ProgramItem.program_id == sara_program.id).order_by(ProgramItem.position).all()
-            )
         for position, days in enumerate(history_days):
-            item = program_items[position] if position < len(program_items) else None
-            title = item.title if item else "practice"
-            target = item.phrases[0] if item and item.phrases else "I like it."
+            title = "practice"
+            target = "I like it."
             session = lesson(days, 10, history_scores[position], history_evaluations[position],
                              [("assistant", f"Hi Sara! Today's lesson is {title}. Say: {target}"),
                               ("user", target),
                               ("assistant", "Well done! Can you tell me one more thing about it?"),
                               ("user", "I like it because it is easy.")])
-            if item is not None:
-                db.add(LessonItem(session_id=session.id, program_id=sara_program.id, position=position,
-                                  program_version=sara_program.version, counted=True, created_at=session.started_at))
-        # Free talks with no program lesson, so the report shows them as free conversations.
+        # Free talks with no topic, so the report shows them as free conversations.
         lesson(10, 5, 74.0, "Good answers about your pet. Try longer sentences.",
                [("assistant", "What is your pet's name?"), ("user", "My dog is Brownie.")])
         lesson(2, 5, 76.0, "Good answers about your weekend. Try longer sentences.",
