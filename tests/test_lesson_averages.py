@@ -33,7 +33,7 @@ def test_repeating_a_finished_lesson_averages_its_attempts_and_keeps_the_place(c
             db.add(session)
             db.flush()
             variant = variant_for(db, first.id, band, level)
-            db.add(LessonTopic(session_id=session.id, topic_id=first.id, variant_id=variant.id, catalog_version=1))
+            db.add(LessonTopic(session_id=session.id, topic_id=first.id, variant_id=variant.id if variant else None, catalog_version=1))
             made.append(session.id)
         student.repeat_topic_id = None
         db.commit()

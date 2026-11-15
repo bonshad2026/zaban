@@ -11,7 +11,7 @@
       Z.show($("passwordBox"), true);
     } catch (_) {
       // Not signed in as an adult: the sign-in page is the right place.
-      location.href = "/parent";
+      location.href = "/student";
     }
   }
 

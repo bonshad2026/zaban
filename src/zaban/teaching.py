@@ -50,10 +50,10 @@ def _student_for_teacher(db: DBSession, teacher: Guardian, guardian_id: str) -> 
 
 @router.get("/teacher")
 def read_teacher(
-    zaban_parent: str | None = Cookie(default=None),
+    zaban_student: str | None = Cookie(default=None),
     db: DBSession = Depends(get_db),
 ) -> dict:
-    adult = _guardian_from_cookie(db, zaban_parent)
+    adult = _guardian_from_cookie(db, zaban_student)
     teacher = db.get(Guardian, adult.teacher_id) if adult.teacher_id else None
     return {"teacher": _teacher_out(teacher)}
 
@@ -61,11 +61,11 @@ def read_teacher(
 @router.post("/teacher/lookup")
 def lookup_teacher(
     body: TeacherCode,
-    zaban_parent: str | None = Cookie(default=None),
+    zaban_student: str | None = Cookie(default=None),
     db: DBSession = Depends(get_db),
 ) -> dict:
     # Shows the name of the adult who owns the code, so the learner can check it before choosing.
-    adult = _guardian_from_cookie(db, zaban_parent)
+    adult = _guardian_from_cookie(db, zaban_student)
     teacher = _find_teacher(db, adult, body.code)
     return {"teacher": _teacher_out(teacher)}
 
@@ -73,10 +73,10 @@ def lookup_teacher(
 @router.put("/teacher")
 def choose_teacher(
     body: TeacherChoice,
-    zaban_parent: str | None = Cookie(default=None),
+    zaban_student: str | None = Cookie(default=None),
     db: DBSession = Depends(get_db),
 ) -> dict:
-    adult = _guardian_from_cookie(db, zaban_parent)
+    adult = _guardian_from_cookie(db, zaban_student)
     teacher = _find_teacher(db, adult, body.code)
     if not body.confirm:
         raise HTTPException(status_code=400, detail=NEEDS_CONFIRM)
@@ -87,11 +87,11 @@ def choose_teacher(
 
 @router.delete("/teacher")
 def remove_teacher(
-    zaban_parent: str | None = Cookie(default=None),
+    zaban_student: str | None = Cookie(default=None),
     db: DBSession = Depends(get_db),
 ) -> dict:
     # The teacher loses access to this adult's report and progress at once.
-    adult = _guardian_from_cookie(db, zaban_parent)
+    adult = _guardian_from_cookie(db, zaban_student)
     adult.teacher_id = None
     db.commit()
     return {"teacher": None}
@@ -99,10 +99,10 @@ def remove_teacher(
 
 @router.get("/students")
 def my_students(
-    zaban_parent: str | None = Cookie(default=None),
+    zaban_student: str | None = Cookie(default=None),
     db: DBSession = Depends(get_db),
 ) -> list[dict]:
-    teacher = _guardian_from_cookie(db, zaban_parent)
+    teacher = _guardian_from_cookie(db, zaban_student)
     students = db.query(Guardian).filter(Guardian.teacher_id == teacher.id).order_by(Guardian.full_name).all()
     out = []
     for student in students:
@@ -114,10 +114,10 @@ def my_students(
 @router.get("/students/{guardian_id}/progress")
 def student_progress(
     guardian_id: str,
-    zaban_parent: str | None = Cookie(default=None),
+    zaban_student: str | None = Cookie(default=None),
     db: DBSession = Depends(get_db),
 ) -> dict:
-    teacher = _guardian_from_cookie(db, zaban_parent)
+    teacher = _guardian_from_cookie(db, zaban_student)
     student = _student_for_teacher(db, teacher, guardian_id)
     profile = _self_profile(db, student)
     if profile is None:
@@ -128,10 +128,10 @@ def student_progress(
 @router.get("/students/{guardian_id}/report")
 def student_report(
     guardian_id: str,
-    zaban_parent: str | None = Cookie(default=None),
+    zaban_student: str | None = Cookie(default=None),
     db: DBSession = Depends(get_db),
 ) -> dict:
-    teacher = _guardian_from_cookie(db, zaban_parent)
+    teacher = _guardian_from_cookie(db, zaban_student)
     student = _student_for_teacher(db, teacher, guardian_id)
     profile = _self_profile(db, student)
     if profile is None:

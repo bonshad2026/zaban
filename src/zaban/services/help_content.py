@@ -108,7 +108,7 @@ def seed_help_samples(db: DBSession) -> None:
         item = HelpContent(
             title=title,
             category=category,
-            age_band="T",
+            age_band="A",
             level="A1",
             stage=None,
             url=None,

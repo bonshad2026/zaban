@@ -13,7 +13,7 @@ def _student(db, level: str = "A2") -> Student:
         tenant_id=tenant.id,
         external_user_id=f"path-{uuid.uuid4().hex}",
         display_name="Path learner",
-        age_band="11-14",
+        age_band="adult",
         cefr_level=level,
         created_at=utcnow(),
     )
@@ -22,7 +22,7 @@ def _student(db, level: str = "A2") -> Student:
     return student
 
 
-def _finish_topic(db, student: Student, topic_id: str, variant_id: str) -> None:
+def _finish_topic(db, student: Student, topic_id: str, variant_id: str | None) -> None:
     now = utcnow()
     session = TutorSession(
         student_id=student.id,
@@ -55,7 +55,7 @@ def test_next_lesson_is_the_first_topic_not_yet_covered_and_order_changes_it(cli
         assert first is not None and first[0].id == path[0].id
 
         # A finished topic is skipped, so the lesson moves on to the next one in the path.
-        _finish_topic(db, student, path[0].id, first[1].id)
+        _finish_topic(db, student, path[0].id, first[1].id if first[1] else None)
         after = choose_topic(db, student)
         assert after is not None and after[0].id == path[1].id
 

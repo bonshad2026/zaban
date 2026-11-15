@@ -22,11 +22,11 @@ SUGGESTIONS = {
 
 SUMMARIES_FA = {
     "insufficient_data": "هنوز جلسه‌ی کافی برای ارزیابی پیشرفت ثبت نشده است.",
-    "ahead": "پیشرفت فرزندتان از برنامه جلوتر است.",
-    "on_track": "پیشرفت فرزندتان طبق برنامه است.",
+    "ahead": "پیشرفت شما از برنامه جلوتر است.",
+    "on_track": "پیشرفت شما طبق برنامه است.",
     "behind": "پیشرفت کمی از برنامه عقب است و راهکار پیشنهادی آماده است.",
     "well_behind": "پیشرفت فاصله‌ی قابل توجهی با برنامه دارد. پیشنهاد می‌کنیم برنامه بازبینی شود.",
-    "no_plan": "هنوز برنامه‌ای برای فرزندتان ثبت نشده است.",
+    "no_plan": "هنوز برنامه‌ای برای شما ثبت نشده است.",
 }
 
 
@@ -97,8 +97,8 @@ def student_progress(student_id: str, auth: Auth = Depends(get_auth), db: DBSess
     }
 
 
-@router.get("/students/{student_id}/reports/parent")
-def parent_report(
+@router.get("/students/{student_id}/reports/summary")
+def summary_report(
     student_id: str,
     auth: Auth = Depends(require_manager),
     db: DBSession = Depends(get_db),

@@ -45,7 +45,7 @@ PROMPT_MODES = ("student", "general", "student_db", "all")
 
 
 def _details_section(details: LearnerDetails | None) -> str:
-    # Facts the learner or parent gave in the profile form. They shape the lesson, never the rules.
+    # Facts the learner gave in the profile form. They shape the lesson, never the rules.
     if details is None:
         return ""
     facts = []
@@ -53,8 +53,6 @@ def _details_section(details: LearnerDetails | None) -> str:
         facts.append(f"Age: {details.age}")
     if details.gender:
         facts.append(f"Gender: {details.gender}")
-    if details.grade:
-        facts.append(f"School grade: {details.grade}")
     if (details.attributes or "").strip():
         facts.append(f"Personality and what they like in a teacher: {(details.attributes or "").strip()}")
     if details.conversation_style:
@@ -78,7 +76,7 @@ def _admin_section(global_prompt: str, mode: str) -> str:
 
 
 def _learner_section(profile: TutorProfile | None, mode: str) -> str:
-    # The administrator's and the parent's notes about this one student.
+    # The administrator's notes about this one student.
     if mode not in ("student", "student_db", "all") or profile is None:
         return ""
     facts = []
@@ -90,7 +88,7 @@ def _learner_section(profile: TutorProfile | None, mode: str) -> str:
         facts.append(f"Teacher notes: {profile.instructions.strip()}")
     if not facts:
         return ""
-    return "About this learner (from the administrator and the parent):\n<learner>\n" + "\n".join(facts) + "\n</learner>"
+    return "About this learner (from the administrator):\n<learner>\n" + "\n".join(facts) + "\n</learner>"
 
 
 RULES = """Rules:

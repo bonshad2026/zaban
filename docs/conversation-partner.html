@@ -1,0 +1,698 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>گفتاریار: ساختار طراحی</title>
+<style>
+  :root {
+    --bg: #f7f7f5;
+    --fg: #1d1d1b;
+    --muted: #5f6368;
+    --accent: #1f6f5c;
+    --line: #d9d9d4;
+    --code-bg: #efefeb;
+    --card: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #161816;
+      --fg: #e8e8e4;
+      --muted: #a0a4a0;
+      --accent: #6cc3a8;
+      --line: #3a3d3a;
+      --code-bg: #232623;
+      --card: #1d201d;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #161816;
+    --fg: #e8e8e4;
+    --muted: #a0a4a0;
+    --accent: #6cc3a8;
+    --line: #3a3d3a;
+    --code-bg: #232623;
+    --card: #1d201d;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: Tahoma, "Vazirmatn", "Segoe UI", sans-serif;
+    line-height: 1.9;
+    font-size: 16px;
+  }
+  .layout {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 860px);
+    justify-content: center;
+    gap: 32px;
+    padding: 0 16px;
+    max-width: 1160px;
+    margin: 0 auto;
+    align-items: start;
+  }
+  aside.toc {
+    position: sticky;
+    top: 16px;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+    margin-top: 32px;
+    padding: 16px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    font-size: 0.92rem;
+  }
+  aside.toc h2.toc-title {
+    font-size: 1rem;
+    margin: 0 0 8px;
+    border: 0;
+    color: var(--accent);
+  }
+  aside.toc .group { margin: 14px 0 4px; font-weight: bold; color: var(--muted); font-size: 0.85rem; }
+  aside.toc ul { list-style: none; padding: 0; margin: 0; }
+  aside.toc li { margin: 2px 0; }
+  aside.toc li.sub { padding-inline-start: 12px; }
+  aside.toc a {
+    display: block;
+    padding: 4px 8px;
+    border-radius: 6px;
+    color: var(--fg);
+    text-decoration: none;
+  }
+  aside.toc a:hover { background: var(--code-bg); }
+  aside.toc a.active { background: var(--accent); color: #fff; }
+  main {
+    min-width: 0;
+    padding: 32px 0 64px;
+  }
+  h2[id], h3[id] { scroll-margin-top: 16px; }
+  .menu-toggle { display: none; }
+  @media (max-width: 860px) {
+    .layout { grid-template-columns: 1fr; gap: 0; }
+    aside.toc { position: static; max-height: none; margin-top: 16px; }
+    aside.toc ul { display: none; }
+    aside.toc.open ul { display: block; }
+    .menu-toggle {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      margin-top: 16px;
+      font: inherit;
+      color: var(--fg);
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      cursor: pointer;
+    }
+  }
+  h1 { font-size: 1.8rem; margin: 0 0 8px; color: var(--accent); }
+  h2 { font-size: 1.35rem; margin: 40px 0 12px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+  h3 { font-size: 1.1rem; margin: 24px 0 8px; }
+  p, li { margin: 8px 0; }
+  .meta { color: var(--muted); font-size: 0.95rem; }
+  .note {
+    background: var(--card);
+    border-inline-start: 4px solid var(--accent);
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin: 16px 0;
+  }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 32px 0; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 20px;
+    font-size: 0.95rem;
+    background: var(--card);
+    display: block;
+    overflow-x: auto;
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 8px 10px;
+    text-align: right;
+    vertical-align: top;
+  }
+  th { background: var(--code-bg); }
+  code, pre {
+    font-family: Consolas, "Courier New", monospace;
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+  code {
+    background: var(--code-bg);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.9em;
+  }
+  pre {
+    background: var(--code-bg);
+    padding: 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 0.88rem;
+    line-height: 1.5;
+    text-align: left;
+  }
+  pre code { background: none; padding: 0; }
+  @media (max-width: 480px) {
+    body { font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+<aside class="toc" id="toc" aria-label="فهرست سند">
+  <h2 class="toc-title">فهرست سند</h2>
+  <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="toc-list">نمایش فهرست</button>
+  <div id="toc-list"></div>
+</aside>
+<main>
+
+<h1>گفتاریار: ساختار طراحی، حالت‌های تمرین و سیاست سطح</h1>
+
+<p class="meta">وضعیت: <strong>طراحی (پیش از پیاده‌سازی).</strong> هنوز هیچ کدی بر اساس این سند تغییر نکرده است. نسخه: ۰.۲ (پیش‌نویس).</p>
+
+<p>قوانین کاری پروژه در <code>AGENTS.md</code> و نقشه‌ی صفحات در <code>docs/site-map.md</code> است. برنامه‌ی درسی و سطح‌ها در <code>docs/curriculum.md</code> آمده‌اند.</p>
+
+<hr>
+
+<h2>۱. هدف</h2>
+
+<p>گفتاریار یک <strong>شریک گفتگو</strong> است، نه یک دوره‌ی درسی. زبان‌آموز باید بتواند در موقعیت‌های روزمره راحت صحبت کند و جمله را از ذهن خودش، بدون ترجمه‌ی کلمه‌به‌کلمه، شروع کند. این سند تعیین می‌کند:</p>
+<ul>
+  <li>سامانه از چه لایه‌هایی ساخته می‌شود.</li>
+  <li>چه حالت‌های تمرینی وجود دارد و هر کدام چه مراحلی دارد.</li>
+  <li>سطح زبان‌آموز چطور بر رفتار شریک اثر می‌گذارد.</li>
+  <li>شریک چه شکلی از پاسخ برمی‌گرداند تا رابط بتواند هر بخش را جدا نشان دهد.</li>
+</ul>
+
+<p>موضوع گفتگو یک <strong>بذر</strong> است، نه یک فهرست ثابت. موضوع از علاقه‌ها، زندگی و درخواست زبان‌آموز می‌آید.</p>
+
+<h3>اصول</h3>
+<ol>
+  <li><strong>گفتگو هسته است.</strong> بقیه‌ی حالت‌ها (شادوینگ، ترجمه‌ی ذهنی، شعر، شنیدن) تمرین‌هایی برای تقویت گفتگو هستند.</li>
+  <li><strong>سطح به تفکیک مهارت سنجیده می‌شود،</strong> نه با یک برچسب کلی.</li>
+  <li><strong>شریک باید بیشتر گوش بدهد.</strong> زبان‌آموز حدود ۷۰٪ زمان صحبت کند.</li>
+  <li><strong>ورودی کمی بالاتر از سطح فعلی</strong> (اصل i+1 از کراشن)، نه خیلی بالاتر.</li>
+  <li><strong>فارسی فقط برای رفع ابهام است.</strong> بلافاصله برگشت به انگلیسی.</li>
+  <li><strong>هر حالت مستقل است، اما همه از یک پروفایل و یک هسته‌ی مشترک استفاده می‌کنند.</strong></li>
+  <li><strong>داده‌ی زبان‌آموز مهم است.</strong> هر تصمیم شریک باید از داده‌ی واقعی (عبارت‌ها، خطاها، سطح) بیاید، نه از حدس.</li>
+  <li><strong>ارتباط قبل از دقت.</strong> خطا را همیشه فوراً اصلاح نکنیم. اول پیام منتقل شود، بعد دقت.</li>
+  <li><strong>امنیت روانی.</strong> فشار زمانی فقط در حالت‌های مشخص (ترجمه‌ی ذهنی و تکرار زمان‌دار) باشد. در بقیه‌ی حالت‌ها زبان‌آموز بدون ترس از قضاوت حرف بزند.</li>
+</ol>
+
+<hr>
+
+<h2>۲. معماری در یک نگاه</h2>
+
+<pre><code>┌──────────────────────────────────────────────────────────┐
+│ ۱. پروفایل زبان‌آموز (داده‌ی ماندگار)                    │
+│    سطح به تفکیک مهارت · عبارت‌ها · خطاها · علاقه‌ها      │
+├──────────────────────────────────────────────────────────┤
+│ ۳. هسته‌ی مشترک: قواعد ثابت + سیاست سطح + ثبت خطا       │
+├──────────────────────────────────────────────────────────┤
+│ ۲. حالت تمرین (گفتگو، شادوینگ، ترجمه‌ی ذهنی، شعر، …)    │
+├──────────────────────────────────────────────────────────┤
+│ ۴. کتابخانه‌ی عبارت و محتوا (فیلتر شده بر اساس سطح)     │
+└──────────────────────────────────────────────────────────┘
+          │
+          ▼  قرارداد خروجی ساختاریافته (بخش ۶)
+     رابط: چت · کارت عبارت · پلیر شادوینگ · کارت خطا</code></pre>
+
+<p>ترتیب سه لایه‌ی بالا در ساخت پرامپت هم همین است (بخش ۷).</p>
+
+<hr>
+
+<h2>۳. لایه‌ی ۱: پروفایل زبان‌آموز</h2>
+
+<p>هر زبان‌آموز یک پروفایل پویا دارد. این پروفایل بعد از هر تمرین به‌روز می‌شود.</p>
+
+<table>
+  <thead>
+    <tr><th>فیلد</th><th>توضیح</th><th>منبع</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>age_band</code></td><td>فقط <code>adult</code> (سامانه فقط برای بزرگسالان است)</td><td>حساب بزرگسال</td></tr>
+    <tr><td><code>l1</code></td><td>زبان مادری (فارسی)</td><td>پیش‌فرض</td></tr>
+    <tr><td><code>level_by_skill</code></td><td>سطح CEFR به تفکیک معیار: دامنه، دقت، روانی، تعامل، انسجام</td><td>ارزیابی ورودی و تمرین‌ها</td></tr>
+    <tr><td><code>goals</code></td><td>هدف زبان‌آموز (مثلاً «با دوستان انگلیسی حرف بزنم»)</td><td>فرم ورودی</td></tr>
+    <tr><td><code>interests</code></td><td>علاقه‌ها (برای انتخاب بذر گفتگو)</td><td>فرم و گفتگو</td></tr>
+    <tr><td><code>phrases</code></td><td>عبارت‌های یادگرفته‌شده با وضعیت (بخش ۳.۱)</td><td>تمرین‌ها</td></tr>
+    <tr><td><code>error_log</code></td><td>خطاهای دسته‌بندی‌شده و شمارش آن‌ها (بخش ۳.۲)</td><td>پاسخ‌های شریک</td></tr>
+    <tr><td><code>register_pref</code></td><td>ترجیح لحن: رسمی، معمولی یا محاوره</td><td>تنظیم زبان‌آموز</td></tr>
+    <tr><td><code>persian_assist_count</code></td><td>تعداد دفعات نیاز به توضیح فارسی</td><td>تمرین‌ها</td></tr>
+  </tbody>
+</table>
+
+<h3>۳.۱ وضعیت هر عبارت</h3>
+<ul>
+  <li><strong>دیده‌شده:</strong> زبان‌آموز آن را شنیده یا خوانده است.</li>
+  <li><strong>به‌کار رفته:</strong> زبان‌آموز با کمک آن را گفته است.</li>
+  <li><strong>تسلط:</strong> زبان‌آموز بدون کمک، در موقعیت تازه، آن را درست به کار برده است.</li>
+</ul>
+<p>فقط «تسلط» در حساب پیشرفت به حساب می‌آید. این همان منطق <code>chunks_targeted</code> / <code>chunks_used</code> در <code>docs/curriculum.md</code> است.</p>
+
+<h3>۳.۲ دسته‌های خطا</h3>
+<table>
+  <thead>
+    <tr><th>دسته</th><th>مثال</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>tense</code></td><td>زمان فعل (<code>I go yesterday</code>)</td></tr>
+    <tr><td><code>word_order</code></td><td>ترتیب کلمات در سؤال (<code>Where you live?</code>)</td></tr>
+    <tr><td><code>preposition</code></td><td>حرف اضافه</td></tr>
+    <tr><td><code>literal_translation</code></td><td>ترجمه‌ی تحت‌اللفظی از فارسی</td></tr>
+    <tr><td><code>article</code></td><td>a / an / the</td></tr>
+    <tr><td><code>register</code></td><td>لحن نامناسب (مثلاً رسمی در جای محاوره)</td></tr>
+    <tr><td><code>pronunciation</code></td><td>از متن ورودی صوتی</td></tr>
+  </tbody>
+</table>
+
+<h3>۳.۳ یادآوری فاصله‌دار</h3>
+<p>عبارت‌ها بر اساس نتیجه‌ی آخرین تمرین دوباره پیشنهاد می‌شوند. عبارتی که تسلط دارد دیرتر، و عبارتی که ضعیف است زودتر برمی‌گردد. جزئیات زمان‌بندی در نسخه‌ی بعدی این سند نوشته می‌شود.</p>
+
+<hr>
+
+<h2>۴. لایه‌ی ۲: حالت‌های تمرین</h2>
+
+<p>هر حالت یک قرارداد کوچک دارد: هدف، مراحل، و خروجی. شریک با انتخاب زبان‌آموز یا پیشنهاد سامانه وارد یک حالت می‌شود.</p>
+
+<p><strong>چارچوب کلی:</strong> حالت‌ها بر اساس چهار رشته‌ی Paul Nation دسته‌بندی شده‌اند. هر حالت باید به یکی از این رشته‌ها تعلق داشته باشد؛ این کار جا افتادن موارد مهم را بررسی می‌کند.</p>
+
+<table>
+  <thead>
+    <tr><th>رشته‌ی Nation</th><th>حالت‌های این سند</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>ورودی معنادار</td><td>شنیدن، داستان کوتاه، شعر و ریتم</td></tr>
+    <tr><td>خروجی معنادار</td><td>گفتگو، گفتگوی هدف‌دار، کارکردهای گفتاری، ترجمه‌ی ذهنی</td></tr>
+    <tr><td>یادگیری متمرکز بر زبان</td><td>عبارت‌ها و اصطلاحات، تلفظ و آهنگ، محاوره‌ای کردن</td></tr>
+    <tr><td>توسعه‌ی روانی</td><td>شادوینگ، تکرار زمان‌دار</td></tr>
+  </tbody>
+</table>
+
+<h3>۴.۱ گفتگو (هسته‌ی اصلی)</h3>
+<ul>
+  <li><strong>هدف:</strong> مکالمه‌ی روان و طبیعی در موقعیت روزمره.</li>
+  <li><strong>مراحل:</strong> شریک یک پیام کوتاه با بذر گفتگو شروع می‌کند ← زبان‌آموز جواب می‌دهد ← شریک جواب می‌دهد و در صورت نیاز یک بازخورد کوتاه می‌دهد ← ادامه، با پرسش باز یا موقعیت تازه.</li>
+  <li><strong>قاعده‌ی پرسش:</strong> هر پیام حداکثر یک پرسش باز دارد.</li>
+  <li><strong>خروجی:</strong> پاسخ، بازخورد (در صورت نیاز)، عبارت جدید (در صورت وجود).</li>
+</ul>
+
+<h3>۴.۲ ترجمه‌ی ذهنی (فارسی ← انگلیسی)</h3>
+<ul>
+  <li><strong>هدف:</strong> شروع سریع جمله‌ی انگلیسی بدون ترجمه‌ی کلمه‌به‌کلمه.</li>
+  <li><strong>مراحل:</strong>
+    <ol>
+      <li>شریک یک جمله‌ی فارسی کوتاه از زندگی زبان‌آموز می‌دهد (مثلاً «امروز صبح قهوه خوردم»).</li>
+      <li>زبان‌آموز در مدت محدود آن را انگلیسی می‌گوید.</li>
+      <li>شریک یک نسخه‌ی طبیعی با دو لحن نشان می‌دهد (رسمی و محاوره).</li>
+      <li>شریک توضیح می‌دهد کدام بخش از ساختار فارسی آمده است.</li>
+    </ol>
+  </li>
+  <li><strong>نکته:</strong> اگر زبان‌آموز نمی‌داند، شریک اول شروع جمله را نشان می‌دهد («Start with: I…») و بعد دوباره بخواهد.</li>
+</ul>
+
+<h3>۴.۳ شادوینگ</h3>
+<ul>
+  <li><strong>هدف:</strong> تقلید ریتم، تکیه و تلفظ.</li>
+  <li><strong>مراحل:</strong> شریک یک جمله یا متن کوتاه (با نمونه‌ی صوتی) می‌دهد ← زبان‌آموز همزمان تکرار می‌کند ← بازخورد روی ریتم و تکیه ← تکرار با سرعت کمتر و سپس طبیعی.</li>
+  <li><strong>منبع متن:</strong> فقط متن‌هایی که مجوز دارند یا ساخته‌ی سامانه‌اند.</li>
+</ul>
+
+<h3>۴.۴ شعر و ریتم</h3>
+<ul>
+  <li><strong>هدف:</strong> حفظ آهنگ زبان و حفظ کردن عبارت‌ها در قالب ریتمیک.</li>
+  <li><strong>مراحل:</strong> شعر کوتاه با ترجمه‌ی تحت‌اللفظی ← تکرار با ریتم ← بازگویی با کلمه‌های خود زبان‌آموز.</li>
+  <li><strong>منبع:</strong> شعر عمومی (public domain) یا متنی با مجوز.</li>
+</ul>
+
+<h3>۴.۵ شنیدن: درک کلی و جزئیات</h3>
+<ul>
+  <li><strong>هدف:</strong> درک شنیداری در دو مرحله، و تشخیص عبارت‌های محاوره‌ای.</li>
+  <li><strong>مراحل:</strong>
+    <ol>
+      <li><strong>درک کلی:</strong> زبان‌آموز بخش کوتاهی گوش می‌دهد و موضوع را در یک جمله می‌گوید.</li>
+      <li><strong>جزئیات:</strong> سه پرسش جزئی (مثلاً چه کسی، کجا، چه زمانی یا چرا).</li>
+      <li><strong>بازگویی:</strong> زبان‌آموز ماجرا را با کلمه‌های خودش تعریف می‌کند.</li>
+      <li><strong>عبارت‌ها:</strong> استخراج دو عبارت جدید و استفاده‌ی آن‌ها در گفتگو.</li>
+    </ol>
+  </li>
+  <li><strong>منبع:</strong> متن پیاده‌شده، خلاصه یا نمونه‌ی ساخته‌ی سامانه. متن کامل منبع دارای حق نشر ذخیره یا بازتولید نمی‌شود؛ فقط خلاصه، لینک منبع و نقل کوتاه (در حد یک جمله) مجاز است.</li>
+</ul>
+
+<h3>۴.۶ عبارت‌ها و اصطلاحات</h3>
+<ul>
+  <li><strong>هدف:</strong> شناخت عبارت‌های رایج.</li>
+  <li><strong>مراحل:</strong> معرفی عبارت در یک موقعیت ← مثال ← زبان‌آموز یک جمله‌ی خودش می‌سازد ← عبارت در گفتگوی بعدی پیشنهاد می‌شود.</li>
+</ul>
+
+<h3>۴.۷ محاوره‌ای کردن</h3>
+<ul>
+  <li><strong>هدف:</strong> نزدیک شدن به گفتار طبیعی گویشور بومی.</li>
+  <li><strong>مراحل:</strong> جمله‌ی رسمی ← نسخه‌ی محاوره‌ای (کوتاه‌شدن‌ها، پرکننده‌ها، ساختار ساده‌تر) ← توضیح کاربرد (کی بگوییم و کی نگوییم).</li>
+  <li><strong>قاعده:</strong> محاوره یک لایه‌ی جدا از سطح است (بخش ۵.۴).</li>
+</ul>
+
+<h3>۴.۸ گفتگوی هدف‌دار (وظیفه‌محور)</h3>
+<ul>
+  <li><strong>هدف:</strong> انجام یک کار واقعی با زبان: رزرو هتل، سفارش غذا، تماس با مطب، یا پرسیدن مسیر در فرودگاه.</li>
+  <li><strong>مراحل:</strong> شریک موقعیت و هدف را می‌گوید (مثلاً «باید یک اتاق برای دو شب رزرو کنی») ← زبان‌آموز کار را انجام می‌دهد ← شریک نقش طرف مقابل را بازی می‌کند و در صورت نیاز مشکل تازه‌ای مثل «اتاق پر است» را مطرح می‌کند ← پایان وقتی هدف برآورده شد.</li>
+  <li><strong>معیار پایان:</strong> کار انجام شده باشد (مثلاً اتاق رزرو شده باشد).</li>
+  <li><strong>عبارت‌ها:</strong> عبارت‌های این موقعیت از کتابخانه‌ی عبارت (بخش ۸) انتخاب می‌شوند.</li>
+</ul>
+
+<h3>۴.۹ تلفظ و آهنگ زبان</h3>
+<ul>
+  <li><strong>هدف:</strong> شنیده شدن طبیعی؛ اتصال کلمه‌ها (linking)، کوتاه‌شدن صداها (reduction)، تکیه‌ی جمله، و آهنگ سؤال و جمله‌ی خبری.</li>
+  <li><strong>مراحل:</strong> یک قاعده‌ی کوتاه با مثال شنیداری ← زبان‌آموز همان الگو را در یک جمله‌ی خودش می‌گوید ← بازخورد روی یک نکته‌ی مشخص (نه همه‌ی خطاها) ← ثبت آن نکته در پروفایل.</li>
+  <li><strong>تفاوت با شادوینگ:</strong> شادوینگ تقلید یک متن است. این حالت قاعده‌ها را جدا آموزش می‌دهد و بعد به جمله‌های خود زبان‌آموز برمی‌گرداند.</li>
+  <li><strong>نکته‌ی فنی:</strong> بازخورد واقعی تلفظ نیازمند ورودی صوتی است. بدون آن، فقط قاعده و تمرین متنی ممکن است.</li>
+</ul>
+
+<h3>۴.۱۰ تکرار زمان‌دار (روش ۴-۳-۲)</h3>
+<ul>
+  <li><strong>هدف:</strong> روانی؛ گفتن همان محتوا با سرعت بیشتر.</li>
+  <li><strong>مراحل:</strong> یک موضوع کوتاه (مثلاً «روز من» یا توضیح یک مکان) ← تعریف در ۴ دقیقه ← همان موضوع در ۳ دقیقه، با جمله‌های کوتاه‌تر ← همان موضوع در ۲ دقیقه ← مقایسه‌ی زمان و تعداد مکث‌ها.</li>
+  <li><strong>نکته:</strong> چون محتوا ثابت است، زبان‌آموز روی روانی تمرکز می‌کند، نه روی پیدا کردن ایده.</li>
+  <li><strong>زمان‌سنجی:</strong> سامانه زمان را از روی پیام‌ها نمی‌سنجد. زبان‌آموز تایمر را اجرا می‌کند یا رابط تایمر دارد.</li>
+</ul>
+
+<h3>۴.۱۱ کارکردهای گفتاری (Pragmatics)</h3>
+<ul>
+  <li><strong>هدف:</strong> کارهای زبانی روزمره که گفتار طبیعی را می‌سازند: عذرخواهی، درخواست مؤدبانه، موافقت و مخالفت با احترام، جمع‌کردن گفتگو، و واکنش نشان‌دادن (مثل «Oh really?» یا «Mm-hm»).</li>
+  <li><strong>مراحل:</strong> یک کارکرد و یک موقعیت ← چند عبارت از سطوح مختلف (از رسمی تا محاوره) ← زبان‌آموز یک بار در موقعیت آن را می‌گوید ← شریک پاسخ طبیعی می‌دهد.</li>
+  <li><strong>نکته:</strong> این کارکردها در معیار «تعامل» CEFR دیده می‌شوند.</li>
+</ul>
+
+<h3>۴.۱۲ داستان کوتاه</h3>
+<ul>
+  <li><strong>هدف:</strong> ورودی قابل فهم و تمرین زمان‌های گذشته و ساختار روایت.</li>
+  <li><strong>مراحل:</strong> شریک داستان کوتاه متناسب با سطح را می‌گوید یا نشان می‌دهد ← سه پرسش درک (از جمله یک پرسش جزئی) ← زبان‌آموز داستان را با کلمه‌های خودش بازگو می‌کند ← ادامه‌ی داستان یا تغییر پایان.</li>
+  <li><strong>منبع:</strong> داستان‌های ساخته‌ی سامانه یا متن‌های بدون حق نشر.</li>
+  <li><strong>نکته:</strong> داستان بلند (سریال در چند جلسه) برای مرحله‌ی بعد است، چون به حافظه‌ی پروفایل نیاز دارد.</li>
+</ul>
+
+<h3>۴.۱۳ جدول خلاصه</h3>
+<table>
+  <thead>
+    <tr><th>حالت</th><th>ورودی اصلی</th><th>خروجی اصلی</th><th>وابسته به سطح</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>گفتگو</td><td>بذر گفتگو و پاسخ زبان‌آموز</td><td>پاسخ شریک و بازخورد</td><td>بله، شدید</td></tr>
+    <tr><td>ترجمه‌ی ذهنی</td><td>جمله‌ی فارسی</td><td>جمله‌ی انگلیسی و نسخه‌ی طبیعی</td><td>بله</td></tr>
+    <tr><td>شادوینگ</td><td>متن کوتاه با صدا</td><td>بازخورد تلفظ و ریتم</td><td>بله (طول متن)</td></tr>
+    <tr><td>شعر و ریتم</td><td>شعر با ترجمه</td><td>بازگویی</td><td>کم</td></tr>
+    <tr><td>شنیدن: کلی و جزئیات</td><td>بخش کوتاه صوتی یا متن شنیداری</td><td>پاسخ به پرسش‌های کلی و جزئی، بازگویی</td><td>بله (سرعت و واژگان)</td></tr>
+    <tr><td>عبارت‌ها و اصطلاحات</td><td>عبارت از کتابخانه</td><td>مثال و جمله‌ی زبان‌آموز</td><td>بله</td></tr>
+    <tr><td>محاوره‌ای کردن</td><td>جمله‌ی رسمی</td><td>نسخه‌ی محاوره و کاربرد</td><td>لایه‌ی جدا (بخش ۵.۴)</td></tr>
+    <tr><td>گفتگوی هدف‌دار</td><td>موقعیت و هدف کار</td><td>کار انجام شده و هدف برآورده</td><td>بله</td></tr>
+    <tr><td>تلفظ و آهنگ</td><td>قاعده و نمونه‌ی صوتی</td><td>جمله‌ی خود زبان‌آموز با الگو</td><td>بله</td></tr>
+    <tr><td>تکرار زمان‌دار</td><td>یک موضوع کوتاه</td><td>بازگویی سریع‌تر همان محتوا</td><td>کم</td></tr>
+    <tr><td>کارکردهای گفتاری</td><td>کارکرد و موقعیت</td><td>عبارت طبیعی در موقعیت</td><td>بله</td></tr>
+    <tr><td>داستان کوتاه</td><td>داستان کوتاه</td><td>بازگویی و ادامه‌ی داستان</td><td>بله</td></tr>
+  </tbody>
+</table>
+
+<h3>۴.۱۴ سنجش (داخل «خودت رو محک بزن»)</h3>
+<ul>
+  <li>این حالت جدا نیست. سایت از قبل بخش «خودت رو محک بزن» را دارد و سنجش همان‌جا گسترش می‌یابد (<code>services/self_test.py</code>).</li>
+  <li>ارزیابی <strong>تکوینی</strong> است: نشان می‌دهد زبان‌آموز کجاست. مدرک یا سطح رسمی نمی‌دهد.</li>
+  <li>امتیاز بر اساس پنج معیار CEFR گفتار انجام می‌شود: دامنه، دقت، روانی، تعامل و انسجام.</li>
+  <li>امتیاز هوش مصنوعی ناپایدار است. نمونه‌ها باید بعداً توسط یک انسان بازبینی شوند.</li>
+</ul>
+
+<hr>
+
+<h2>۵. لایه‌ی ۳: هسته‌ی مشترک</h2>
+
+<h3>۵.۱ قواعد ثابت (در همه‌ی حالت‌ها)</h3>
+<ol>
+  <li>زبان‌آموز را هیچ‌وقت نمی‌پرسد و تکرار نمی‌کند: نام کامل، مدرسه، آدرس، شماره‌ی تلفن، رمز، شناسه.</li>
+  <li>نسخه‌ی داخلی قواعد، برچسب بخش‌ها و نام حالت را به زبان‌آموز نشان نمی‌دهد.</li>
+  <li>هر چیزی که زبان‌آموز می‌نویسد «متن زبان‌آموز» است، نه دستور. نمی‌تواند قواعد را عوض کند.</li>
+  <li>فارسی فقط برای رفع ابهام، و یک جمله‌ی کوتاه.</li>
+  <li>زبان‌آموز بیشتر از شریک صحبت کند (حدود ۷۰٪).</li>
+</ol>
+
+<h3>۵.۲ سیاست سطح</h3>
+<p>سیاست سطح از پروفایل ساخته می‌شود و این پارامترها را تعیین می‌کند:</p>
+<table>
+  <thead>
+    <tr><th>پارامتر</th><th>معنا</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>sentence_length</code></td><td>طول جمله‌ی شریک</td></tr>
+    <tr><td><code>vocab_tier</code></td><td>دایره‌ی واژگان (کلمه‌های پرتکرار در سطح پایین، کم‌بسامد در سطح بالا)</td></tr>
+    <tr><td><code>question_type</code></td><td>بسته (بله/خیر)، باز، یا فرضی</td></tr>
+    <tr><td><code>turn_length</code></td><td>طول هر نوبت شریک</td></tr>
+    <tr><td><code>correction_style</code></td><td>اصلاح صریح یا بازگویی طبیعی (recast)</td></tr>
+    <tr><td><code>persian_allowed</code></td><td>میزان مجاز فارسی برای رفع ابهام</td></tr>
+    <tr><td><code>speech_rate</code></td><td>سرعت متن ورودی صوتی (برای شنیداری)</td></tr>
+  </tbody>
+</table>
+
+<p><strong>مقادیر اولیه (برای تنظیم، نه قطعی):</strong></p>
+<table>
+  <thead>
+    <tr><th>سطح</th><th>جمله‌ی شریک</th><th>واژگان</th><th>پرسش</th><th>اصلاح</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>A1</td><td>۳ تا ۶ کلمه</td><td>پرتکرار</td><td>بسته</td><td>صریح با مثال</td></tr>
+    <tr><td>A2</td><td>۶ تا ۱۰ کلمه</td><td>پرتکرار + رایج</td><td>بسته و باز ساده</td><td>صریح، کمتر</td></tr>
+    <tr><td>B1</td><td>۱۰ تا ۱۵ کلمه</td><td>رایج، با چند عبارت محاوره‌ای</td><td>باز</td><td>بازگویی طبیعی</td></tr>
+    <tr><td>B2</td><td>جمله‌ی کامل با ساختار ربط</td><td>رایج و کم‌بسامد</td><td>باز و فرضی</td><td>بازگویی طبیعی و نکته‌ی محاوره</td></tr>
+    <tr><td>C1–C2</td><td>بدون محدودیت خاص، با ظرافت</td><td>گسترده، اصطلاح، کنایه</td><td>باز، بحث</td><td>فقط در صورت لزوم</td></tr>
+  </tbody>
+</table>
+<p>این جدول پیش‌فرض اولیه است و باید بعد از آزمایش با زبان‌آموزان واقعی تنظیم شود.</p>
+
+<h3>۵.۳ ارتقا و پایین‌آوردن سطح</h3>
+<ul>
+  <li><strong>ارتقا:</strong> وقتی زبان‌آموز در یک معیار دو بار متوالی بالاتر از سطح فعلی عمل کند.</li>
+  <li><strong>پایین‌آوردن:</strong> وقتی در یک معیار سه بار متوالی ناتمام بماند، سیاست همان معیار یک پله ساده‌تر می‌شود. این قاعده‌ی ساده‌سازی در <code>docs/curriculum.md</code> بخش ۸ هم آمده است.</li>
+  <li>سطح هر معیار جدا تغییر می‌کند. دقت می‌تواند بالا رود در حالی که روانی هنوز پایین است.</li>
+</ul>
+
+<h3>۵.۴ لایه‌ی محاوره (جدا از سطح)</h3>
+<ul>
+  <li><code>register</code> = <code>formal</code> | <code>neutral</code> | <code>casual</code>.</li>
+  <li>زبان‌آموز انتخاب می‌کند. پیش‌فرض <code>neutral</code> است.</li>
+  <li>در <code>casual</code> شریک می‌تواند کوتاه‌شدن‌ها (<code>gonna</code>، <code>wanna</code>، <code>kinda</code>)، پرکننده‌ها (<code>you know</code>، <code>I mean</code>) و ساختار ساده‌تر به کار ببرد.</li>
+  <li>هر مورد محاوره‌ای باید کاربرد داشته باشد (کجا رایج است و در کجا نامناسب است). بدون توضیح، زبان‌آموز آن را در جای اشتباه به کار می‌برد.</li>
+  <li>B1 می‌تواند محاوره بگوید. داشتن محاوره به معنای داشتن سطح بالاتر نیست.</li>
+</ul>
+
+<hr>
+
+<h2>۶. قرارداد خروجی (شکل پاسخ شریک)</h2>
+
+<p>شریک به‌جای متن آزاد، یک ساختار برمی‌گرداند. این ساختار باعث می‌شود رابط هر بخش را جدا نشان دهد و داده‌ها قابل شمارش باشند.</p>
+
+<pre><code>{
+  "mode": "conversation | task | shadowing | translation | pronunciation | fluency | functions | listening | story | poetry | phrases | casual",
+  "reply": "جواب شریک در لحن و سطح مناسب",
+  "feedback": {
+    "error_type": "tense | word_order | preposition | literal_translation | article | register | pronunciation",
+    "original": "جمله‌ی زبان‌آموز",
+    "better": "نسخه‌ی درست یا طبیعی"
+  },
+  "new_phrase": {
+    "text": "عبارت جدید",
+    "situation": "موقعیت کاربرد",
+    "register": "formal | neutral | casual"
+  },
+  "next_action": "continue | switch_mode | ask_learner | end"
+}</code></pre>
+
+<ul>
+  <li><code>feedback</code> و <code>new_phrase</code> اختیاری هستند و در صورت نبود <code>null</code> می‌شوند.</li>
+  <li><code>next_action</code> به رابط می‌گوید چه کاری انجام شود (ادامه، تغییر حالت، پرسیدن از زبان‌آموز، پایان).</li>
+  <li>پاسخ‌ها برای سامانه‌ی ثبت خطا و عبارت‌ها خوانده می‌شوند، نه فقط برای نمایش.</li>
+</ul>
+
+<hr>
+
+<h2>۷. ساختار پرامپت (اسکلت، نه متن)</h2>
+
+<p>هر درخواست از چهار بخش به ترتیب ساخته می‌شود:</p>
+<ol>
+  <li><strong>هسته‌ی مشترک</strong> (بخش ۵.۱)</li>
+  <li><strong>مشخصات حالت انتخاب‌شده</strong> (بخش ۴)</li>
+  <li><strong>سیاست سطح</strong> (بخش ۵.۲ و ۵.۴)</li>
+  <li><strong>تکه‌ی لازم از کتابخانه و پروفایل</strong> (فقط آنچه مربوط است)</li>
+</ol>
+<p>تغییر یک حالت یا یک سطح فقط بخش ۲ یا ۳ را عوض می‌کند و بقیه‌ی سامانه دست نمی‌خورد.</p>
+
+<hr>
+
+<h2>۸. کتابخانه‌ی عبارت و محتوا</h2>
+<ul>
+  <li>هر عبارت ذخیره می‌شود با: متن، موقعیت، سطح، لحن (<code>register</code>)، و منبع.</li>
+  <li>عبارت‌ها بر اساس سطح فیلتر می‌شوند. زبان‌آموز A1 عبارت C1 را نمی‌گیرد.</li>
+  <li>محتوای شنیداری و شعر در کتابخانه با مجوز منبع ثبت می‌شود.</li>
+  <li>این کتابخانه در ساختار فعلی شبیه <code>help_content</code> و برچسب‌هاست (بخش ۹).</li>
+</ul>
+
+<hr>
+
+<h2>۹. نقشه با کد فعلی (بررسی شده، بدون تغییر)</h2>
+
+<table>
+  <thead>
+    <tr><th>بخش این سند</th><th>وضعیت فعلی در کد</th><th>توضیح</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>قواعد ثابت (۵.۱)</td><td><code>RULES</code> در <code>src/zaban/services/sessions.py</code></td><td>قواعد برای درس ساخته شده‌اند، نه برای شریک آزاد.</td></tr>
+    <tr><td>تضاد قواعد با گفتگوی آزاد</td><td>همان <code>RULES</code></td><td>«فقط درباره‌ی یادگیری انگلیسی در این درس» و «دقیقاً یک پرسش ساده» برای حالت شریک مناسب نیستند. باید بر اساس حالت تعریف شوند.</td></tr>
+    <tr><td>قالب پرامپت درس</td><td><code>src/zaban/services/prompt_template.py</code></td><td>اسکلت فعلی است. ساختار چهارلایه (بخش ۷) نیاز به بازنویسی دارد.</td></tr>
+    <tr><td>حالت گفتگو و API</td><td>پوشه‌ی <code>src/zaban/conversation/</code> و مسیرهای <code>/v1/conv</code> (<code>site-map.md</code> بخش ۹)</td><td>زیرساخت گفتگو و استریم وجود دارد. قرارداد خروجی (بخش ۶) هنوز نیست.</td></tr>
+    <tr><td>کمک‌آموزشی و برچسب‌ها</td><td><code>services/help_content.py</code>، <code>learning_aids.py</code></td><td>پایه‌ی کتابخانه‌ی عبارت (بخش ۸) است.</td></tr>
+    <tr><td>پروفایل و سطح</td><td><code>services/progress.py</code>، <code>services/placement_test.py</code>، جدول <code>StudentProgress</code></td><td>سطح یک برچسب کلی است. سطح به تفکیک معیار (بخش ۳) جدید است.</td></tr>
+    <tr><td>ثبت عبارت و خطا</td><td><code>LessonItem</code>، <code>sessions</code></td><td>ثبت عبارت‌ها و خطاها جدید است.</td></tr>
+    <tr><td>خودت رو محک بزن</td><td><code>services/self_test.py</code></td><td>سنجش تکوینی. گسترش سنجش (بخش ۴.۱۴) روی همین بخش انجام می‌شود، نه حالت جدا.</td></tr>
+    <tr><td>برنامه‌ی درسی</td><td><code>docs/curriculum.md</code></td><td>حالت «گفتگوی آزاد» کنار برنامه‌ی درسی قرار می‌گیرد، نه جایگزین آن.</td></tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <strong>نتیجه:</strong> زیرساخت گفتگو و استریم آماده است. قرارداد خروجی، پروفایل تفکیکی، سیاست سطح، حالت‌های غیرگفتگو و کتابخانه‌ی عبارت هنوز ساخته نشده‌اند.
+</div>
+
+<hr>
+
+<h2>۱۰. باز برای تصمیم صاحب پروژه</h2>
+<ol>
+  <li>آیا گفتگوی آزاد کنار برنامه‌ی درسی باشد، یا جایگزین بخشی از آن؟</li>
+  <li>قواعد <code>RULES</code> برای حالت آزاد جدا شوند یا فقط برای درس باقی بمانند؟</li>
+  <li>(حل شد) سامانه فقط برای بزرگسالان است؛ زبان‌آموز زیر ۱۸ سال پذیرفته نمی‌شود.</li>
+  <li>مقادیر اولیه‌ی بخش ۵.۲ تأیید شود یا با آزمایش تنظیم شود؟</li>
+  <li>ترجیح لحن (<code>register</code>) پیش‌فرض <code>neutral</code> باشد یا از ابتدا از زبان‌آموز پرسیده شود؟</li>
+  <li>منبع محتوای شنیداری و شعر چیست؟ (بخش ۴.۵)</li>
+  <li>مرحله‌بندی حالت‌ها (بخش ۱۲) تأیید شود؟ به‌ویژه اینکه کدام حالت‌ها در مرحله‌ی اول بیایند.</li>
+</ol>
+
+<hr>
+
+<h2>۱۱. ایمنی و حریم خصوصی</h2>
+<ul>
+  <li><strong>حریم خصوصی:</strong> سامانه فقط برای بزرگسالان است و کودکی در آن نیست (طبق <code>AGENTS.md</code>). داده‌ی زبان‌آموز نباید در لاگ‌ها، خروجی گزارش‌ها یا پیام‌های چت دیده شود.</li>
+  <li><strong>حق نشر:</strong> متن کامل پادکست و شعر دارای حق نشر در سامانه ذخیره یا بازتولید نشود.</li>
+  <li><strong>محدودیت هوش مصنوعی:</strong> شریک تلفظ و لحن را تقریباً درست نشان می‌دهد، ولی جای بازخورد انسانی را نمی‌گیرد. برای تأیید کیفیت، نمونه‌های ضبط‌شده باید بعداً توسط یک مدرس بررسی شوند.</li>
+</ul>
+
+<hr>
+
+<h2>۱۲. گام بعد</h2>
+
+<h3>مرحله‌بندی حالت‌ها</h3>
+<ul>
+  <li><strong>مرحله‌ی ۱ (پایه):</strong> گفتگو، گفتگوی هدف‌دار، ترجمه‌ی ذهنی، شادوینگ، شنیدن، تلفظ و آهنگ، تکرار زمان‌دار، عبارت‌ها و اصطلاحات.</li>
+  <li><strong>مرحله‌ی ۲:</strong> کارکردهای گفتاری، داستان کوتاه، شعر و ریتم، محاوره‌ای کردن.</li>
+  <li><strong>مرحله‌ی ۳:</strong> داستان بلند (سریال در چند جلسه)، گسترش سنجش در «خودت رو محک بزن».</li>
+</ul>
+
+<h3>قدم‌های بعدی</h3>
+<ol>
+  <li>این سند بازبینی و تأیید شود.</li>
+  <li>بخش ۱۰ (تصمیم‌ها) پاسخ داده شود.</li>
+  <li>اسکلت قرارداد خروجی (بخش ۶) و سیاست سطح (بخش ۵.۲) به‌صورت آزمایشی روی حالت گفتگو پیاده شوند.</li>
+  <li>حالت‌های مرحله‌ی ۱ یکی‌یکی اضافه شوند.</li>
+</ol>
+
+<p class="meta">هر تغییر در این سند با افزایش شماره‌ی نسخه ثبت می‌شود. نسخه‌ی Markdown همین محتوا در <code>docs/conversation-partner.md</code> است.</p>
+
+</main>
+</div>
+<script>
+(function () {
+  // Groups of sections, by their number in the heading (۱ to ۱۲).
+  var GROUPS = [
+    { title: 'شروع', nums: [1, 2] },
+    { title: 'ساختار داده', nums: [3] },
+    { title: 'تمرین‌ها', nums: [4] },
+    { title: 'قواعد و سطح', nums: [5, 6, 7, 8] },
+    { title: 'وضعیت کد', nums: [9] },
+    { title: 'تصمیم و ایمنی', nums: [10, 11, 12] }
+  ];
+  var main = document.querySelector('main');
+  var list = document.getElementById('toc-list');
+  var toggle = document.querySelector('.menu-toggle');
+  var toc = document.getElementById('toc');
+  var links = [];
+
+  function slug(text, i) {
+    return 'sec-' + i + '-' + text.replace(/[^؀-ۿa-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '');
+  }
+
+  function makeLink(heading, sub) {
+    var li = document.createElement('li');
+    if (sub) li.className = 'sub';
+    var a = document.createElement('a');
+    a.href = '#' + heading.id;
+    a.textContent = heading.textContent;
+    li.appendChild(a);
+    links.push({ id: heading.id, el: a });
+    return li;
+  }
+
+  // Assign ids to all h2 and h3 in the document.
+  var h2s = main.querySelectorAll('h2');
+  h2s.forEach(function (h2, i) {
+    h2.id = slug(h2.textContent, i + 1);
+  });
+  var h3s = main.querySelectorAll('h3');
+  h3s.forEach(function (h3, i) {
+    h3.id = slug(h3.textContent, 'h' + (i + 1));
+  });
+
+  // Build grouped menu from h2 numbers.
+  GROUPS.forEach(function (group) {
+    var label = document.createElement('div');
+    label.className = 'group';
+    label.textContent = group.title;
+    list.appendChild(label);
+    var ul = document.createElement('ul');
+    group.nums.forEach(function (n) {
+      var h2 = h2s[n - 1];
+      if (!h2) return;
+      ul.appendChild(makeLink(h2, false));
+      // h3 headings that follow this h2, before the next h2
+      var node = h2.nextElementSibling;
+      while (node && node.tagName !== 'H2') {
+        if (node.tagName === 'H3') ul.appendChild(makeLink(node, true));
+        node = node.nextElementSibling;
+      }
+    });
+    list.appendChild(ul);
+  });
+
+  toggle.addEventListener('click', function () {
+    var open = toc.classList.toggle('open');
+    toggle.setAttribute('aria-expanded', String(open));
+    toggle.textContent = open ? 'پنهان کردن فهرست' : 'نمایش فهرست';
+  });
+
+  // Highlight the section in view.
+  if ('IntersectionObserver' in window) {
+    var current = null;
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        current = entry.target.id;
+        links.forEach(function (l) {
+          l.el.classList.toggle('active', l.id === current);
+        });
+      });
+    }, { rootMargin: '0px 0px -70% 0px' });
+    [].concat(Array.prototype.slice.call(h2s), Array.prototype.slice.call(h3s))
+      .forEach(function (h) { observer.observe(h); });
+  }
+})();
+</script>
+</body>
+</html>

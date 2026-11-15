@@ -4,7 +4,6 @@ from datetime import timedelta
 from zaban.db import Base, SessionLocal, engine
 from zaban.models import Guardian, Tenant, utcnow
 from zaban.security import generate_api_key, hash_api_key
-from zaban.services.children_cleanup import purge_web_children
 from zaban.services.otp import normalize_phone
 
 
@@ -25,7 +24,7 @@ def _create_tenant(args: argparse.Namespace) -> None:
     print(f"API key (shown once, store it securely): {api_key}")
 
 
-def _create_parent(args: argparse.Namespace) -> None:
+def _create_adult(args: argparse.Namespace) -> None:
     phone = normalize_phone(args.phone)
     if phone is None:
         raise SystemExit("The mobile number must look like 09121234567.")
@@ -40,12 +39,6 @@ def _create_parent(args: argparse.Namespace) -> None:
     print("Adult account created. The person signs in with an SMS code sent to that number.")
 
 
-def _purge_children(args: argparse.Namespace) -> None:
-    with SessionLocal() as db:
-        removed = purge_web_children(db)
-    print(f"Removed {removed} child account(s) created on the website, with their data.")
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(description="zaban administration")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -56,13 +49,10 @@ def main() -> None:
     tenant.add_argument("--days", type=int, default=None, help="Days until the subscription expires")
     tenant.set_defaults(handler=_create_tenant)
 
-    parent = commands.add_parser("parent", help="Create an adult account that signs in with an SMS code")
-    parent.add_argument("--phone", required=True, help="Mobile number, for example 09121234567")
-    parent.add_argument("--name", required=True, help="Full name shown in the website")
-    parent.set_defaults(handler=_create_parent)
-
-    purge = commands.add_parser("purge-children", help="Remove child accounts created on the website, with all their data")
-    purge.set_defaults(handler=_purge_children)
+    adult = commands.add_parser("adult", help="Create an adult account that signs in with a mobile number and password")
+    adult.add_argument("--phone", required=True, help="Mobile number, for example 09121234567")
+    adult.add_argument("--name", required=True, help="Full name shown in the website")
+    adult.set_defaults(handler=_create_adult)
 
     args = parser.parse_args()
     Base.metadata.create_all(engine)

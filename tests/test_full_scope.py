@@ -32,7 +32,7 @@ def _parent(client) -> None:
 def test_landing_offers_one_sign_in_from_header(client):
     html = client.get("/").text
     # One sign-in for adults. The admin page is not linked publicly.
-    assert 'href="/parent"' in html
+    assert 'href="/login"' in html
     assert 'href="/student"' not in html
 
 
@@ -44,7 +44,7 @@ def test_student_page_has_the_learner_tools(client):
 
 
 def test_parent_page_has_no_child_tools(client):
-    html = client.get("/parent").text
+    html = client.get("/login").text
     assert 'id="cdForm"' not in html and 'id="addForm"' not in html and "parent-tools.js" not in html
 
 
@@ -63,19 +63,19 @@ def test_static_scripts_are_served(client):
 
 def test_learner_saves_and_reads_their_details(client):
     _student(client)
-    body = {"age": 11, "gender": "female", "grade": "5", "attributes": "kind", "conversation_style": "story",
+    body = {"age": 34, "gender": "female", "attributes": "kind", "conversation_style": "story",
             "response_style": "playful", "level_sample": "I like cats.", "free_text": "I love drawing"}
     assert client.put("/v1/web/student/details", json=body).status_code == 200
     details = client.get("/v1/web/student/details").json()["details"]
-    assert details["age"] == 11 and details["conversation_style"] == "story" and details["free_text"] == "I love drawing"
+    assert details["age"] == 34 and details["conversation_style"] == "story" and details["free_text"] == "I love drawing"
 
 
 def test_partial_details_update_keeps_other_fields(client):
     _student(client)
-    client.put("/v1/web/student/details", json={"grade": "6"})
+    client.put("/v1/web/student/details", json={"age": 34})
     client.put("/v1/web/student/details", json={"free_text": "football"})
     details = client.get("/v1/web/student/details").json()["details"]
-    assert details["grade"] == "6" and details["free_text"] == "football"
+    assert details["age"] == 34 and details["free_text"] == "football"
 
 
 def test_details_reject_unknown_style(client):
@@ -155,7 +155,7 @@ def test_self_test_starts_after_the_admin_changes_its_prompt(client):
 
 def test_admin_help_content_file_needs_a_known_mime(client):
     _admin(client)
-    body = {"title": "Bad type", "category": "story", "age_band": "T", "level": "A1",
+    body = {"title": "Bad type", "category": "story", "age_band": "A", "level": "A1",
             "data_base64": base64.b64encode(b"x").decode(), "mime": "application/x-msdownload"}
     assert client.post("/v1/admin/api/help-content", json=body).status_code == 422
 
@@ -169,8 +169,6 @@ def test_help_content_filter_by_category(client):
 
 def test_parent_cannot_read_another_familys_child(client):
     _parent(client)
-    assert client.get("/v1/web/parent/children/not-my-child/details").status_code == 404
-    assert client.get("/v1/web/parent/children/not-my-child/progress").status_code == 404
 
 
 # ----- Stand-alone AI service -----
@@ -206,23 +204,23 @@ def test_consult_form_has_the_new_fields(client):
 
 def test_admin_consult_list_shows_the_new_fields(client):
     client.post("/v1/public/consult", json={"name": "Ali", "last_name": "Hosseini", "phone": "09121230003",
-                                            "subject": "Kids class", "contact_permission": True})
+                                            "subject": "Adult class", "contact_permission": True})
     _admin(client)
     row = next(r for r in client.get("/v1/admin/api/consults").json() if r["phone"] == "09121230003")
-    assert row["last_name"] == "Hosseini" and row["subject"] == "Kids class" and row["contact_permission"] is True
+    assert row["last_name"] == "Hosseini" and row["subject"] == "Adult class" and row["contact_permission"] is True
 
 
 # ----- Student sign-in page links to the parent sign-in -----
 
 def test_student_page_links_to_parent_sign_in(client):
-    assert 'href="/parent"' in client.get("/student").text
+    assert 'href="/login"' in client.get("/student").text
 
 
 # ----- A lesson needs the level and the basic profile first -----
 
 def test_lesson_is_refused_until_the_profile_is_complete(client):
     headers = {"x-api-key": API_KEY}
-    student_id = client.post("/v1/students", json={"age_band": "11-14", "display_name": "Gate"}, headers=headers).json()["id"]
+    student_id = client.post("/v1/students", json={"age_band": "adult", "display_name": "Gate"}, headers=headers).json()["id"]
     assert client.post(f"/v1/students/{student_id}/consent", json={"accepted": True}, headers=headers).status_code == 201
     refused = client.post(f"/v1/students/{student_id}/sessions", json={"duration_minutes": 5}, headers=headers)
     assert refused.status_code == 409

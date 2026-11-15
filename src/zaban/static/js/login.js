@@ -102,17 +102,17 @@
 
   async function sendLoginCode() {
     Z.showError($("loginError"), "");
-    const phone = $("parentPhone").value.trim();
+    const phone = $("loginPhone").value.trim();
     if (!phone) {
       Z.showError($("loginError"), t("ابتدا شماره‌ی موبایل را وارد کنید.", "Enter your mobile number first."));
-      $("parentPhone").focus();
+      $("loginPhone").focus();
       return;
     }
     try {
       const sent = await Z.request("POST", "/v1/web/user/otp/request", { phone, purpose: "login" });
-      Z.showDevCode($("loginDevHint"), $("parentCode"), sent.dev_code);
+      Z.showDevCode($("loginDevHint"), $("loginCode"), sent.dev_code);
       startLoginClock(sent.expires_in_seconds);
-      $("parentCode").focus();
+      $("loginCode").focus();
     } catch (err) {
       Z.showError($("loginError"), err.message);
     }
@@ -164,7 +164,7 @@
   function showReset(on) {
     Z.show($("loginForm"), !on);
     Z.show($("resetForm"), on);
-    if (on) $("resetPhone").value = $("parentPhone").value.trim();
+    if (on) $("resetPhone").value = $("loginPhone").value.trim();
   }
 
   async function sendResetCode() {
@@ -213,17 +213,16 @@
 
     let me = null;
     try {
-      me = await Z.request("GET", "/v1/web/me?role=parent");
+      me = await Z.request("GET", "/v1/web/me");
     } catch (_) {
       me = null;
     }
-    if (me && me.role === "parent") {
+    if (me) {
       await enterApp();
     } else {
       showView("login");
     }
   }
 
-  Z.pageRole.value = "parent";
   document.addEventListener("DOMContentLoaded", boot);
 })();

@@ -2,8 +2,7 @@
 const Z = (() => {
   const ERROR_TEXT = [
     ["already taken", "این نام کاربری قبلاً استفاده شده است. یک نام دیگر انتخاب کنید."],
-    ["Wrong username or PIN", "نام کاربری یا PIN درست نیست."],
-    ["Too many wrong PINs", "چند بار PIN اشتباه وارد شده است. ۱۵ دقیقه بعد دوباره تلاش کنید."],
+    ["Too many wrong passwords", "چند بار رمز اشتباه وارد شده است. ۱۵ دقیقه بعد دوباره تلاش کنید."],
     ["Invalid or expired code", "کد اشتباه است یا منقضی شده. کد تازه بگیرید."],
     ["Please wait a minute", "لطفاً یک دقیقه صبر کنید، سپس دوباره کد بگیرید."],
     ["Too many codes", "تعداد درخواست کد زیاد شده است. کمی بعد دوباره تلاش کنید."],
@@ -13,7 +12,6 @@ const Z = (() => {
     ["Enter a valid mobile number", "شماره‌ی موبایل معتبر نیست. مثلاً 09121234567 را وارد کنید."],
     ["Your name is needed", "برای ساخت حساب، نام و نام خانوادگی لازم است."],
     ["SMS could not be sent", "پیامک ارسال نشد. لطفاً دوباره تلاش کنید."],
-    ["The PIN must be", "PIN باید ۴ تا ۶ رقم باشد."],
     ["Adults must create", "بزرگسالان باید حساب خودشان را بسازند."],
     ["not ready yet", "سرویس هنوز آماده نیست. کمی بعد دوباره تلاش کنید."],
     ["Choose a plan first", "برای ادامه، ابتدا یک پلن را انتخاب و پرداخت کنید."],
@@ -29,7 +27,7 @@ const Z = (() => {
     ["Too many requests", "تعداد درخواست‌ها زیاد شده است. کمی بعد دوباره تلاش کنید."],
     ["Wrong password", "رمز ورود درست نیست."],
     ["not available", "این پلن در حال حاضر در دسترس نیست."],
-    ["Parent consent is required", "برای شروع جلسه، ابتدا رضایت والد را ثبت کنید."],
+    ["Consent is required first", "برای شروع جلسه، ابتدا رضایت خود را ثبت کنید."],
     ["quota", "امکان ادامه‌ی جلسه‌ها فعلاً فراهم نیست. لطفاً با پشتیبانی تماس بگیرید."],
     ["Subscription expired", "اشتراک شما به پایان رسیده است."],
     ["already running", "یک جلسه هم‌اکنون در جریان است."],
@@ -39,7 +37,7 @@ const Z = (() => {
     ["not found", "این مورد پیدا نشد."],
     ["Student not found", "این دانش‌آموز پیدا نشد."],
     ["A password is needed", "برای ساخت حساب ورود، رمز عبور لازم است."],
-    ["Consent must be accepted", "برای ادامه، باید رضایت والد را تأیید کنید."],
+    ["Consent must be accepted", "برای ادامه، باید رضایت خود را تأیید کنید."],
     ["Enter a valid email", "ایمیل معتبر نیست. مثلاً name@example.com را وارد کنید."],
     ["already used by another", "این ایمیل برای حساب دیگری استفاده شده است."],
     ["current password is not correct", "رمز فعلی درست نیست."],
@@ -53,8 +51,8 @@ const Z = (() => {
   // English messages for the same server errors, matched by the same keys, in the same order.
   const ERROR_TEXT_EN = [
     ["already taken", "This username is already taken. Please choose another one."],
-    ["Wrong username or PIN", "The username or PIN is wrong."],
-    ["Too many wrong PINs", "Too many wrong PINs. Please try again in 15 minutes."],
+    ["Wrong username or password", "The username or password is wrong."],
+    ["Too many wrong passwords", "Too many wrong passwords. Please try again in 15 minutes."],
     ["Invalid or expired code", "The code is wrong or has expired. Please request a new one."],
     ["Please wait a minute", "Please wait a minute, then request a new code."],
     ["Too many codes", "Too many codes were requested. Please try again later."],
@@ -64,7 +62,6 @@ const Z = (() => {
     ["Enter a valid mobile number", "Please enter a valid mobile number, for example 09121234567."],
     ["Your name is needed", "Please enter your full name."],
     ["SMS could not be sent", "The SMS could not be sent. Please try again."],
-    ["The PIN must be", "The PIN must be 4 to 6 digits."],
     ["Adults must create", "Adults must create their own account."],
     ["not ready yet", "The service is not ready yet. Please try again later."],
     ["Choose a plan first", "Please choose and pay for a plan first."],
@@ -79,7 +76,7 @@ const Z = (() => {
     ["Too many requests", "Too many requests. Please try again later."],
     ["Wrong password", "The password is wrong."],
     ["not available", "This plan is not available right now."],
-    ["Parent consent is required", "A parent's consent is needed before a lesson can start."],
+    ["Consent is required first", "Your consent is needed before a lesson can start."],
     ["quota", "Lessons are not available right now. Please contact support."],
     ["Subscription expired", "Your subscription has ended."],
     ["already running", "A lesson is already running."],
@@ -89,7 +86,7 @@ const Z = (() => {
     ["not found", "This item was not found."],
     ["Student not found", "This learner was not found."],
     ["A password is needed", "A password is needed to create a sign-in."],
-    ["Consent must be accepted", "The parent's consent must be accepted to continue."],
+    ["Consent must be accepted", "Your consent must be accepted to continue."],
     ["Enter a valid email", "Please enter a valid email address, for example name@example.com."],
     ["already used by another", "This email is already used by another account."],
     ["current password is not correct", "The current password is not correct."],
@@ -135,12 +132,8 @@ const Z = (() => {
     return english ? "Something went wrong. Please try again." : "مشکلی پیش آمد. لطفاً دوباره تلاش کنید.";
   }
 
-  // Set by each page ("student" or "parent") so the server uses the right sign-in.
-  const pageRole = { value: null };
-
   async function request(method, path, body) {
     const options = { method, credentials: "same-origin", headers: {} };
-    if (pageRole.value) options.headers["X-Zaban-Role"] = pageRole.value;
     if (body !== undefined) {
       options.headers["Content-Type"] = "application/json";
       options.body = JSON.stringify(body);
@@ -414,7 +407,7 @@ const Z = (() => {
     dialog.showModal();
   }
 
-  // The learner part of the dialog (level, grade, how the teacher should talk, and so on) needs the learner sign-in.
+  // The learner part of the dialog (level, how the teacher should talk, and so on) needs the learner sign-in.
   // The adult gets it by starting their own learning, which needs a plan. Without one, this part stays hidden.
   let learnerReady = false;
   async function learnerDetails() {
@@ -438,7 +431,6 @@ const Z = (() => {
     byId("accLevelReading").value = levels.reading || "A1";
     byId("accLevelGrammar").value = levels.grammar || "A1";
     byId("accLevelSpeakingWriting").value = levels.speaking_writing || "A1";
-    byId("accGrade").value = d.grade || "";
     byId("accAttributes").value = d.attributes || "";
     byId("accConversation").value = d.conversation_style || "";
     byId("accResponse").value = d.response_style || "";
@@ -451,7 +443,6 @@ const Z = (() => {
     await request("PUT", "/v1/web/student/details", {
       age: byId("accAge").value ? Number(byId("accAge").value) : null,
       gender: nullIfEmpty(byId("accGender").value),
-      grade: nullIfEmpty(byId("accGrade").value.trim()),
       attributes: byId("accAttributes").value.trim(),
       conversation_style: nullIfEmpty(byId("accConversation").value),
       response_style: nullIfEmpty(byId("accResponse").value),
@@ -484,8 +475,6 @@ const Z = (() => {
     show(byId("accTeacherCurrent"), hasTeacher);
     show(byId("accTeacherChoose"), !hasTeacher);
     if (hasTeacher) byId("accTeacherName").textContent = state.teacher.name;
-    const own = await request("GET", "/v1/web/user/referrals");
-    byId("accTeacherOwnCode").textContent = own.code;
   }
 
   async function openTeacherDialog() {
@@ -494,8 +483,6 @@ const Z = (() => {
     show(byId("accTeacherOk"), false);
     show(byId("accTeacherFound"), false);
     byId("accTeacherCode").value = "";
-    byId("accTeacherConfirm").checked = false;
-    byId("accTeacherSave").disabled = true;
     dialog.showModal();
     try {
       await loadTeacher();
@@ -512,9 +499,9 @@ const Z = (() => {
     foundTeacherCode = byId("accTeacherCode").value.trim();
     try {
       const found = await request("POST", "/v1/web/user/teacher/lookup", { code: foundTeacherCode });
-      byId("accTeacherFoundName").textContent = found.teacher.name;
-      byId("accTeacherConfirm").checked = false;
-      byId("accTeacherSave").disabled = true;
+      // Only the family name (the last word of the full name) is shown to the learner.
+      const parts = found.teacher.name.trim().split(/\s+/);
+      byId("accTeacherFoundName").textContent = parts[parts.length - 1];
       show(byId("accTeacherFound"), true);
     } catch (err) {
       showError(byId("accTeacherError"), err.message);
@@ -547,9 +534,6 @@ const Z = (() => {
 
   function setupTeacherForm() {
     byId("accTeacherCheck").addEventListener("click", checkTeacherCode);
-    byId("accTeacherConfirm").addEventListener("change", (event) => {
-      byId("accTeacherSave").disabled = !event.target.checked;
-    });
     byId("accTeacherSave").addEventListener("click", saveTeacher);
     byId("accTeacherRemove").addEventListener("click", removeTeacher);
   }
@@ -658,8 +642,8 @@ const Z = (() => {
     byId("accSignOutDialog").showModal();
   }
 
-  async function signOut(signedIn) {
-    await Promise.all(signedIn.map((role) => request("POST", `/v1/web/logout?role=${role}`).catch(() => {})));
+  async function signOut() {
+    await request("POST", "/v1/web/logout").catch(() => {});
     location.href = "/";
   }
 
@@ -706,14 +690,14 @@ const Z = (() => {
     addItem("درخواست‌های شما", "Your requests", () => { location.href = "/requests"; });
     addItem("کد معرف من", "My referral code", () => { location.href = "/referrals"; });
     addItem("پرداخت‌های شما", "Your payments", () => {
-      location.href = signedIn.includes("parent") ? "/payments" : "/student?tab=payments";
+      location.href = "/payments";
     });
     list.appendChild(el("div", "account-sep"));
     addItem("خروج", "Sign out", () => askSignOut(
       isEnglish() ? "Are you sure you want to sign out?" : "آیا برای خروج اطمینان دارید؟",
-      () => signOut(signedIn),
+      () => signOut(),
     ));
-    if (signedIn.includes("parent")) {
+    {
       addItem("خروج از همه‌ی دستگاه‌ها", "Sign out of all devices", () => askSignOut(
         isEnglish()
           ? "Are you sure you want to sign out of all devices? You will need your password to sign in again."
@@ -739,17 +723,14 @@ const Z = (() => {
     const box = document.getElementById("siteActions");
     if (!box) return;
     const signedIn = [];
-    let greeting = "";
-    let teaches = 0;
-    for (const role of ["parent", "student"]) {
-      try {
-        const me = await request("GET", `/v1/web/me?role=${role}`);
-        signedIn.push(role);
-        greeting = greeting || me.name;
-        if (role === "parent") teaches = me.students || 0;
-      } catch (_) { /* not signed in to this area */ }
-    }
+    let me = null;
+    try {
+      me = await request("GET", "/v1/web/me");
+      signedIn.push("student");
+    } catch (_) { /* not signed in */ }
     if (!signedIn.length) return;
+    const greeting = me.name;
+    const teaches = me.students || 0;
 
     // A signed-in visitor starts on the lesson page, not on the public home page. The logo and the home link go there too.
     const memberHome = "/student";
@@ -773,7 +754,7 @@ const Z = (() => {
     box.dataset.state = "member";
 
     onProfileSaved = (saved) => {
-      if (signedIn.includes("parent")) nameNode.textContent = saved.name;
+      nameNode.textContent = saved.name;
       paintAvatar(menu.avatar, saved.avatar);
     };
     if (!headerWired) {
@@ -792,17 +773,14 @@ const Z = (() => {
     const path = location.pathname;
     const tool = new URLSearchParams(location.search).get("tab");
     const onLearnerPage = path === "/student";
-    const learnerSignedIn = signedIn.includes("student");
+    const learnerSignedIn = signedIn.length > 0;
     const items = [];
     items.push({ href: "/student", fa: "آموزش من", en: "My learning", active: onLearnerPage && tool !== "payments" && tool !== "help", startOwn: !learnerSignedIn, learning: true });
-    if (signedIn.includes("parent")) {
-      items.push({ href: "/plan", fa: "پلن و اعتبار", en: "Plan and credit", active: path === "/plan" });
-      items.push({ href: "/level", fa: "تعیین سطح", en: "Set level", active: path === "/level" });
-    } else {
-    }
+    items.push({ href: "/plan", fa: "پلن و اعتبار", en: "Plan and credit", active: path === "/plan" });
+    items.push({ href: "/level", fa: "تعیین سطح", en: "Set level", active: path === "/level" });
     items.push({ href: "/student?tab=help", fa: "کمک‌آموزشی", en: "Help", active: onLearnerPage && tool === "help" });
     // "My students" appears once at least one adult has chosen this account as their teacher.
-    if (signedIn.includes("parent") && teaches > 0) {
+    if (teaches > 0) {
       items.push({ href: "/students", fa: "دانش‌آموزان من", en: "My students", active: path === "/students" });
     }
 
@@ -920,7 +898,7 @@ const Z = (() => {
   }
 
   return {
-    request, friendly, pageRole, parseUtc, locale, currentLang, fmtDate, fmtDateTime, el, show, showError, showDevCode, codeTimer, initLang, initTheme, initReveal,
+    request, friendly, parseUtc, locale, currentLang, fmtDate, fmtDateTime, el, show, showError, showDevCode, codeTimer, initLang, initTheme, initReveal,
     initSiteHeader, STATUS_FA, SUGGESTION_FA, LEVEL_FA, SESSION_FA,
   };
 })();

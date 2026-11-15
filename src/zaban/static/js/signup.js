@@ -68,7 +68,7 @@
       });
       stopTimer();
       // The account exists and the browser holds its sign-in. The plan page comes next.
-      location.href = "/parent";
+      location.href = "/student";
     } catch (err) {
       Z.showError($("signupError"), err.message);
     }

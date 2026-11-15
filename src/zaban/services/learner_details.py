@@ -8,12 +8,11 @@ RESPONSE_STYLES = ("gentle", "direct", "playful", "strict")
 
 def details_out(details: LearnerDetails | None) -> dict:
     if details is None:
-        return {"age": None, "gender": None, "grade": None, "attributes": "", "conversation_style": None,
+        return {"age": None, "gender": None, "attributes": "", "conversation_style": None,
                 "response_style": None, "level_sample": "", "free_text": ""}
     return {
         "age": details.age,
         "gender": details.gender,
-        "grade": details.grade,
         "attributes": details.attributes,
         "conversation_style": details.conversation_style,
         "response_style": details.response_style,

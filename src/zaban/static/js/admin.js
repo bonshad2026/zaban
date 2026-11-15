@@ -325,8 +325,8 @@
     const payments = statusChips(data.payments, (s) => PAYMENT_LABELS[s] || s);
     box.replaceChildren(
       overviewSection("کاربران", "ثبت‌نام‌ها و دانش‌آموزان در سیستم.", [
-        statCard("بزرگسالان ثبت‌نام‌شده", fa(data.users.adults), "والدین و بزرگسالانی که برای خودشان یاد می‌گیرند"),
-        statCard("دانش‌آموزان", fa(data.users.learners), "فرزندان و دانش‌آموزان مستقل"),
+        statCard("بزرگسالان ثبت‌نام‌شده", fa(data.users.adults), "بزرگسالانی که برای خودشان یاد می‌گیرند"),
+        statCard("دانش‌آموزان", fa(data.users.learners), "بزرگسالانی که برای خودشان یاد می‌گیرند"),
         statCard("پلن‌های فعال", fa(data.active_plans), "بزرگسالانی که پلنشان هنوز تمام نشده است"),
       ]),
       overviewSection("پرداخت‌ها", "پرداخت‌هایی که ثبت شده‌اند. پرداخت‌های منتظر تأیید در بخش «مالی» دیده می‌شوند.", [
@@ -348,14 +348,14 @@
     );
   }
 
-  // Every learner in one list, with the parent for a child. The list is used to pick the learner for the details below.
+  // Every learner in one list. The list is used to pick the learner for the details below.
   async function loadLearnerChoices() {
     const learners = await Z.request("GET", `${API}/learners`);
     const select = $("learnerSelect");
     const current = select.value;
     fillSelect(select, learners.map((l) => [
       l.id,
-      l.kind === "self" ? `${l.name} (یادگیری خود)` : `${l.name}${l.parent ? ` — والد: ${l.parent}` : ""}`,
+      l.parent ? `${l.name} — ${l.parent}` : l.name,
     ]));
     if (current) select.value = current;
   }
@@ -381,7 +381,6 @@
         factCard("نام", d.display_name || "—"),
         factCard("سن", details.age ? `${fa(details.age)} سال` : "—"),
         factCard("جنسیت", GENDER_LABELS[details.gender] || "—"),
-        factCard("پایه‌ی تحصیلی", details.grade || "—"),
         factCard("سطح", d.cefr_level || "تعیین نشده"),
         factCard("سبک گفتگو", CONVERSATION_LABELS[details.conversation_style] || "—"),
         factCard("سبک پاسخ", RESPONSE_LABELS[details.response_style] || "—"),

@@ -42,7 +42,7 @@ def _bearer(authorization: str | None) -> str:
 def _owner(db: DBSession, student_id: str) -> Guardian | None:
     # The adult who pays for this learner. Their plan tokens are used by the conversation, as in a lesson.
     student = db.get(Student, student_id)
-    owner_id = (student.guardian_id or student.self_owner_id) if student else None
+    owner_id = student.self_owner_id if student else None
     return db.get(Guardian, owner_id) if owner_id else None
 
 

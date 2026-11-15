@@ -207,15 +207,14 @@ def save_connections(body: ConnectionsUpdate, db: DBSession = Depends(get_db)) -
 
 @router.get("/learners")
 def list_learners(db: DBSession = Depends(get_db)) -> list[dict]:
-    # Every learner, children of a parent included, so the panel can pick any of them by name.
+    # Every learner, so the panel can pick any of them by name.
     students = db.query(Student).order_by(Student.display_name).all()
     guardians = {g.id: g.full_name for g in db.query(Guardian).all()}
     return [
         {
             "id": s.id,
             "name": s.display_name or s.username or "—",
-            "kind": "self" if s.self_owner_id else "child",
-            "parent": guardians.get(s.guardian_id or s.self_owner_id, ""),
+            "parent": guardians.get(s.self_owner_id, ""),
         }
         for s in students
     ]

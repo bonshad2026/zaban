@@ -44,16 +44,8 @@ def set_topic_order(db: DBSession, topic_ids: list[str]) -> None:
 
 
 def path_topics(db: DBSession, student: Student) -> list[CurriculumTopic]:
-    # The topics of the lesson path for this learner: the ones that fit their age band and level and have a written version, in order.
-    band = band_code(student.age_band)
-    if band is None:
-        return []
-    level = student.cefr_level or DEFAULT_LEVEL
-    return [
-        topic
-        for topic in ordered_topics(db)
-        if _fits(topic, band, level) and variant_for(db, topic.id, band, level) is not None
-    ]
+    # The lesson path is the same for every learner: every topic, in order. Age and level do not change it.
+    return ordered_topics(db)
 
 
 def next_topic(db: DBSession, student: Student) -> tuple[int, int, CurriculumTopic] | None:
@@ -112,17 +104,11 @@ def bump_catalog_version(db: DBSession) -> int:
 
 def seed_curriculum(db: DBSession) -> None:
     # Adds topics and variants that are missing. Rows the administrator already changed are never overwritten.
+    # The built-in texts (VARIANTS) are not loaded any more. The administrator writes the texts in the database.
     for topic_id, title, goal, first, last, bands in TOPICS:
         if db.get(CurriculumTopic, topic_id) is None:
             db.add(CurriculumTopic(id=topic_id, title=title, goal=goal, first_level=first, last_level=last, bands=bands))
     db.flush()
-    for variant_id, topic_id, band, level, opener, phrases, style in VARIANTS:
-        if db.get(CurriculumVariant, variant_id) is None:
-            db.add(
-                CurriculumVariant(
-                    id=variant_id, topic_id=topic_id, band=band, level=level, opener=opener, phrases=phrases, style=style
-                )
-            )
     if db.get(AppSetting, VERSION_KEY) is None:
         db.add(AppSetting(key=VERSION_KEY, value="1"))
     db.commit()
@@ -148,60 +134,54 @@ def _fits(topic: CurriculumTopic, band: str, level: str) -> bool:
     return band in topic.bands and level in topic_levels(topic)
 
 
-def choose_topic(
-    db: DBSession, student: Student, requested: str | None = None
-) -> tuple[CurriculumTopic, CurriculumVariant] | None:
-    # Picks the next topic for a learner: one that fits their age band and level and has a written variant.
-    # With no request, topics used in the last few lessons come last, so the lessons keep moving forward.
+def text_for(db: DBSession, student: Student, topic_id: str) -> CurriculumVariant | None:
+    # The written text of a topic for this learner's age band and level. None when no text is written yet.
     band = band_code(student.age_band)
     if band is None:
         return None
-    level = student.cefr_level or DEFAULT_LEVEL
-    # A topic the learner asked to play again comes first, when no other topic was asked for.
+    return variant_for(db, topic_id, band, student.cefr_level or DEFAULT_LEVEL)
+
+
+def choose_topic(
+    db: DBSession, student: Student, requested: str | None = None
+) -> tuple[CurriculumTopic, CurriculumVariant | None] | None:
+    # Picks the next topic of the lesson path: the first one not covered yet. A topic the learner asked to play
+    # again comes first, when no other topic was asked for. The text is None when no text is written for it yet.
     if requested is None and student.repeat_topic_id:
         requested = student.repeat_topic_id
-
     if requested:
         topic = db.get(CurriculumTopic, requested)
-        if topic is None or not _fits(topic, band, level):
-            return None
-        variant = variant_for(db, topic.id, band, level)
-        return (topic, variant) if variant else None
-
+        return (topic, text_for(db, student, topic.id)) if topic else None
+    topics = ordered_topics(db)
+    if not topics:
+        return None
     covered = covered_topic_ids(db, student.id)
-    first = None
-    for topic in ordered_topics(db):
-        if not _fits(topic, band, level):
-            continue
-        variant = variant_for(db, topic.id, band, level)
-        if variant is None:
-            continue
-        if topic.id not in covered:
-            return topic, variant
-        first = first or (topic, variant)
-    return first
+    topic = next((t for t in topics if t.id not in covered), topics[0])
+    return topic, text_for(db, student, topic.id)
 
 
-def record_lesson_topic(db: DBSession, session_id: str, topic: CurriculumTopic, variant: CurriculumVariant) -> None:
+def record_lesson_topic(db: DBSession, session_id: str, topic: CurriculumTopic, variant: CurriculumVariant | None) -> None:
     db.add(
         LessonTopic(
             session_id=session_id,
             topic_id=topic.id,
-            variant_id=variant.id,
+            variant_id=variant.id if variant else None,
             catalog_version=catalog_version(db),
         )
     )
 
 
-def session_topic(db: DBSession, session_id: str) -> tuple[CurriculumTopic, CurriculumVariant] | None:
+def session_topic(db: DBSession, session_id: str) -> tuple[CurriculumTopic, CurriculumVariant | None] | None:
     record = db.get(LessonTopic, session_id)
     if record is None:
         return None
-    return db.get(CurriculumTopic, record.topic_id), db.get(CurriculumVariant, record.variant_id)
+    return db.get(CurriculumTopic, record.topic_id), db.get(CurriculumVariant, record.variant_id) if record.variant_id else None
 
 
-def topic_note(topic: CurriculumTopic, variant: CurriculumVariant) -> str:
+def topic_note(topic: CurriculumTopic, variant: CurriculumVariant | None) -> str:
     # The part of the lesson prompt that tells the model what this lesson is about.
+    if variant is None:
+        return f"Today's topic: {topic.title}. Goal: {topic.goal}."
     phrases = ", ".join(f'"{p}"' for p in variant.phrases) or "none"
     return (
         f"Today's topic: {topic.title}. Goal: {topic.goal}.\n"

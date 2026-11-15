@@ -10,7 +10,7 @@ ADMIN_PASSWORD = os.environ["ADMIN_PASSWORD"]
 
 
 class _Student:
-    age_band = "11-14"
+    age_band = "adult"
     cefr_level = "A1"
 
 

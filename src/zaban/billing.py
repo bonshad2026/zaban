@@ -55,9 +55,9 @@ def list_plans(db: DBSession = Depends(get_db)) -> list[dict]:
 
 
 @router.get("/plan")
-def current_plan(zaban_parent: str | None = Cookie(default=None), db: DBSession = Depends(get_db)) -> dict:
+def current_plan(zaban_student: str | None = Cookie(default=None), db: DBSession = Depends(get_db)) -> dict:
     # The plan the adult is on: its name (from the last confirmed payment), when the paid period began, and when it ends.
-    guardian = _guardian_from_cookie(db, zaban_parent)
+    guardian = _guardian_from_cookie(db, zaban_student)
     last = (
         db.query(Payment)
         .filter(Payment.guardian_id == guardian.id, Payment.status == "confirmed")
@@ -85,16 +85,16 @@ def current_plan(zaban_parent: str | None = Cookie(default=None), db: DBSession 
 
 
 @router.get("/payments")
-def my_payments(zaban_parent: str | None = Cookie(default=None), db: DBSession = Depends(get_db)) -> list[dict]:
+def my_payments(zaban_student: str | None = Cookie(default=None), db: DBSession = Depends(get_db)) -> list[dict]:
     # Every payment the adult has made, newest first.
-    guardian = _guardian_from_cookie(db, zaban_parent)
+    guardian = _guardian_from_cookie(db, zaban_student)
     rows = db.query(Payment).filter(Payment.guardian_id == guardian.id).order_by(Payment.created_at.desc()).all()
     return [_payment_out(p, db.get(BillingPlan, p.plan_id)) for p in rows]
 
 
 @router.get("/status")
-def billing_status(zaban_parent: str | None = Cookie(default=None), db: DBSession = Depends(get_db)) -> dict:
-    guardian = _guardian_from_cookie(db, zaban_parent)
+def billing_status(zaban_student: str | None = Cookie(default=None), db: DBSession = Depends(get_db)) -> dict:
+    guardian = _guardian_from_cookie(db, zaban_student)
     payments = (
         db.query(Payment)
         .filter(Payment.guardian_id == guardian.id)
@@ -112,10 +112,10 @@ def billing_status(zaban_parent: str | None = Cookie(default=None), db: DBSessio
 @router.post("/checkout", status_code=201)
 def checkout(
     body: CheckoutCreate,
-    zaban_parent: str | None = Cookie(default=None),
+    zaban_student: str | None = Cookie(default=None),
     db: DBSession = Depends(get_db),
 ) -> dict:
-    guardian = _guardian_from_cookie(db, zaban_parent)
+    guardian = _guardian_from_cookie(db, zaban_student)
     plan = db.get(BillingPlan, body.plan_id)
     if plan is None or not plan.active:
         raise HTTPException(status_code=404, detail="This plan is not available")
@@ -173,13 +173,13 @@ def zarinpal_callback(
 @router.post("/fake/confirm")
 def fake_confirm(
     body: FakeConfirm,
-    zaban_parent: str | None = Cookie(default=None),
+    zaban_student: str | None = Cookie(default=None),
     db: DBSession = Depends(get_db),
 ) -> dict:
     # Development only. It stands in for the gateway's callback, so the flow can be tested without a merchant account.
     if settings.environment == "production":
         raise HTTPException(status_code=404, detail="Not found")
-    guardian = _guardian_from_cookie(db, zaban_parent)
+    guardian = _guardian_from_cookie(db, zaban_student)
     payment = db.get(Payment, body.payment_id)
     if payment is None or payment.guardian_id != guardian.id or payment.gateway != "fake":
         raise HTTPException(status_code=404, detail="Payment not found")

@@ -11,7 +11,7 @@ DEMO = {"X-API-Key": os.environ["ZABAN_DEMO_API_KEY"]}
 
 
 def _ready_student(client, external_id: str) -> str:
-    created = client.post("/v1/students", json={"external_user_id": external_id, "age_band": "11-14"}, headers=DEMO)
+    created = client.post("/v1/students", json={"external_user_id": external_id, "age_band": "adult"}, headers=DEMO)
     assert created.status_code == 201, created.text
     student_id = created.json()["id"]
     assert client.post(f"/v1/students/{student_id}/consent", json={"accepted": True}, headers=DEMO).status_code == 201

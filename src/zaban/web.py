@@ -1,5 +1,4 @@
 from datetime import timedelta
-from typing import Literal
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session as DBSession
@@ -8,7 +7,7 @@ from zaban.config import settings
 from zaban.db import get_db
 from zaban.models import Consent, Guardian, Student, Tenant, VoiceSample, WebSession, utcnow
 from zaban.schemas import AccentChoice, OtpLogin, OtpRequest, PasswordReset, SignUpCreate, UserLogin
-from zaban.security import WEB_COOKIE_NAMES, read_web_session, session_is_current
+from zaban.security import WEB_COOKIE, read_web_session, session_is_current
 from zaban.services.web_sessions import start_web_session
 from zaban.services.learner import get_accent, set_accent, set_learner_profile
 from zaban.services.otp import check_code, development_code, normalize_phone, request_code
@@ -25,12 +24,11 @@ WRONG_LOGIN = "Wrong phone number or password"
 WRONG_CODE = "Invalid or expired code. Request a new one"
 MAX_PASSWORD_FAILURES = 5
 PASSWORD_LOCK_MINUTES = 15
-Role = Literal["student", "parent"]
 
 
-def _set_session_cookie(response: Response, role: str, token: str) -> None:
+def _set_session_cookie(response: Response, token: str) -> None:
     response.set_cookie(
-        WEB_COOKIE_NAMES[role],
+        WEB_COOKIE,
         token,
         max_age=settings.web_session_ttl_seconds,
         httponly=True,
@@ -53,12 +51,12 @@ def _self_profile(db: DBSession, guardian: Guardian) -> Student | None:
 
 
 def _adult_out(guardian: Guardian) -> dict:
-    return {"role": "parent", "name": guardian.full_name}
+    return {"role": "student", "name": guardian.full_name}
 
 
 def _set_adult_cookie(response: Response, guardian: Guardian, db: DBSession, request: Request) -> None:
     token = start_web_session(db, request, "guardian", guardian.id, guardian.tenant_id, guardian.session_version)
-    _set_session_cookie(response, "parent", token)
+    _set_session_cookie(response, token)
 
 
 @router.post("/user/otp/request")
@@ -116,9 +114,9 @@ def sign_up(body: SignUpCreate, response: Response, request: Request, db: DBSess
 
 
 @router.get("/user/referrals")
-def my_referrals(zaban_parent: str | None = Cookie(default=None), db: DBSession = Depends(get_db)) -> dict:
+def my_referrals(zaban_student: str | None = Cookie(default=None), db: DBSession = Depends(get_db)) -> dict:
     # The adult's own code, and who joined with it: names and counts only.
-    guardian = _guardian_from_cookie(db, zaban_parent)
+    guardian = _guardian_from_cookie(db, zaban_student)
     return referral_summary(db, guardian)
 
 
@@ -199,13 +197,11 @@ def reset_password(body: PasswordReset, db: DBSession = Depends(get_db)) -> dict
 
 @router.post("/user/self")
 def start_own_learning(
-    response: Response,
-    request: Request,
-    zaban_parent: str | None = Cookie(default=None),
+    zaban_student: str | None = Cookie(default=None),
     db: DBSession = Depends(get_db),
 ) -> dict:
     # An adult who wants to learn for themself gets one learner profile. Only that adult can see its reports.
-    guardian = _guardian_from_cookie(db, zaban_parent)
+    guardian = _guardian_from_cookie(db, zaban_student)
     require_plan(guardian)
     student = _self_profile(db, guardian)
     if student is None:
@@ -225,19 +221,17 @@ def start_own_learning(
         set_learner_profile(db, student.id, motivation=guardian.goal or "")
         db.commit()
 
-    token = start_web_session(db, request, "student", student.id, student.tenant_id, student.session_version)
-    _set_session_cookie(response, "student", token)
     return {"role": "student", "name": student.display_name, "id": student.id}
 
 
 @router.post("/user/logout-all")
 def logout_everywhere(
     response: Response,
-    zaban_parent: str | None = Cookie(default=None),
+    zaban_student: str | None = Cookie(default=None),
     db: DBSession = Depends(get_db),
 ) -> dict:
     # Invalidates every sign-in for this adult and for their own learner profile.
-    guardian = _guardian_from_cookie(db, zaban_parent)
+    guardian = _guardian_from_cookie(db, zaban_student)
     guardian.session_version += 1
     self_profile = _self_profile(db, guardian)
     if self_profile:
@@ -248,35 +242,32 @@ def logout_everywhere(
         {"revoked_at": utcnow()}, synchronize_session=False
     )
     db.commit()
-    response.delete_cookie(WEB_COOKIE_NAMES["parent"], path="/")
-    response.delete_cookie(WEB_COOKIE_NAMES["student"], path="/")
+    response.delete_cookie(WEB_COOKIE, path="/")
     return {"ok": True}
 
 
 @router.post("/logout")
 def logout(
     response: Response,
-    role: Role = "student",
-    zaban_parent: str | None = Cookie(default=None),
     zaban_student: str | None = Cookie(default=None),
     db: DBSession = Depends(get_db),
 ) -> dict:
     # Ends this device's sign-in, so the same cookie cannot be used again.
-    token = zaban_parent if role == "parent" else zaban_student
-    payload = read_web_session(token) if token else None
+    payload = read_web_session(zaban_student) if zaban_student else None
     row = db.get(WebSession, payload.get("j") or "") if payload else None
     if row is not None and row.revoked_at is None:
         row.revoked_at = utcnow()
         db.commit()
-    response.delete_cookie(WEB_COOKIE_NAMES[role], path="/")
+    response.delete_cookie(WEB_COOKIE, path="/")
     return {"ok": True}
 
 
 def _student_from_cookie(db: DBSession, token: str | None) -> Student:
-    payload = read_web_session(token) if token else None
-    student = db.get(Student, payload["sid"]) if payload and payload["role"] == "student" else None
-    if not session_is_current(payload or {}, student, db):
-        raise HTTPException(status_code=401, detail="Please sign in")
+    # The learner is the signed-in adult's own learning profile. It is created by POST /web/user/self.
+    guardian = _guardian_from_cookie(db, token)
+    student = _self_profile(db, guardian)
+    if student is None:
+        raise HTTPException(status_code=404, detail="Start your own learning first")
     return student
 
 
@@ -320,36 +311,17 @@ def choose_accent(
 
 @router.get("/me")
 def me(
-    role: Role = "student",
     zaban_student: str | None = Cookie(default=None),
-    zaban_parent: str | None = Cookie(default=None),
     db: DBSession = Depends(get_db),
 ) -> dict:
-    token = zaban_student if role == "student" else zaban_parent
-    payload = read_web_session(token) if token else None
-    if payload is None:
-        raise HTTPException(status_code=401, detail="Please sign in")
-    if payload["role"] == "student":
-        student = db.get(Student, payload["sid"])
-        if session_is_current(payload, student, db):
-            # Lessons need the plan of the adult who owns this learner profile.
-            owner_id = student.guardian_id or student.self_owner_id
-            owner = db.get(Guardian, owner_id) if owner_id else None
-            return {
-                "role": "student",
-                "name": student.display_name or student.username,
-                "id": student.id,
-                "has_active_plan": True if owner is None else has_active_plan(owner),
-            }
-    if payload["role"] == "guardian":
-        guardian = db.get(Guardian, payload["sid"])
-        if session_is_current(payload, guardian, db):
-            return {
-                "role": "parent",
-                "name": guardian.full_name,
-                "has_own_learning": _self_profile(db, guardian) is not None,
-                "has_active_plan": has_active_plan(guardian),
-                # How many adults chose this adult as their teacher. The header shows "My students" from one.
-                "students": db.query(Guardian).filter(Guardian.teacher_id == guardian.id).count(),
-            }
-    raise HTTPException(status_code=401, detail="Please sign in")
+    guardian = _guardian_from_cookie(db, zaban_student)
+    self_profile = _self_profile(db, guardian)
+    return {
+        "role": "student",
+        "name": guardian.full_name,
+        "id": self_profile.id if self_profile else None,
+        "has_own_learning": self_profile is not None,
+        "has_active_plan": has_active_plan(guardian),
+        # How many adults chose this adult as their teacher. The header shows "My students" from one.
+        "students": db.query(Guardian).filter(Guardian.teacher_id == guardian.id).count(),
+    }

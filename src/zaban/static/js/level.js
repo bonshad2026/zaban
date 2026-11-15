@@ -57,7 +57,7 @@
 
   // One box per skill: its icon and current level, the level chooser with its save button, then the test button.
   function skillCard(skill) {
-    const card = Z.el("article", "skill-card");
+    const card = Z.el("article", `skill-card skill-${skill.key}`);
 
     const head = Z.el("div", "skill-head");
     const icon = Z.el("span", "skill-icon");

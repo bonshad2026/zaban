@@ -75,7 +75,7 @@ def test_parent_or_api_key_can_set_interests_and_motivation_at_creation(client):
     created = client.post(
         "/v1/students",
         headers=DEMO,
-        json={"age_band": "11-14", "display_name": "Sara", "interests": "drawing", "motivation": "travel"},
+        json={"age_band": "adult", "display_name": "Sara", "interests": "drawing", "motivation": "travel"},
     )
     assert created.status_code == 201, created.text
 

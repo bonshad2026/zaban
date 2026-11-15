@@ -36,9 +36,9 @@
             body: JSON.stringify({ payment_id: paymentId, ok }),
           });
           if (!res.ok) throw new Error("payment");
-          location.href = "/parent?payment=" + (ok ? "ok" : "failed");
+          location.href = "/login?payment=" + (ok ? "ok" : "failed");
         } catch (_) {
-          error.textContent = "ثبت نتیجه انجام نشد. ابتدا با حساب والد وارد شوید.";
+          error.textContent = "ثبت نتیجه انجام نشد. ابتدا وارد حساب خود شوید.";
           error.hidden = false;
         }
       }

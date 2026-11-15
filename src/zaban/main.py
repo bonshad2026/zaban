@@ -15,7 +15,7 @@ from zaban.billing import router as billing_router
 from zaban.config import settings
 from zaban.conversation import models as conversation_models  # noqa: F401  (registers the conversation tables)
 from zaban.conversation.api import router as conversation_router
-from zaban.db import Base, SessionLocal, add_missing_columns, engine
+from zaban.db import Base, SessionLocal, add_missing_columns, allow_lessons_without_text, engine
 from zaban.reports import router as reports_router
 from zaban.seed import ensure_default_plan, seed_demo_accounts, seed_demo_plans, seed_demo_tenant
 from zaban.placement_web import router as placement_router
@@ -27,7 +27,6 @@ from zaban.services.help_content import seed_help_facets, seed_help_samples
 from zaban.services.sms import dev_outbox
 from zaban.admin_ops import router as admin_ops_router
 from zaban.ai_api import router as ai_router
-from zaban.learning_aids import parent_router as learning_parent_router
 from zaban.learning_aids import router as learning_aids_router
 from zaban.account import router as account_router
 from zaban.web import router as web_router
@@ -43,6 +42,7 @@ async def lifespan(_: FastAPI):
         raise RuntimeError("SECRET_KEY must be set in production")
     Base.metadata.create_all(engine)
     add_missing_columns()
+    allow_lessons_without_text()
     with SessionLocal() as db:
         seed_curriculum(db)
         ensure_topic_positions(db)
@@ -87,7 +87,6 @@ app.include_router(web_router, prefix="/v1")
 app.include_router(account_router, prefix="/v1")
 app.include_router(teaching_router, prefix="/v1")
 app.include_router(learning_aids_router, prefix="/v1")
-app.include_router(learning_parent_router, prefix="/v1")
 app.include_router(ai_router, prefix="/v1")
 app.include_router(billing_router, prefix="/v1")
 app.include_router(placement_router, prefix="/v1")
@@ -141,9 +140,9 @@ def student_page() -> HTMLResponse:
     return _page("student.html", "/student")
 
 
-@app.get("/parent", include_in_schema=False)
-def parent_page() -> HTMLResponse:
-    return _page("parent.html", "/parent")
+@app.get("/login", include_in_schema=False)
+def login_page() -> HTMLResponse:
+    return _page("login.html", "/login")
 
 
 @app.get("/signup", include_in_schema=False)

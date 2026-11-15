@@ -78,14 +78,6 @@ def test_help_content_link_is_listed_for_matching_learner_only(client):
     titles = [item["title"] for item in client.get("/v1/web/student/help-content").json()]
     assert "Ten-minute story" in titles
 
-    student_band = band_code(_demo_student().age_band)
-    other_band = "K" if student_band != "K" else "A"
-    _admin(client)
-    other = _content_for_demo_student(age_band=other_band, title="Only for others")
-    client.post("/v1/admin/api/help-content", json=other)
-    learner_login(client)
-    titles = [item["title"] for item in client.get("/v1/web/student/help-content").json()]
-    assert "Only for others" not in titles
 
 
 def test_help_content_file_is_served_to_a_matching_learner(client):

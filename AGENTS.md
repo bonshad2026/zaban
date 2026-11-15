@@ -20,7 +20,7 @@ This file is for any coding agent (Claude, Codex, or others). It states the proj
 - **Static files are baked into the image.** After any change under `src/zaban/static/`, rebuild with `docker compose build --no-cache app`, then `docker compose up -d --force-recreate app`. A plain build once served stale files. Check the new text with curl afterwards.
 - **Git:** work on a feature branch. Do not commit to `develop` directly. Develop only moves forward with `git merge --ff-only`. Never force-push or reset a shared branch. Do not push unless the user asks.
 - **Secrets:** `.env` is never committed. Do not print or copy its values.
-- **Child data:** the product serves children. Do not add tools or outputs that expose personal data of children in logs or chat.
+- **Adults only:** the product serves adults only. Every learner is an adult who learns for themself (`self_owner_id`), or a learner created through a customer's API key. Do not add child (under 18) account types, age bands other than `adult`, parent-managed learners, or school-grade fields. On 2026-11-15 the owner removed all child logic (code, curriculum rows for bands K, J, T, S, the `purge-children` command, child demo data), and the test data with under-18 records was deleted. If a request seems to need child support, ask the owner first. Report counts only, never names.
 - **Persian UI:** public pages are bilingual through `data-fa` and `data-en` attributes and the `ERROR_TEXT` tables in `common.js`. A new server error message needs an entry in both English and Persian tables.
 - **Element IDs:** page scripts use short generic IDs such as `infoForm`. Header dialogs use the `acc` prefix so they do not clash with those IDs.
 
@@ -28,9 +28,10 @@ This file is for any coding agent (Claude, Codex, or others). It states the proj
 
 | Topic | Start here |
 |---|---|
-| Sign-in and accounts | `README.md` (Accounts, Website sign-in), `src/zaban/web.py`, `src/zaban/account.py` |
+| Sign-in and accounts | `README.md` (Accounts, Website sign-in), `src/zaban/web.py`, `src/zaban/account.py`, sign-in page `static/login.html` (`/login`) |
 | Website header and profile menu | `docs/account-menu.md` |
 | Curriculum and learning programs | `docs/curriculum.md`, `src/zaban/curriculum_data.py`, `src/zaban/program_data.py` |
+| Conversation partner (modes, learner profile, level policy, output contract) | `docs/conversation-partner.md` (design only, not yet implemented) |
 | Database columns added after first release | `ADDED_COLUMNS` in `src/zaban/db.py` |
 | Port usage on this computer | `docs/ports.md` |
 | Pages, admin menu, data and open items | `docs/site-map.md` |

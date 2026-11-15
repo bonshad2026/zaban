@@ -4,18 +4,17 @@ This note is for any developer or AI coding agent working on the website. It des
 
 ## What the user sees
 
-- **Signed out:** the header shows the "ورود" menu (parent or learner) and the "ثبت‌نام" button.
-- **Signed in:** the header shows the signed-in person's name, the "پنل والد" link (for an adult), and a round profile button. The button shows the profile photo, or a plain silhouette when there is none. There is no "یادگیری من" link in the top row.
+- **Signed out:** the header shows a plain "ورود" link to `/login` and the "ثبت‌نام" button.
+- **Signed in:** the header shows the signed-in person's name and a round profile button. There is no parent panel link. The button shows the profile photo, or a plain silhouette when there is none. There is no "یادگیری من" link in the top row.
 - **Second header row (signed in only):** the person's own items, filled by `initSiteHeader` from `#memberNav`. For an adult: آموزش من, پلن و اعتبار, تعیین سطح, کمک‌آموزشی, and «دانش‌آموزان من» once at least one adult has chosen them as a teacher. For a learner: آموزش من, درخواست‌ها, پرداخت‌ها. The item for the current page gets `aria-current="page"` and a filled style.
-  - «آموزش من» always opens the learner page (`/student`). An adult with no learner sign-in first calls `POST /v1/web/user/self` (`startOwnLearning` in `common.js`), then the learner page opens. The parent page has no «یادگیری خودم» section any more.
-  - «پرداخت‌ها» (adults) opens `/payments`, a plain list of the adult's payments from `GET /v1/web/billing/payments`. Learners keep their own payments tab.
+  - «آموزش من» always opens the learner page (`/student`). An adult with no learner sign-in first calls `POST /v1/web/user/self` (`startOwnLearning` in `common.js`), then the learner page opens.  - «پرداخت‌ها» (adults) opens `/payments`, a plain list of the adult's payments from `GET /v1/web/billing/payments`. Learners keep their own payments tab.
   - «پلن و اعتبار» opens `/plan`. Its «خرید یا تمدید پلن» button does nothing yet; what it should do is still to be decided.
 - **Third header row (learner page only):** the learning tabs (جلسه, لهجه, گزارش من, پیشرفت, اطلاعات من, کمک‌آموزشی, خودت رو محک بزن). The payments tab is hidden here, because payments has its own main-row item. `initSiteHeader` moves the `.tabs` nav from `student.html` into `#memberSub`, and shows it only on `/student`. The tab buttons keep their click handlers because they are the same nodes.
 - **Profile menu** (opens from the round button; closes on outside click or Escape):
   - اطلاعات شخصی / Personal details: opens the personal details dialog.
   - تغییر رمز عبور / Change password: opens the password dialog.
   - خروج / Sign out: asks for confirmation first (a thank-you line, then the question). Then it ends the sign-in on this browser (every role cookie).
-  - خروج از همه‌ی دستگاه‌ها / Sign out of all devices: only for an adult (`zaban_parent` cookie). Asks for confirmation first, then ends every sign-in for the adult and their own learner profile.
+  - خروج از همه‌ی دستگاه‌ها / Sign out of all devices: only for an adult (the one website cookie). Asks for confirmation first, then ends every sign-in for the adult and their own learner profile.
 
 "Sign out of all devices" appears only in this menu. It is not on any page body.
 
@@ -49,8 +48,8 @@ The browser resizes a picked photo to a 256 px square JPEG (`readPhoto` in `comm
 | PUT | `/web/user/profile` | Update the profile. Only fields that are sent change. An empty `email` or `avatar` clears it. `gender: null` clears it. |
 | POST | `/web/user/password` | Change password. Needs the current password. |
 | POST | `/web/user/logout-all` | Sign out everywhere. Needs the adult cookie. |
-| POST | `/web/logout?role=parent\|student` | Sign out one role on this browser. |
-| GET | `/web/me?role=parent\|student` | Who is signed in for that role (name, plan status). |
+| POST | `/web/logout` | Sign out on this browser. |
+| GET | `/web/me` | Who is signed in (name, plan status, own learning). |
 
 Validation lives in `src/zaban/account.py` (`ProfileUpdate`, `EMAIL_PATTERN`, `AVATAR_PATTERN`). Errors use the server's English detail strings. The browser turns them into Persian or English sentences through `ERROR_TEXT` and `ERROR_TEXT_EN` in `common.js`. A new server message needs an entry in both lists, or it shows the generic text.
 
@@ -62,7 +61,7 @@ Validation lives in `src/zaban/account.py` (`ProfileUpdate`, `EMAIL_PATTERN`, `A
   - `buildAccountMenu()`: the round button and its menu.
   - `openPersonalDetails()`, `setupAccountForms()`, `readPhoto()`, `signOut()`, `signOutEverywhere()`.
 - `src/zaban/static/css/app.css`: header and menu styles, search for `account-menu`, `account-dialog`, `avatar-`.
-- `src/zaban/static/js/parent.js` and `student.js`: their `login()` calls `Z.initSiteHeader()` after a successful sign-in. The header is drawn as a guest on page load, so this call is what shows the menu without a refresh.
+- `src/zaban/static/js/login.js` and `student.js`: their `login()` calls `Z.initSiteHeader()` after a successful sign-in. The header is drawn as a guest on page load, so this call is what shows the menu without a refresh.
 - `src/zaban/static/profile.html` and `js/profile.js`: an older profile page with a name form and a password form. It still works, because `PUT /web/user/profile` accepts a name alone. It duplicates the header dialogs, so it may be removed later.
 - Database: `src/zaban/models.py` (`Guardian`), and `ADDED_COLUMNS` in `src/zaban/db.py`. The new columns are added to an existing database at startup.
 
@@ -85,12 +84,12 @@ The dialog controls use the `acc` prefix (`accName`, `accEmail`, `accAge`, `accG
 
 ## Layout and menu (current)
 
-- Adults only. Children created on the website were removed (`zaban.cli purge-children` deletes them with all their data). The learner PIN sign-in (`/v1/web/student/login`) is gone. Learning is for the adult, through `POST /v1/web/user/self`.
-- Guests see one «ورود» link to `/parent`. The header has no sign-in menu.
+- Adults only. There are no child accounts. Learning is for the adult, through `POST /v1/web/user/self`.
+- Guests see one «ورود» link to `/login`. The header has no sign-in menu.
 - Signed in, the public links are hidden and the header is one row: logo, greeting and the profile button.
 - The side menu (`nav#memberNav`, `app-side`, built by `initSiteHeader`) holds one level: آموزش من, درخواست‌ها, پلن و اعتبار, پرداخت‌ها. On the learner page, «آموزش من» has a collapsible list of the learning tabs. Each entry clicks the page's own tab, and the list follows the active tab.
 - On desktop the side menu is a column beside the content. On a phone (up to 760 px) it is a bar at the bottom, and the learning list opens above it.
-- Tenant API keys still manage students through `/v1/students` (`require_manager` accepts only API keys). The admin students list hides website children (`guardian_id` set).
+- Tenant API keys manage students through `/v1/students` (`require_manager` accepts only API keys). The admin students list shows every learner, with `kind` set to `self` for an adult learning for themself and `tenant` for a learner from a customer's API.
 
 ## Teacher and students
 

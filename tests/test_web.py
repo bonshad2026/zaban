@@ -20,7 +20,6 @@ STUDENT_USERNAME = os.environ["ZABAN_DEMO_STUDENT_USERNAME"]
 STUDENT_PASSWORD = os.environ["ZABAN_DEMO_STUDENT_PASSWORD"]
 OTHER_PARENT_PHONE = "09121112233"
 NEW_CHILD_USERNAME = "web-test-child"
-NEW_CHILD_PIN = "4821"
 
 
 def _demo_student_id() -> str:
@@ -79,15 +78,8 @@ def _buy_plan(client) -> None:
     assert decided.json()["status"] == "confirmed"
 
 
-def _student_login(client, pin: str = STUDENT_PASSWORD, username: str = STUDENT_USERNAME):
-    return client.post("/v1/web/student/login", json={"username": username, "password": pin})
-
-
-def _create_child(client, username: str, pin: str, age_band: str = "11-14"):
-    return client.post(
-        "/v1/students",
-        json={"display_name": "Ali", "age_band": age_band, "username": username, "password": pin},
-    )
+def _student_login(client, password: str = STUDENT_PASSWORD, username: str = STUDENT_USERNAME):
+    return client.post("/v1/web/student/login", json={"username": username, "password": password})
 
 
 def test_password_hash_round_trip():
@@ -107,7 +99,7 @@ def test_phone_numbers_are_normalized():
 
 
 def test_public_pages_are_served(client):
-    for path in ["/", "/student", "/parent"]:
+    for path in ["/", "/student", "/login"]:
         response = client.get(path)
         assert response.status_code == 200
         assert "text/html" in response.headers["content-type"]
@@ -117,8 +109,8 @@ def test_adult_signs_up_then_signs_in_with_password(client):
     phone = "09121230001"
     response = _sign_up(client, phone, "Sara")
     assert response.status_code == 201, response.text
-    assert response.json()["role"] == "parent"
-    assert client.get("/v1/web/me?role=parent").json()["role"] == "parent"
+    assert response.json()["role"] == "student"
+    assert client.get("/v1/web/me").json()["role"] == "student"
 
     fresh = TestClient(app)
     assert fresh.post("/v1/web/user/login", json={"phone": phone, "password": ADULT_PASSWORD}).status_code == 200
@@ -173,7 +165,7 @@ def test_forgotten_password_is_reset_with_a_code_and_older_sign_ins_end(client):
     new_password = "brand-new-pass-456"
     reset = client.post("/v1/web/user/password/reset", json={"phone": phone, "code": code, "password": new_password})
     assert reset.status_code == 200, reset.text
-    assert old.get("/v1/web/me?role=parent").status_code == 401
+    assert old.get("/v1/web/me").status_code == 401
     assert TestClient(app).post("/v1/web/user/login", json={"phone": phone, "password": new_password}).status_code == 200
 
 
@@ -202,8 +194,8 @@ def test_bad_phone_number_is_refused(client):
 
 
 def test_me_without_cookie_is_unauthorized(client):
-    assert client.get("/v1/web/me?role=student").status_code == 401
-    assert client.get("/v1/web/me?role=parent").status_code == 401
+    assert client.get("/v1/web/me").status_code == 401
+    assert client.get("/v1/web/me").status_code == 401
 
 
 def test_adult_without_a_plan_cannot_start_learning(client):
@@ -221,15 +213,15 @@ def test_failed_payment_does_not_activate_a_plan(client):
     paid = adult.post("/v1/web/billing/checkout", json={"plan_id": plans[0]["id"]}).json()
     failed = adult.post("/v1/web/billing/fake/confirm", json={"payment_id": paid["payment_id"], "ok": False})
     assert failed.json()["status"] == "failed"
-    assert adult.get("/v1/web/me?role=parent").json()["has_active_plan"] is False
+    assert adult.get("/v1/web/me").json()["has_active_plan"] is False
 
 
 def test_successful_payment_activates_the_plan_and_unlocks_learning(client):
     adult = TestClient(app)
     _adult_login(adult, "09129992222", "Paid Parent")
-    assert adult.get("/v1/web/me?role=parent").json()["has_active_plan"] is False
+    assert adult.get("/v1/web/me").json()["has_active_plan"] is False
     _buy_plan(adult)
-    assert adult.get("/v1/web/me?role=parent").json()["has_active_plan"] is True
+    assert adult.get("/v1/web/me").json()["has_active_plan"] is True
     status = adult.get("/v1/web/billing/status").json()
     assert status["has_active_plan"] is True
     assert status["payments"][0]["status"] == "confirmed"
@@ -254,12 +246,6 @@ def test_dev_sms_outbox_shows_codes_only_in_development(client):
     assert isinstance(response.json(), list)
 
 
-def test_adult_cannot_be_created_as_a_child(client):
-    _adult_login(client)
-    response = _create_child(client, "grown-up-child", "2468", age_band="adult")
-    assert response.status_code == 403
-
-
 def test_adult_can_learn_for_themself_and_guardian_cannot_see_it(client):
     adult = TestClient(app)
     assert _adult_login(adult, "09126667788", "Self Learner").status_code in (200, 201)
@@ -267,15 +253,19 @@ def test_adult_can_learn_for_themself_and_guardian_cannot_see_it(client):
     started = adult.post("/v1/web/user/self")
     assert started.status_code == 200, started.text
     self_id = started.json()["id"]
-    assert adult.get("/v1/web/me?role=parent").json()["has_own_learning"] is True
+    assert adult.get("/v1/web/me").json()["has_own_learning"] is True
 
     # The learner's own view works through the learner cookie.
-    own = adult.get(f"/v1/students/{self_id}/usage", headers={"X-Zaban-Role": "student"})
+    own = adult.get(f"/v1/students/{self_id}/usage")
     assert own.status_code == 200
-    # The same person as an adult sees the learner profile as not theirs to manage.
-    assert adult.get(f"/v1/students/{self_id}/usage", headers={"X-Zaban-Role": "parent"}).status_code == 404
+    # The website has one user: the adult is also the learner, so their own learning profile is theirs.
+    assert adult.get(f"/v1/students/{self_id}/usage").status_code == 200
+    # Someone else's learner profile is never visible.
+    other = TestClient(app)
+    _adult_login(other, "09126667799", "Other Adult")
+    assert other.get(f"/v1/students/{self_id}/usage").status_code == 404
     # Adults no longer manage students here. Only tenant API keys do.
-    assert adult.get("/v1/students", headers={"X-Zaban-Role": "parent"}).status_code == 403
+    assert adult.get("/v1/students").status_code == 403
 
 
 def test_self_learning_profile_is_created_once(client):
@@ -292,17 +282,17 @@ def test_logout_everywhere_ends_adult_and_learner_sessions(client):
     _adult_login(adult, "09128889900", "Logout Everywhere")
     _buy_plan(adult)
     adult.post("/v1/web/user/self")
-    assert adult.get("/v1/web/me?role=student").status_code == 200
+    assert adult.get("/v1/web/me").status_code == 200
 
     assert adult.post("/v1/web/user/logout-all").status_code == 200
-    assert adult.get("/v1/web/me?role=parent").status_code == 401
-    assert adult.get("/v1/web/me?role=student").status_code == 401
+    assert adult.get("/v1/web/me").status_code == 401
+    assert adult.get("/v1/web/me").status_code == 401
 
 
 def test_logout_clears_access(client):
     _student_login(client)
-    client.post("/v1/web/logout?role=student")
-    assert client.get("/v1/web/me?role=student").status_code == 401
+    client.post("/v1/web/logout")
+    assert client.get("/v1/web/me").status_code == 401
 
 
 def _complete_profile(student_id: str) -> None:
@@ -332,8 +322,8 @@ def test_adult_signs_in_with_the_sms_code_and_older_sign_ins_end(client):
     fresh = TestClient(app)
     signed_in = fresh.post("/v1/web/user/otp/login", json={"phone": phone, "code": code})
     assert signed_in.status_code == 200, signed_in.text
-    assert fresh.get("/v1/web/me?role=parent").status_code == 200
-    assert old.get("/v1/web/me?role=parent").status_code == 401
+    assert fresh.get("/v1/web/me").status_code == 200
+    assert old.get("/v1/web/me").status_code == 401
     # A code works once. A second use is refused.
     assert TestClient(app).post("/v1/web/user/otp/login", json={"phone": phone, "code": code}).status_code == 401
 

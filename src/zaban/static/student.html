@@ -107,7 +107,13 @@
           </div>
           <p class="path-counts muted"><span id="pathBefore"></span><span id="pathAfter"></span></p>
 
-          <article class="lesson-detail" id="lessonDetail" aria-live="polite"></article>
+          <dialog id="lessonDialog" class="account-dialog account-dialog-wide" aria-labelledby="lessonDialogTitle">
+            <h2 id="lessonDialogTitle" data-fa="جزئیات جلسه" data-en="Lesson details">جزئیات جلسه</h2>
+            <article class="lesson-detail" id="lessonDetail" aria-live="polite"></article>
+            <div class="dialog-actions">
+              <button type="button" class="ghost" id="lessonDialogClose" data-fa="بستن" data-en="Close">بستن</button>
+            </div>
+          </dialog>
         </div>
       </section>
 

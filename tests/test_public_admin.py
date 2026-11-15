@@ -25,13 +25,13 @@ def test_public_pages_are_served_without_sign_in(client):
 def test_consult_request_needs_no_sign_in(client):
     response = client.post(
         "/v1/public/consult",
-        json={"name": "Parisa", "last_name": "Karimi", "subject": "Kids class", "contact_permission": True, "phone": "+98 912 555 0101", "message": "How does it work?", "preferred_time": "evenings"},
+        json={"name": "Parisa", "last_name": "Karimi", "subject": "Adult class", "contact_permission": True, "phone": "+98 912 555 0101", "message": "How does it work?", "preferred_time": "evenings"},
     )
     assert response.status_code == 201, response.text
 
 
 def test_consult_request_rejects_a_bad_number(client):
-    response = client.post("/v1/public/consult", json={"name": "Parisa", "last_name": "Karimi", "subject": "Kids class", "contact_permission": True, "phone": "12345678"})
+    response = client.post("/v1/public/consult", json={"name": "Parisa", "last_name": "Karimi", "subject": "Adult class", "contact_permission": True, "phone": "12345678"})
     assert response.status_code == 400
 
 
@@ -72,7 +72,7 @@ def test_a_paid_plan_starts_at_once_and_the_admin_can_still_decide_a_pending_pay
     paid = adult.post("/v1/web/billing/checkout", json={"plan_id": plans[0]["id"]}).json()
     # The gateway confirms the money, so the plan starts at once without an administrator.
     adult.post("/v1/web/billing/fake/confirm", json={"payment_id": paid["payment_id"], "ok": True})
-    assert adult.get("/v1/web/me?role=parent").json()["has_active_plan"] is True
+    assert adult.get("/v1/web/me").json()["has_active_plan"] is True
 
     # A payment that is still waiting for a decision can be settled by the administrator.
     second = adult.post("/v1/web/billing/checkout", json={"plan_id": plans[0]["id"]})

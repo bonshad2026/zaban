@@ -51,10 +51,6 @@
     return Z.el(tag, className, text);
   }
 
-  function isRtl() {
-    return document.documentElement.dir === "rtl";
-  }
-
   function statusText(status) {
     if (status === "done") return Z.pick("انجام شد", "Done");
     if (status === "current") return Z.pick("در این جلسه هستی", "You are here");
@@ -90,10 +86,28 @@
     $("pathNext").setAttribute("aria-label", Z.pick("جلسه‌های بعدی", "Later lessons"));
   }
 
+  // The path shows a window of lessons: 9 on a computer, 5 on a phone. The window is centred on `center`,
+  // which starts at the current lesson. The arrows move `center` one lesson at a time.
+  let center = null;
+  const phoneQuery = window.matchMedia("(max-width: 560px)");
+
+  function windowSize() {
+    return phoneQuery.matches ? 5 : 9;
+  }
+
+  function windowRange() {
+    const total = progress.lessons.length;
+    const size = Math.min(windowSize(), total);
+    const start = Math.min(Math.max(0, center - Math.floor(size / 2)), total - size);
+    return [start, start + size];
+  }
+
   function renderPath() {
     const track = $("pathTrack");
     const lessons = progress.lessons;
-    track.replaceChildren(...lessons.map((lesson, index) => {
+    const [start, end] = windowRange();
+    track.replaceChildren(...lessons.slice(start, end).map((lesson, offset) => {
+      const index = start + offset;
       const next = lessons[index + 1];
       const linked = lesson.done && next && next.done ? " link-done" : "";
       const step = el("div", `path-step ${lesson.status}${linked}`);
@@ -105,11 +119,15 @@
       step.append(node, el("span", "path-label", lesson.title));
       return step;
     }));
+    $("pathPrev").disabled = center <= 0;
+    $("pathNext").disabled = center >= lessons.length - 1;
   }
 
-  function scrollPathTo(number) {
-    const node = $("pathTrack").querySelectorAll(".path-node")[number - 1];
-    if (node) node.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+  // Moves the window by one lesson. Negative goes back, positive goes forward.
+  function moveCenter(delta) {
+    const last = progress.lessons.length - 1;
+    center = Math.min(Math.max(0, center + delta), last);
+    renderPath();
   }
 
   function miniStat(label, value) {
@@ -147,7 +165,6 @@
     const stats = el("div", "lesson-stats");
     stats.append(
       miniStat(Z.pick("دفعات", "Times"), String(lesson.visits)),
-      miniStat(Z.pick("میانگین نمره", "Average score"), lesson.average === null ? "—" : String(lesson.average)),
       miniStat(Z.pick("میانگین مدت", "Average time"), lesson.average_minutes === null ? "—" : Z.pick(`${lesson.average_minutes} دقیقه`, `${lesson.average_minutes} min`)),
     );
     box.replaceChildren(head, el("h3", "", lesson.title));
@@ -174,20 +191,17 @@
     }
   }
 
+  // Clicking a lesson on the path opens its details in a dialog.
   function pick(number) {
     picked = number;
     $("pathTrack").querySelectorAll(".path-node").forEach((node, index) => {
       node.setAttribute("aria-pressed", index + 1 === number ? "true" : "false");
     });
     renderDetail();
+    $("lessonDialog").showModal();
   }
 
   // Scrolls the path by most of a screen. In a right-to-left page the later lessons are on the left.
-  function scrollPath(forward) {
-    const track = $("pathTrack");
-    const direction = forward ? 1 : -1;
-    track.scrollBy({ left: direction * (isRtl() ? -1 : 1) * track.clientWidth * 0.8, behavior: "smooth" });
-  }
 
   async function loadProgress() {
     try {
@@ -203,10 +217,11 @@
         return;
       }
       if (picked === null) picked = progress.current;
+      if (center === null) center = picked;
       renderSummary();
       renderPath();
-      renderDetail();
-      scrollPathTo(picked);
+      // An open lesson dialog shows the fresh data, for example after a repeat is asked for.
+      if ($("lessonDialog").open) renderDetail();
     } catch (err) {
       Z.showError($("progressNotice"), err.message);
     }
@@ -511,11 +526,15 @@
     $("helpFilterApply").addEventListener("click", applyHelpFilters);
     $("helpFilterClear").addEventListener("click", clearHelpFilters);
     $("helpFilterClose").addEventListener("click", () => $("helpFilterDialog").close());
+    $("lessonDialogClose").addEventListener("click", () => $("lessonDialog").close());
     $("helpSearch").addEventListener("keydown", (event) => {
       if (event.key === "Enter") loadHelp();
     });
-    $("pathPrev").addEventListener("click", () => scrollPath(false));
-    $("pathNext").addEventListener("click", () => scrollPath(true));
+    $("pathPrev").addEventListener("click", () => moveCenter(-1));
+    $("pathNext").addEventListener("click", () => moveCenter(1));
+    phoneQuery.addEventListener("change", () => {
+      if (progress && progress.program) renderPath();
+    });
     $("testStart").addEventListener("click", startTest);
     $("testSend").addEventListener("click", sendAnswer);
     $("testFinish").addEventListener("click", finishTest);

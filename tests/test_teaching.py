@@ -47,7 +47,7 @@ def test_learner_chooses_a_teacher_by_code_and_the_teacher_sees_only_that_learne
 
     students = teacher.get("/v1/web/user/students").json()
     assert [s["name"] for s in students] == ["Ali Learner"]
-    assert teacher.get("/v1/web/me?role=parent").json()["students"] == 1
+    assert teacher.get("/v1/web/me").json()["students"] == 1
 
     # The teacher can open this learner's progress and report, and nobody else can.
     learner_id = students[0]["id"]

@@ -9,7 +9,7 @@ PARENT_PASSWORD = os.environ["ZABAN_DEMO_PARENT_PASSWORD"]
 
 
 def learner_login(client) -> None:
-    # The adult signs in, then starts learning for themself. That sets the learner cookie.
+    # The adult signs in, then starts learning for themself. The one website cookie then serves the learner pages.
     assert client.post("/v1/web/user/login", json={"phone": PARENT_PHONE, "password": PARENT_PASSWORD}).status_code == 200
     assert client.post("/v1/web/user/self").status_code == 200
 

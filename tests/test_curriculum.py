@@ -3,8 +3,16 @@ import uuid
 
 from zaban.curriculum_data import TOPICS
 from zaban.db import SessionLocal
-from zaban.models import CurriculumTopic, Student, Tenant, TutorSession, utcnow
-from zaban.services.curriculum import choose_topic, record_lesson_topic, session_topic, topic_note, variant_for
+from zaban.models import CurriculumTopic, CurriculumVariant, LessonTopic, Student, Tenant, TutorSession, utcnow
+from zaban.services.curriculum import (
+    choose_topic,
+    create_variant,
+    record_lesson_topic,
+    save_variant_text,
+    session_topic,
+    topic_note,
+    variant_for,
+)
 from zaban.services.sessions import build_system_prompt
 
 ADMIN_PASSWORD = os.environ["ADMIN_PASSWORD"]
@@ -29,84 +37,111 @@ def _new_student(age_band: str, level: str) -> str:
         return student.id
 
 
+def _ensure_text(db, topic_id: str, band: str, level: str, opener: str = "Hi!") -> str:
+    # Writes a text for one topic, band and level, unless it exists. Returns its id.
+    variant = variant_for(db, topic_id, band, level)
+    if variant is None:
+        variant = create_variant(db, topic_id, band, level)
+        save_variant_text(variant, opener, ["I'm…"], "test style")
+        db.commit()
+    return variant.id
+
+
+def _drop_texts(db, variant_ids: list[str]) -> None:
+    # Removes the texts a test wrote, and the lesson records that use them.
+    db.query(LessonTopic).filter(LessonTopic.variant_id.in_(variant_ids)).delete(synchronize_session=False)
+    db.query(CurriculumVariant).filter(CurriculumVariant.id.in_(variant_ids)).delete(synchronize_session=False)
+    db.commit()
+
+
 def test_curriculum_needs_admin_sign_in(client):
     assert client.get("/v1/admin/api/curriculum").status_code == 401
 
 
-def test_catalog_is_seeded_with_every_topic_and_the_written_versions(client):
+def test_catalog_lists_every_topic_with_its_levels_and_slots(client):
     _admin(client)
     catalog = client.get("/v1/admin/api/curriculum").json()
 
     assert len(catalog["topics"]) == len(TOPICS)
     assert catalog["levels"] == ["A1", "A2", "B1", "B2", "C1", "C2"]
     intro = next(t for t in catalog["topics"] if t["id"] == "INTRO")
-    written = {slot["variant_id"] for slot in intro["slots"] if slot["written"]}
-    assert {"INTRO.K.A1", "INTRO.J.A1", "INTRO.T.A2", "INTRO.S.B1", "INTRO.A.B2", "INTRO.A.C1", "INTRO.A.C2"} <= written
-    assert any(v["id"] == "INTRO.A.C2" for v in catalog["variants"])
+    assert intro["slots"] and all("variant_id" in slot for slot in intro["slots"])
 
 
 def test_a_saved_variant_bumps_the_version_and_reaches_the_prompt(client):
     _admin(client)
-    before = client.get("/v1/admin/api/curriculum").json()["version"]
-    original = next(v for v in client.get("/v1/admin/api/curriculum").json()["variants"] if v["id"] == "INTRO.J.A1")
-
-    saved = client.put(
-        "/v1/admin/api/curriculum/variants/INTRO.J.A1",
-        json={"opener": "Hello there, friend!", "phrases": ["I'm…", "  ", "I like…"], "style": "test style"},
-    )
-    assert saved.status_code == 200, saved.text
-    assert saved.json()["version"] == before + 1
-
     with SessionLocal() as db:
-        topic = db.get(CurriculumTopic, "INTRO")
-        variant = variant_for(db, "INTRO", "J", "A1")
-        note = topic_note(topic, variant)
-        assert variant.phrases == ["I'm…", "I like…"]
-    assert "Hello there, friend!" in note
-    assert "Version for this learner: INTRO.J.A1" in note
+        _ensure_text(db, "INTRO", "A", "A1", opener="Hi, my name is…")
+        original = variant_for(db, "INTRO", "A", "A1")
+        original_text = (original.opener, list(original.phrases), original.style)
+    before = client.get("/v1/admin/api/curriculum").json()["version"]
 
-    restored = client.put(
-        "/v1/admin/api/curriculum/variants/INTRO.J.A1",
-        json={"opener": original["opener"], "phrases": original["phrases"], "style": original["style"]},
-    )
-    assert restored.status_code == 200
+    try:
+        saved = client.put(
+            "/v1/admin/api/curriculum/variants/INTRO.A.A1",
+            json={"opener": "Hello there, friend!", "phrases": ["I'm…", "  ", "I like…"], "style": "test style"},
+        )
+        assert saved.status_code == 200, saved.text
+        assert saved.json()["version"] == before + 1
+
+        with SessionLocal() as db:
+            topic = db.get(CurriculumTopic, "INTRO")
+            variant = variant_for(db, "INTRO", "A", "A1")
+            note = topic_note(topic, variant)
+            assert variant.phrases == ["I'm…", "I like…"]
+        assert "Hello there, friend!" in note
+        assert "Version for this learner: INTRO.A.A1" in note
+    finally:
+        with SessionLocal() as db:
+            variant = variant_for(db, "INTRO", "A", "A1")
+            variant.opener, variant.phrases, variant.style = original_text[0], original_text[1], original_text[2]
+            _drop_texts(db, ["INTRO.A.A1"])
 
 
 def test_a_new_version_must_fit_the_topic(client):
     _admin(client)
     outside = client.post(
         "/v1/admin/api/curriculum/variants",
-        json={"topic_id": "NEWS_EVENTS", "band": "K", "level": "B1", "opener": "x", "phrases": [], "style": ""},
+        json={"topic_id": "NEWS_EVENTS", "band": "A", "level": "A1", "opener": "x", "phrases": [], "style": ""},
     )
     assert outside.status_code == 400
 
-    duplicate = client.post(
-        "/v1/admin/api/curriculum/variants",
-        json={"topic_id": "INTRO", "band": "A", "level": "B2", "opener": "x", "phrases": [], "style": ""},
-    )
-    assert duplicate.status_code == 409
-
-    created = client.post(
-        "/v1/admin/api/curriculum/variants",
-        json={"topic_id": "PETS", "band": "K", "level": "A1", "opener": "I have a pet.", "phrases": ["I have a…"], "style": "picture game"},
-    )
-    assert created.status_code == 201, created.text
-    assert created.json()["id"] == "PETS.K.A1"
-
-
-def test_topic_choice_respects_age_band_and_level(client):
-    student_id = _new_student("11-14", "A2")
     with SessionLocal() as db:
-        student = db.get(Student, student_id)
-        topic, variant = choose_topic(db, student)
-        assert (topic.id, variant.id) == ("INTRO", "INTRO.T.A2")
+        _ensure_text(db, "INTRO", "A", "B2")
+    try:
+        duplicate = client.post(
+            "/v1/admin/api/curriculum/variants",
+            json={"topic_id": "INTRO", "band": "A", "level": "B2", "opener": "x", "phrases": [], "style": ""},
+        )
+        assert duplicate.status_code == 409
 
-        assert choose_topic(db, student, "NEWS_EVENTS") is None  # adults and teens only
-        assert choose_topic(db, student, "INTRO")[1].id == "INTRO.T.A2"
+        created = client.post(
+            "/v1/admin/api/curriculum/variants",
+            json={"topic_id": "GREET", "band": "A", "level": "A1", "opener": "Hi, how are you?", "phrases": ["I'm fine, thanks."], "style": "everyday greeting"},
+        )
+        assert created.status_code == 201, created.text
+        assert created.json()["id"] == "GREET.A.A1"
+    finally:
+        with SessionLocal() as db:
+            _drop_texts(db, ["INTRO.A.B2", "GREET.A.A1"])
 
 
-def test_recently_used_topics_are_skipped_when_another_fits(client):
-    student_id = _new_student("4-6", "A1")
+def test_the_path_is_the_same_for_every_age_and_level(client):
+    # Topics do not depend on the learner's age or level. Only the text does.
+    young = _new_student("adult", "A1")
+    adult = _new_student("adult", "C2")
+    with SessionLocal() as db:
+        first_for_young = choose_topic(db, db.get(Student, young))
+        first_for_adult = choose_topic(db, db.get(Student, adult))
+        assert first_for_young[0].id == first_for_adult[0].id == "INTRO"
+        # No text is written yet, so the lesson starts with the topic's title and goal only.
+        assert first_for_young[1] is None and first_for_adult[1] is None
+        assert choose_topic(db, db.get(Student, young), "NEWS_EVENTS")[0].id == "NEWS_EVENTS"
+        assert choose_topic(db, db.get(Student, young), "NOT_A_TOPIC") is None
+
+
+def test_a_finished_topic_is_skipped_for_the_next_lesson(client):
+    student_id = _new_student("adult", "A1")
     with SessionLocal() as db:
         student = db.get(Student, student_id)
         first_topic, first_variant = choose_topic(db, student)
@@ -119,17 +154,24 @@ def test_recently_used_topics_are_skipped_when_another_fits(client):
         record_lesson_topic(db, lesson.id, first_topic, first_variant)
         db.commit()
 
-        # A topic used in a recent lesson comes after one that is new to this learner.
         assert choose_topic(db, student)[0].id != "INTRO"
         recorded = session_topic(db, lesson.id)
-        assert recorded[0].id == "INTRO" and recorded[1].id == "INTRO.K.A1"
+        assert recorded[0].id == "INTRO" and recorded[1] is None
 
 
-def test_lesson_prompt_includes_the_topic_note():
-    student_id = _new_student("15-18", "B1")
+def test_lesson_prompt_includes_the_topic_note_with_or_without_text():
+    student_id = _new_student("adult", "B1")
     with SessionLocal() as db:
         student = db.get(Student, student_id)
         topic, variant = choose_topic(db, student)
-        prompt = build_system_prompt(student, None, "main_practice", 30, "", None, "en-US", topic_note(topic, variant))
-    assert "Today's topic: معرفی خود" in prompt
-    assert "INTRO.S.B1" in prompt
+        without_text = topic_note(topic, variant)
+        prompt = build_system_prompt(student, None, "main_practice", 30, "", None, "en-US", without_text)
+        assert "Today's topic: معرفی خود" in prompt
+        assert "Version for this learner" not in prompt
+
+        text_id = _ensure_text(db, "INTRO", "A", "B1")
+        try:
+            prompt = build_system_prompt(student, None, "main_practice", 30, "", None, "en-US", topic_note(topic, variant_for(db, "INTRO", "A", "B1")))
+            assert "INTRO.A.B1" in prompt
+        finally:
+            _drop_texts(db, [text_id])

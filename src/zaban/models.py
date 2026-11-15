@@ -30,8 +30,7 @@ class Tenant(Base):
 
 
 class Guardian(Base):
-    # An adult account, signed in with a mobile number and an SMS code. It can manage children
-    # (guardian_id on Student) and can also learn for itself (self_owner_id on Student).
+    # An adult account, signed in with a mobile number and a password. The adult can learn for themself (self_owner_id on Student).
     __tablename__ = "guardians"
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
@@ -67,8 +66,6 @@ class Guardian(Base):
     # Bumped on logout-everywhere and password reset, so older sign-in cookies stop working.
     session_version: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
-
-    students: Mapped[list["Student"]] = relationship(back_populates="guardian", foreign_keys="Student.guardian_id")
 
 
 class ConsultRequest(Base):
@@ -137,9 +134,8 @@ class OtpCode(Base):
 
 
 class Student(Base):
-    # A learner. Two kinds exist:
-    # - managed: a child under 18, created by a guardian (guardian_id), signs in with username and PIN.
-    # - self: an adult who learns for themself (self_owner_id). Only that adult can see their reports.
+    # A learner. Every learner is an adult who learns for themself (self_owner_id). Only that adult can see their reports.
+    # Learners created through a tenant API key have no self_owner_id; the tenant (customer) owns them.
     __tablename__ = "students"
     __table_args__ = (UniqueConstraint("tenant_id", "external_user_id"),)
 
@@ -151,29 +147,27 @@ class Student(Base):
     display_name: Mapped[str] = mapped_column(String(120), default="")
     username: Mapped[str | None] = mapped_column(String(60), unique=True, nullable=True)
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    guardian_id: Mapped[str | None] = mapped_column(ForeignKey("guardians.id"), index=True, nullable=True)
     self_owner_id: Mapped[str | None] = mapped_column(ForeignKey("guardians.id"), index=True, nullable=True)
-    age_band: Mapped[str] = mapped_column(String(20))
+    age_band: Mapped[str] = mapped_column(String(20), default="adult")
     cefr_level: Mapped[str | None] = mapped_column(String(4), nullable=True)
     # One level per skill. Each starts at A1 and is changed by the learner or by the level test of that skill.
     level_listening: Mapped[str] = mapped_column(String(4), default="A1")
     level_reading: Mapped[str] = mapped_column(String(4), default="A1")
     level_grammar: Mapped[str] = mapped_column(String(4), default="A1")
     level_speaking_writing: Mapped[str] = mapped_column(String(4), default="A1")
-    # PIN login protection: after repeated wrong PINs the login is paused for a while.
+    # Password login protection: after repeated wrong passwords the login is paused for a while.
     failed_logins: Mapped[int] = mapped_column(Integer, default=0)
     locked_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     session_version: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
-    guardian: Mapped[Guardian | None] = relationship(back_populates="students", foreign_keys=[guardian_id])
     consents: Mapped[list["Consent"]] = relationship(back_populates="student", cascade="all, delete-orphan")
     plans: Mapped[list["Plan"]] = relationship(back_populates="student", cascade="all, delete-orphan")
     sessions: Mapped[list["TutorSession"]] = relationship(back_populates="student", cascade="all, delete-orphan")
 
 
 class TutorProfile(Base):
-    # What the lesson prompt knows about one learner: interests and motivation (from the parent or sign-up form),
+    # What the lesson prompt knows about one learner: interests and motivation (from the sign-up form),
     # and notes an administrator writes. They shape topics and tone but never override the safety rules.
     # Kept in its own table, so an existing database gets it from create_all.
     __tablename__ = "tutor_profiles"
@@ -243,7 +237,7 @@ class TutorSession(Base):
     ends_at: Mapped[datetime] = mapped_column(DateTime)
     ended_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     score: Mapped[float | None] = mapped_column(Float, nullable=True)
-    # The short evaluation written after the lesson, shown in the learner progress and the parent report.
+    # The short evaluation written after the lesson, shown in the learner progress and the report.
     evaluation: Mapped[str | None] = mapped_column(Text, nullable=True)
     # The system prompt built when the lesson started: admin guidance, database facts, the learner and the lesson item.
     start_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -294,7 +288,7 @@ class VoiceSample(Base):
 
 
 class CurriculumTopic(Base):
-    # One conversation topic. Levels run from first_level to last_level, and bands lists the age band codes it fits (K, J, T, S, A).
+    # One conversation topic. Levels run from first_level to last_level, and bands lists the age band codes it fits (only A, adults, now).
     __tablename__ = "curriculum_topics"
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True)
@@ -339,13 +333,14 @@ class LessonTopic(Base):
 
     session_id: Mapped[str] = mapped_column(ForeignKey("sessions.id"), primary_key=True)
     topic_id: Mapped[str] = mapped_column(ForeignKey("curriculum_topics.id"), index=True)
-    variant_id: Mapped[str] = mapped_column(ForeignKey("curriculum_variants.id"))
+    # Empty when the topic had no written text for the learner's age band and level.
+    variant_id: Mapped[str | None] = mapped_column(ForeignKey("curriculum_variants.id"), nullable=True)
     catalog_version: Mapped[int] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
 class StudentGoal(Base):
-    # The goal a parent chose for a child, from the fixed list. Used to pick the learning program.
+    # The goal a learner chose, from the fixed list. Used to pick the learning program.
     __tablename__ = "student_goals"
 
     student_id: Mapped[str] = mapped_column(ForeignKey("students.id"), primary_key=True)
@@ -384,7 +379,7 @@ class HelpContent(Base):
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
     title: Mapped[str] = mapped_column(String(160))
     category: Mapped[str] = mapped_column(String(20))  # podcast, story, animation, video, sample, other
-    age_band: Mapped[str] = mapped_column(String(1))  # K, J, T, S, A (same codes as the curriculum)
+    age_band: Mapped[str] = mapped_column(String(1))  # A only (adults), the same code as the curriculum
     level: Mapped[str] = mapped_column(String(2))
     gender: Mapped[str | None] = mapped_column(String(10), nullable=True)  # empty means for everyone
     interests: Mapped[str] = mapped_column(String(200), default="")  # comma-separated tags
@@ -455,13 +450,12 @@ class SelfTestMessage(Base):
 
 
 class LearnerDetails(Base):
-    # Personal facts about a learner that shape the lesson prompt. Filled by the learner, or by the parent for a child.
+    # Personal facts about a learner that shape the lesson prompt. Filled in by the learner.
     __tablename__ = "learner_details"
 
     student_id: Mapped[str] = mapped_column(ForeignKey("students.id"), primary_key=True)
     age: Mapped[int | None] = mapped_column(Integer, nullable=True)
     gender: Mapped[str | None] = mapped_column(String(10), nullable=True)
-    grade: Mapped[str | None] = mapped_column(String(40), nullable=True)  # school grade, free text
     attributes: Mapped[str] = mapped_column(Text, default="")  # personality and what they like in a teacher
     conversation_style: Mapped[str | None] = mapped_column(String(20), nullable=True)  # chat, story, role_play, quiz, mixed
     response_style: Mapped[str | None] = mapped_column(String(20), nullable=True)  # gentle, direct, playful, strict

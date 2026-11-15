@@ -46,6 +46,16 @@ class Base(DeclarativeBase):
     pass
 
 
+def allow_lessons_without_text() -> None:
+    # A lesson on a topic with no written text has no variant. Databases made before that have the column as NOT NULL.
+    if engine.dialect.name != "postgresql" or not inspect(engine).has_table("lesson_topics"):
+        return
+    column = next(c for c in inspect(engine).get_columns("lesson_topics") if c["name"] == "variant_id")
+    if not column["nullable"]:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE lesson_topics ALTER COLUMN variant_id DROP NOT NULL"))
+
+
 def add_missing_columns() -> None:
     inspector = inspect(engine)
     with engine.begin() as conn:

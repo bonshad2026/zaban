@@ -302,14 +302,13 @@ def delete_plan(plan_id: str, db: DBSession = Depends(get_db)) -> dict:
 
 @router.get("/students", dependencies=[Depends(require_admin)])
 def list_students(db: DBSession = Depends(get_db)) -> list[dict]:
-    # Children created on the website are not listed. Self learners and tenant API students are.
-    rows = db.query(Student).filter(Student.guardian_id.is_(None)).order_by(Student.created_at.desc()).limit(300).all()
+    rows = db.query(Student).order_by(Student.created_at.desc()).limit(300).all()
     profiles = {p.student_id: p for p in db.query(TutorProfile).all()}
     return [
         {
             "id": s.id,
             "name": s.display_name,
-            "kind": "self" if s.self_owner_id else "child",
+            "kind": "self" if s.self_owner_id else "tenant",
             "username": s.username,
             "age_band": s.age_band,
             "cefr_level": s.cefr_level,
@@ -438,7 +437,7 @@ class VariantSave(BaseModel):
 
 class VariantCreate(VariantSave):
     topic_id: str = Field(min_length=1, max_length=40)
-    band: Literal["K", "J", "T", "S", "A"]
+    band: Literal["A"]
     level: Literal["A1", "A2", "B1", "B2", "C1", "C2"]
 
 
@@ -638,7 +637,7 @@ def add_help_content(body: HelpContentCreate, db: DBSession = Depends(get_db)) -
 
 class HelpClassification(BaseModel):
     # The learner rules use the age band and the level, so they are required. Gender empty means for everyone.
-    age_band: Literal["K", "J", "T", "S", "A"]
+    age_band: Literal["A"]
     level: Literal["A1", "A2", "B1", "B2", "C1", "C2"]
     gender: Literal["female", "male"] | None = None
     tag_ids: list[str] = Field(default_factory=list, max_length=50)

@@ -7,7 +7,7 @@ from zaban.services.metering import record_usage
 from zaban.services.self_test import split_score
 
 EVALUATION_INSTRUCTIONS = (
-    "Write a short evaluation of this English lesson for the parent, in English, in at most five sentences. "
+    "Write a short evaluation of this English lesson for the learner, in English, in at most five sentences. "
     "Cover what went well, one thing to improve, and one task for next time. Do not repeat any personal details. "
     "Then add one last line exactly in this form: SCORE: <a whole number from 0 to 100>, "
     "judging how well the student did in this lesson for their level."

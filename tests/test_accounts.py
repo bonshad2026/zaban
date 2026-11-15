@@ -9,7 +9,7 @@ DEMO = {"X-API-Key": os.environ["ZABAN_DEMO_API_KEY"]}
 
 
 def test_placement_accepts_a_level_picked_by_a_parent(client):
-    created = client.post("/v1/students", headers=DEMO, json={"age_band": "11-14", "display_name": "Level Kid"})
+    created = client.post("/v1/students", headers=DEMO, json={"age_band": "adult", "display_name": "Level Learner"})
     student_id = created.json()["id"]
 
     placed = client.post(f"/v1/students/{student_id}/placement", headers=DEMO, json={"level": "B1"})
@@ -18,7 +18,7 @@ def test_placement_accepts_a_level_picked_by_a_parent(client):
 
 
 def test_placement_needs_exactly_one_of_level_or_score(client):
-    created = client.post("/v1/students", headers=DEMO, json={"age_band": "11-14", "display_name": "Both"})
+    created = client.post("/v1/students", headers=DEMO, json={"age_band": "adult", "display_name": "Both"})
     student_id = created.json()["id"]
 
     assert client.post(f"/v1/students/{student_id}/placement", headers=DEMO, json={}).status_code == 422
@@ -36,7 +36,7 @@ def test_learner_chooses_an_accent_and_the_lesson_prompt_uses_it(client):
     created = client.post(
         "/v1/students",
         headers=DEMO,
-        json={"age_band": "11-14", "display_name": "Accent Kid", "username": "accent-kid-1", "password": "5555"},
+        json={"age_band": "adult", "display_name": "Accent Learner", "username": "accent-learner-1", "password": "5555"},
     )
     assert created.status_code == 201, created.text
     learner = TestClient(app)
@@ -47,7 +47,7 @@ def test_learner_chooses_an_accent_and_the_lesson_prompt_uses_it(client):
     assert learner.get("/v1/web/student/accent").json() == {"accent": "en-GB"}
     assert learner.post("/v1/web/student/accent", json={"accent": "fr-FR"}).status_code == 422
 
-    student_id = learner.get("/v1/web/me?role=student").json()["id"]
+    student_id = learner.get("/v1/web/me").json()["id"]
     with SessionLocal() as db:
         assert get_accent(db, student_id) == "en-GB"
         prompt = build_system_prompt(db.get(Student, student_id), None, "warm_up", 10, "", None, "en-GB")
@@ -76,7 +76,7 @@ def test_admin_uploads_a_named_voice_sample_and_learner_can_play_it(client):
     created = client.post(
         "/v1/students",
         headers=DEMO,
-        json={"age_band": "11-14", "display_name": "Sample Kid", "username": "sample-kid-1", "password": "6666"},
+        json={"age_band": "adult", "display_name": "Sample Learner", "username": "sample-learner-1", "password": "6666"},
     )
     assert created.status_code == 201, created.text
     learner = TestClient(app)

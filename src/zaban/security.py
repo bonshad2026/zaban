@@ -10,9 +10,9 @@ from zaban.config import settings
 from zaban.db import get_db
 from zaban.models import Guardian, Student, Tenant, WebSession, utcnow
 
-# One cookie per role, so an adult and a child can be signed in on the same computer at the same time.
-# "parent" is the adult account (guardian and/or self-learner). Its sign-in is by mobile number and SMS code.
-WEB_COOKIE_NAMES = {"student": "zaban_student", "parent": "zaban_parent"}
+# One cookie for the website. Every website user is a student; the signed-in person is an adult account (role "guardian"),
+# and their own learning profile is found from it. Sign-in is by mobile number and password, or a one-time SMS code.
+WEB_COOKIE = "zaban_student"
 
 _token_serializer = URLSafeTimedSerializer(settings.secret_key, salt="student-token")
 _web_serializer = URLSafeTimedSerializer(settings.secret_key, salt="web-session")
@@ -71,7 +71,7 @@ def _check_tenant(tenant: Tenant | None) -> Tenant:
 @dataclass(frozen=True)
 class Auth:
     tenant: Tenant
-    # Exactly one of these is set for student and parent callers. Tenant API keys leave both as None.
+    # Exactly one of these is set for a learner (Bearer token) or a website user. Tenant API keys leave both as None.
     student_id: str | None = None
     guardian_id: str | None = None
 
@@ -80,8 +80,6 @@ def get_auth(
     x_api_key: str | None = Header(default=None),
     authorization: str | None = Header(default=None),
     zaban_student: str | None = Cookie(default=None),
-    zaban_parent: str | None = Cookie(default=None),
-    x_zaban_role: str | None = Header(default=None),
     db: Session = Depends(get_db),
 ) -> Auth:
     if x_api_key:
@@ -93,21 +91,12 @@ def get_auth(
         tenant = _check_tenant(db.get(Tenant, payload["tid"]))
         return Auth(tenant=tenant, student_id=payload["sid"])
 
-    # The page says which role it is acting as, so a shared computer never mixes the two sessions up.
-    cookies = (zaban_parent, zaban_student) if x_zaban_role == "parent" else (zaban_student, zaban_parent)
-    for token in cookies:
-        payload = read_web_session(token) if token else None
-        if not payload:
-            continue
+    payload = read_web_session(zaban_student) if zaban_student else None
+    if payload and payload["role"] == "guardian":
         tenant = _check_tenant(db.get(Tenant, payload["tid"]))
-        if payload["role"] == "student":
-            student = db.get(Student, payload["sid"])
-            if session_is_current(payload, student, db):
-                return Auth(tenant=tenant, student_id=student.id)
-        if payload["role"] == "guardian":
-            guardian = db.get(Guardian, payload["sid"])
-            if session_is_current(payload, guardian, db):
-                return Auth(tenant=tenant, guardian_id=guardian.id)
+        guardian = db.get(Guardian, payload["sid"])
+        if session_is_current(payload, guardian, db):
+            return Auth(tenant=tenant, guardian_id=guardian.id)
 
     raise HTTPException(status_code=401, detail="Please sign in")
 
@@ -131,6 +120,7 @@ def get_student_for_auth(db: Session, auth: Auth, student_id: str) -> Student:
         raise HTTPException(status_code=404, detail="Student not found")
     if auth.student_id is not None and auth.student_id != student.id:
         raise HTTPException(status_code=403, detail="Not allowed for this student")
-    if auth.guardian_id is not None and student.guardian_id != auth.guardian_id:
+    if auth.guardian_id is not None and student.self_owner_id != auth.guardian_id:
+        # A website user only sees their own learning profile.
         raise HTTPException(status_code=404, detail="Student not found")
     return student

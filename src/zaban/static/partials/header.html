@@ -30,7 +30,7 @@
     </div>
     <!-- The script in common.js replaces the guest buttons below when someone is signed in. -->
     <div class="site-actions" id="siteActions" data-state="guest">
-      <a class="pill" href="/parent" data-fa="ورود" data-en="Sign in">ورود</a>
+      <a class="pill" href="/login" data-fa="ورود" data-en="Sign in">ورود</a>
       <a class="pill gold" href="/signup" data-fa="ثبت‌نام" data-en="Sign up">ثبت‌نام</a>
     </div>
     <button class="menu-toggle" id="menuToggle" type="button" aria-expanded="false" aria-controls="siteDrawer" aria-label="منو">
@@ -85,8 +85,6 @@
       <label for="accLevelSpeakingWriting" data-fa="سطح گفتار و نوشتار" data-en="Speaking and writing level">سطح گفتار و نوشتار</label>
       <select id="accLevelSpeakingWriting"><option value="A1">A1</option><option value="A2">A2</option><option value="B1">B1</option><option value="B2">B2</option><option value="C1">C1</option></select>
       <p class="muted"><a href="/level" data-fa="تعیین سطح با آزمون" data-en="Take the level test">تعیین سطح با آزمون</a></p>
-      <label for="accGrade" data-fa="مقطع تحصیلی" data-en="School grade">مقطع تحصیلی</label>
-      <input id="accGrade" maxlength="40" data-fa-placeholder="مثلاً پنجم دبستان" placeholder="مثلاً پنجم دبستان">
       <label for="accAttributes" data-fa="دوست دارم معلمم چطور باشد" data-en="How I want my teacher to be">دوست دارم معلمم چطور باشد</label>
       <textarea id="accAttributes" rows="2" maxlength="1000" placeholder="مثلاً مهربان، با شوخی، صبور"></textarea>
       <label for="accConversation" data-fa="دوست دارم چطور حرف بزنیم" data-en="How I like to talk">دوست دارم چطور حرف بزنیم</label>
@@ -142,17 +140,15 @@
       <button type="button" class="secondary" id="accTeacherCheck" data-fa="بررسی کد" data-en="Check code">بررسی کد</button>
     </div>
     <div id="accTeacherFound" hidden>
-      <p><span data-fa="این مربی است:" data-en="This is your teacher:">این مربی است:</span> <strong id="accTeacherFoundName"></strong></p>
-      <label class="inline"><input type="checkbox" id="accTeacherConfirm"> <span data-fa="تأیید می‌کنم که این معلم من است." data-en="I confirm that this is my teacher.">تأیید می‌کنم که این معلم من است.</span></label>
+      <p><span data-fa="نام خانوادگی مربی:" data-en="Teacher's last name:">نام خانوادگی مربی:</span> <strong id="accTeacherFoundName"></strong></p>
       <div class="dialog-actions">
-        <button type="button" id="accTeacherSave" disabled data-fa="ثبت مربی" data-en="Save teacher">ثبت مربی</button>
+        <button type="button" id="accTeacherSave" data-fa="تأیید" data-en="Confirm">تأیید</button>
       </div>
     </div>
   </div>
 
   <p class="error" id="accTeacherError" hidden></p>
   <p class="ok-msg" id="accTeacherOk" hidden></p>
-  <p class="muted"><span data-fa="کد شما:" data-en="Your code:">کد شما:</span> <strong id="accTeacherOwnCode" class="ltr-field"></strong></p>
   <div class="dialog-actions">
     <button type="button" class="ghost" data-close data-fa="بستن" data-en="Close">بستن</button>
   </div>

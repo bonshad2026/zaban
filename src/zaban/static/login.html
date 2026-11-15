@@ -14,20 +14,20 @@
       <!-- Two ways in: the password chosen at sign-up, or a one-time code sent to the mobile by SMS -->
       <form id="loginForm" class="auth-card" autocomplete="on" novalidate>
         <h1 data-fa="ورود" data-en="Sign in">ورود</h1>
-        <label for="parentPhone" data-fa="شماره‌ی موبایل" data-en="Mobile number">شماره‌ی موبایل</label>
-        <input id="parentPhone" name="phone" type="tel" inputmode="tel" class="ltr-field" autocomplete="username" placeholder="09121234567" autofocus>
+        <label for="loginPhone" data-fa="شماره‌ی موبایل" data-en="Mobile number">شماره‌ی موبایل</label>
+        <input id="loginPhone" name="phone" type="tel" inputmode="tel" class="ltr-field" autocomplete="username" placeholder="09121234567" autofocus>
 
         <div id="passwordPart">
-          <label for="parentPassword" data-fa="رمز عبور" data-en="Password">رمز عبور</label>
-          <input id="parentPassword" name="password" type="password" class="ltr-field" autocomplete="current-password">
+          <label for="loginPassword" data-fa="رمز عبور" data-en="Password">رمز عبور</label>
+          <input id="loginPassword" name="password" type="password" class="ltr-field" autocomplete="current-password">
         </div>
 
         <div id="codePart" hidden>
           <p class="notice" id="loginDevHint" hidden></p>
           <div class="field-action">
             <div>
-              <label for="parentCode" data-fa="کد پیامکی" data-en="SMS code">کد پیامکی</label>
-              <input id="parentCode" name="code" inputmode="numeric" class="ltr-field" autocomplete="one-time-code" maxlength="8">
+              <label for="loginCode" data-fa="کد پیامکی" data-en="SMS code">کد پیامکی</label>
+              <input id="loginCode" name="code" inputmode="numeric" class="ltr-field" autocomplete="one-time-code" maxlength="8">
             </div>
             <button type="button" id="loginSendBtn" class="secondary" data-fa="ارسال کد پیامکی" data-en="Send SMS code">ارسال کد پیامکی</button>
           </div>
@@ -79,6 +79,6 @@
   </div>
 
   <script src="/static/js/common.js"></script>
-  <script src="/static/js/parent.js"></script>
+  <script src="/static/js/login.js"></script>
 </body>
 </html>

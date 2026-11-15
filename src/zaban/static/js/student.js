@@ -103,7 +103,7 @@
     // Lessons need the plan of the adult who owns this profile. Without it, the learner is told why and cannot start.
     if (me.has_active_plan === false) {
       $("startBtn").disabled = true;
-      Z.showError($("startError"), Z.tr("پلن والدتان فعال نیست، بنابراین جلسه فعلاً شروع نمی‌شود. لطفاً به والدتان بگویید پلن را فعال کنند."));
+      Z.showError($("startError"), Z.tr("پلن شما فعال نیست، بنابراین جلسه فعلاً شروع نمی‌شود. لطفاً پلن خود را فعال کنید."));
     }
     selectTab("lesson");
     const { session } = await Z.request("GET", `/v1/students/${me.id}/sessions/active`);
@@ -228,7 +228,7 @@
     }
   }
 
-  // The learner sees their level before a lesson. Without one, they can take a short check or ask a parent.
+  // The learner sees their level before a lesson. Without one, they can take a short check or choose it themselves.
   async function showLevel() {
     try {
       const student = await Z.request("GET", `/v1/students/${me.id}`);
@@ -253,7 +253,7 @@
     document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => selectTab(tab.dataset.tab)));
 
     try {
-      me = await Z.request("GET", "/v1/web/me?role=student");
+      me = await Z.request("GET", "/v1/web/me");
     } catch (_) {
       me = null;
     }
@@ -261,9 +261,9 @@
       // An adult who has a plan learns for themself. Anyone else goes to sign-in.
       try {
         await Z.request("POST", "/v1/web/user/self");
-        me = await Z.request("GET", "/v1/web/me?role=student");
+        me = await Z.request("GET", "/v1/web/me");
       } catch (_) {
-        location.replace("/parent");
+        location.replace("/login");
         return;
       }
     }
@@ -271,6 +271,5 @@
     await enterApp();
   }
 
-  Z.pageRole.value = "student";
   document.addEventListener("DOMContentLoaded", boot);
 })();

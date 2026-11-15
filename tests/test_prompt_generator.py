@@ -19,7 +19,7 @@ def test_render_fills_known_placeholders_and_lists_unknown_ones():
 def test_admin_builds_the_prompt_from_the_template_and_the_stored_learner(client):
     learner = TestClient(app)
     learner_login(learner)
-    learner.put("/v1/web/student/details", json={"age": 12, "gender": "female", "free_text": "I love drawing"})
+    learner.put("/v1/web/student/details", json={"age": 34, "gender": "female", "free_text": "I love drawing"})
     with SessionLocal() as db:
         student_id = self_student(db).id
 
@@ -32,7 +32,7 @@ def test_admin_builds_the_prompt_from_the_template_and_the_stored_learner(client
     assert saved.status_code == 200
 
     built = admin.post("/v1/admin/api/prompt/generate", json={"student_id": student_id}).json()
-    assert "Age: 12" in built["prompt"]
+    assert "Age: 34" in built["prompt"]
     assert "Gender: زن" in built["prompt"]
     assert "Note: I love drawing" in built["prompt"]
     assert built["unknown_placeholders"] == ["learner.typo"]

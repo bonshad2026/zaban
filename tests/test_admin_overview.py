@@ -16,7 +16,7 @@ def test_learner_list_contains_every_learner_with_a_name(client):
     learners = client.get("/v1/admin/api/learners").json()
     assert learners, "the learner list must not be empty after a learner signs in"
     assert all(item["id"] and item["name"] for item in learners)
-    assert all({"id", "name", "kind", "parent"} <= set(item) for item in learners)
+    assert all({"id", "name", "parent"} <= set(item) for item in learners)
 
 
 def test_overview_returns_the_counts_the_panel_shows(client):

@@ -11,7 +11,7 @@ DEMO = {"X-API-Key": os.environ["ZABAN_DEMO_API_KEY"]}
 def _create_student(client, external_id: str = "student-001") -> str:
     response = client.post(
         "/v1/students",
-        json={"external_user_id": external_id, "age_band": "11-14"},
+        json={"external_user_id": external_id, "age_band": "adult"},
         headers=DEMO,
     )
     assert response.status_code == 201, response.text
@@ -82,7 +82,7 @@ def test_full_lesson_flow_and_reports(client):
     assert progress.json()["status"] == "insufficient_data"
     assert len(progress.json()["sessions"]) == 1
 
-    parent = client.get(f"/v1/students/{student_id}/reports/parent", headers=DEMO)
+    parent = client.get(f"/v1/students/{student_id}/reports/summary", headers=DEMO)
     assert parent.status_code == 200
     assert parent.json()["summary_fa"]
 
@@ -102,7 +102,7 @@ def test_student_token_only_reaches_own_data(client):
 
     assert client.get(f"/v1/students/{first}/reports/progress", headers=bearer).status_code == 200
     assert client.get(f"/v1/students/{second}/reports/progress", headers=bearer).status_code == 403
-    assert client.get(f"/v1/students/{first}/reports/parent", headers=bearer).status_code == 403
+    assert client.get(f"/v1/students/{first}/reports/summary", headers=bearer).status_code == 403
 
 
 def test_quota_exhaustion_blocks_new_lessons(client):

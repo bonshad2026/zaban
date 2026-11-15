@@ -3,7 +3,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, model_validator
 
 LessonMinutes = Literal[5, 10, 15, 20, 30, 45, 60]
-AgeBand = Literal["4-6", "7-10", "11-14", "15-18", "adult"]
+AgeBand = Literal["adult"]
 USERNAME_PATTERN = r"^[a-z0-9_.-]{3,30}$"
 
 
@@ -12,9 +12,8 @@ class StudentCreate(BaseModel):
     display_name: str = Field(default="", max_length=120)
     external_user_id: str | None = Field(default=None, min_length=1, max_length=120)
     username: str | None = Field(default=None, pattern=USERNAME_PATTERN)
-    # Guardians set a 4 to 6 digit PIN. Tenant API keys may send a longer password.
     password: str | None = Field(default=None, min_length=4, max_length=100)
-    # Optional facts the lessons use to choose topics. A parent fills these in when creating a child's account.
+    # Optional facts the lessons use to choose topics.
     interests: str | None = Field(default=None, max_length=300)
     motivation: str | None = Field(default=None, max_length=60)
     # The learning goal of the learner. Empty means the everyday conversation goal.
@@ -36,7 +35,7 @@ class ConsentCreate(BaseModel):
 
 
 class PlacementCreate(BaseModel):
-    # Either a level picked by the parent (A1 to C2), or a 0 to 100 score from a test.
+    # Either a level picked by the learner (A1 to C2), or a 0 to 100 score from a test.
     level: Literal["A1", "A2", "B1", "B2", "C1", "C2"] | None = None
     score: int | None = Field(default=None, ge=0, le=100)
 
@@ -103,10 +102,6 @@ class PasswordReset(BaseModel):
     password: str = Field(min_length=8, max_length=100)
 
 
-# A PIN is what a child types on a phone or tablet, so it is 4 to 6 digits.
-PIN_PATTERN = r"^\d{4,6}$"
-
-
 class VoiceSampleCreate(BaseModel):
     name: str = Field(min_length=1, max_length=80)
     accent: Literal["en-US", "en-GB", "en-AU", "en-CA"]
@@ -129,7 +124,7 @@ CefrLevel = Literal["A1", "A2", "B1", "B2", "C1", "C2"]
 class HelpContentCreate(BaseModel):
     title: str = Field(min_length=1, max_length=160)
     category: HelpCategory
-    age_band: Literal["K", "J", "T", "S", "A"]
+    age_band: Literal["A"]
     level: CefrLevel
     gender: Literal["female", "male"] | None = None
     interests: str = Field(default="", max_length=200)
@@ -168,9 +163,8 @@ class SelfTestAnswer(BaseModel):
 
 class DetailsUpdate(BaseModel):
     # Every field is optional, so a partial save keeps what is not sent.
-    age: int | None = Field(default=None, ge=3, le=99)
+    age: int | None = Field(default=None, ge=18, le=99)
     gender: Literal["female", "male", "other"] | None = None
-    grade: str | None = Field(default=None, max_length=40)
     attributes: str | None = Field(default=None, max_length=1000)
     conversation_style: Literal["chat", "story", "role_play", "quiz", "mixed"] | None = None
     response_style: Literal["gentle", "direct", "playful", "strict"] | None = None

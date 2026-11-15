@@ -21,12 +21,10 @@ from zaban.services.help_content import GENDERS, LEVELS, facet_tree, tags_by_con
 from zaban.services.self_test import answer_test, finish_test, owned_test, start_test
 from zaban.services.curriculum import covered_topic_ids, path_topics
 from zaban.models import LessonTopic
-from zaban.web import _guardian_from_cookie, _student_from_cookie
+from zaban.web import _student_from_cookie
 
-# Student-facing learning aids: the help content library and the self-test ("خودت رو محک بزن").
+# Learner-facing learning aids: the help content library and the self-test ("خودت رو محک بزن").
 router = APIRouter(prefix="/web/student")
-# A parent reads and edits the details and progress of their own children.
-parent_router = APIRouter(prefix="/web/parent")
 
 
 def _matches(item: HelpContent, student: Student) -> bool:
@@ -415,7 +413,7 @@ def my_progress(zaban_student: str | None = Cookie(default=None), db: DBSession 
 @router.get("/payments")
 def my_payments(zaban_student: str | None = Cookie(default=None), db: DBSession = Depends(get_db)) -> list[dict]:
     student = _student_from_cookie(db, zaban_student)
-    owner = student.guardian_id or student.self_owner_id
+    owner = student.self_owner_id
     if owner is None:
         return []
     rows = db.query(Payment).filter(Payment.guardian_id == owner).order_by(Payment.created_at.desc()).all()
@@ -436,35 +434,3 @@ def my_payments(zaban_student: str | None = Cookie(default=None), db: DBSession 
     return out
 
 
-# ----- A parent's view of a child: the same details, progress and evaluations -----
-
-def _child_for_guardian(db: DBSession, zaban_parent: str | None, student_id: str) -> Student:
-    guardian = _guardian_from_cookie(db, zaban_parent)
-    student = db.get(Student, student_id)
-    if student is None or student.guardian_id != guardian.id:
-        raise HTTPException(status_code=404, detail="Not found")
-    return student
-
-
-@parent_router.get("/children/{student_id}/details")
-def child_details(student_id: str, zaban_parent: str | None = Cookie(default=None), db: DBSession = Depends(get_db)) -> dict:
-    child = _child_for_guardian(db, zaban_parent, student_id)
-    return {"details": details_out(db.get(LearnerDetails, child.id)), "cefr_level": child.cefr_level}
-
-
-@parent_router.put("/children/{student_id}/details")
-def save_child_details(
-    student_id: str,
-    body: DetailsUpdate,
-    zaban_parent: str | None = Cookie(default=None),
-    db: DBSession = Depends(get_db),
-) -> dict:
-    child = _child_for_guardian(db, zaban_parent, student_id)
-    save_details(db, child.id, body.model_dump(exclude_unset=True))
-    db.commit()
-    return {"details": details_out(db.get(LearnerDetails, child.id))}
-
-
-@parent_router.get("/children/{student_id}/progress")
-def child_progress(student_id: str, zaban_parent: str | None = Cookie(default=None), db: DBSession = Depends(get_db)) -> dict:
-    return _progress_out(db, _child_for_guardian(db, zaban_parent, student_id))

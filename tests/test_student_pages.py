@@ -13,7 +13,7 @@ def test_student_payments_show_the_plan_name(client):
     learner_login(client)
     with SessionLocal() as db:
         student = self_student(db)
-        owner = student.guardian_id or student.self_owner_id
+        owner = student.self_owner_id
         plan = db.query(BillingPlan).order_by(BillingPlan.price_toman).first()
         payment = Payment(guardian_id=owner, plan_id=plan.id, amount_toman=plan.price_toman, status="confirmed",
                           gateway="fake", created_at=utcnow())

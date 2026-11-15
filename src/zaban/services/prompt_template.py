@@ -21,7 +21,6 @@ DEFAULT_TEMPLATE = """[پرامپت کلی]
 جنسیت: {{learner.gender}}
 سطح انگلیسی: {{learner.level}}
 لهجه‌ی تمرین: {{learner.accent}}
-کلاس یا پایه: {{learner.grade}}
 سبک گفتگوی مورد علاقه: {{learner.conversation_style}}
 سبک پاسخ معلم: {{learner.response_style}}
 ویژگی‌ها و چیزهایی که دوست دارد: {{learner.attributes}}
@@ -50,7 +49,6 @@ PLACEHOLDERS = [
     ("learner.level_reading", "سطح خواندن"),
     ("learner.level_speaking_writing", "سطح گفتار و نوشتار"),
     ("learner.level_grammar", "سطح دستور و واژگان"),
-    ("learner.grade", "کلاس یا پایه"),
     ("learner.conversation_style", "سبک گفتگوی مورد علاقه"),
     ("learner.response_style", "سبک پاسخ معلم"),
     ("learner.attributes", "ویژگی‌ها و آنچه دوست دارد معلم داشته باشد"),
@@ -119,7 +117,6 @@ def learner_values(db: DBSession, student: Student, duration_minutes: int = 0) -
         "learner.level_reading": student.level_reading or "",
         "learner.level_grammar": student.level_grammar or "",
         "learner.level_speaking_writing": student.level_speaking_writing or "",
-        "learner.grade": details["grade"] or "",
         "learner.conversation_style": STYLE_FA.get(details["conversation_style"] or "", ""),
         "learner.response_style": STYLE_FA.get(details["response_style"] or "", ""),
         "learner.attributes": details["attributes"] or "",
