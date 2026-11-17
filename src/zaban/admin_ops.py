@@ -28,7 +28,8 @@ from zaban.models import (
     utcnow,
 )
 from zaban.services.partner_settings import partner_value, save_settings as save_partner_settings, settings_view
-from zaban.models import LearnerError, LearnerMemoryVersion, LearnerPhrase, PhraseItem, PhraseReview
+from zaban.models import ContentItem, LearnerError, LearnerMemoryVersion, LearnerPhrase, PhraseItem, PhraseReview
+from zaban.services.content_library import add_item as add_content_item
 from zaban.services.partner_end import reprocess as reprocess_session_end
 from zaban.services.partner_levels import CRITERION_COLUMNS
 from zaban.services.partner_notebook import current_notebook, notebook_problems, save_notebook
@@ -375,6 +376,48 @@ def decide_phrase_review(review_id: int, body: PhraseReviewUpdate, db: DBSession
         if add_phrase(db, row.text, body.level, situation=row.situation, register=register, source="review") is None:
             raise HTTPException(status_code=400, detail="This phrase is already in the library. Dismiss it instead.")
         row.status = "added"
+    db.commit()
+    return {"ok": True}
+
+
+class ContentCreate(BaseModel):
+    kind: str = Field(max_length=12)
+    level: str = Field(max_length=4)
+    title: str = Field(min_length=1, max_length=120)
+    text: str = Field(min_length=1, max_length=6000)
+    source: str = Field(min_length=1, max_length=200)
+    licence: str = Field(min_length=1, max_length=120)
+
+
+class ContentActive(BaseModel):
+    active: bool
+
+
+@router.get("/content")
+def list_content(db: DBSession = Depends(get_db)) -> list[dict]:
+    rows = db.query(ContentItem).order_by(ContentItem.id.desc()).all()
+    return [
+        {"id": r.id, "kind": r.kind, "level": r.level, "title": r.title, "source": r.source, "licence": r.licence, "active": r.active}
+        for r in rows
+    ]
+
+
+@router.post("/content", status_code=201)
+def add_content(body: ContentCreate, db: DBSession = Depends(get_db)) -> dict:
+    try:
+        item = add_content_item(db, body.kind, body.level, body.title, body.text, body.source, body.licence)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    db.commit()
+    return {"id": item.id}
+
+
+@router.post("/content/{item_id}/active")
+def set_content_active(item_id: int, body: ContentActive, db: DBSession = Depends(get_db)) -> dict:
+    item = db.get(ContentItem, item_id)
+    if item is None:
+        raise HTTPException(status_code=404, detail="Content not found")
+    item.active = body.active
     db.commit()
     return {"ok": True}
 

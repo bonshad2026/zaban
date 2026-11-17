@@ -6,7 +6,10 @@ from zaban.services.settings_store import get_setting, set_setting
 
 from zaban.services.partner_policy import LEVEL_CODES, parse_override
 
-RHYTHM_MODES = ["conversation", "translation", "review", "summary", "shadowing", "pronunciation"]
+RHYTHM_MODES = [
+    "conversation", "translation", "review", "summary", "shadowing", "pronunciation",
+    "task", "functions", "phrases", "casual", "listening", "story", "poetry", "repeat",
+]
 
 SHARED_RULES_DEFAULT = (
     "فارسی فقط برای رفع ابهام و در یک جمله‌ی کوتاه؛ زبان‌آموز حدود ۷۰٪ زمان صحبت کند؛ "

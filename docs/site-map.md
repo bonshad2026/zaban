@@ -77,6 +77,7 @@
   - وضعیت مشاوره: `new` (جدید)، `reviewed` (بررسی شد)، `called` (تماس گرفته شد)، `recall` (تماس مجدد)، `awaiting_reply` (منتظر پاسخ)، `closed` (بسته شد). وضعیت قدیمی `contacted` هنوز نمایش داده می‌شود.
   - وضعیت همکاری: `new`، `contacted`، `closed`.
 - **محتوای کمک‌آموزشی:** `HelpContent` (جدول `help_content`) به‌همراه `HelpFacet` (گروه برچسب، جدول `help_facets`)، `HelpTag` (برچسب، جدول `help_tags`) و جدول واسط `help_content_tags`. گروه سنی (فقط `A` برای بزرگسال)، سطح و جنسیت روی خود محتوا هستند و قاعده‌های دانش‌آموز از آن‌ها استفاده می‌کنند. برچسب‌ها گروه‌هایی هستند که ادمین تعریف می‌کند.
+- **گفتاریار، فاز ۶:** حالت‌های تازه در `services/partner_prompt.py` و `services/partner_rhythm.py`؛ کتابخانه‌ی محتوا در `services/content_library.py` و جدول `content_items`؛ مدیر: `/admin/api/content`.
 - **گفتاریار، فاز ۵:** حالت‌های شادوینگ و تلفظ در `services/partner_prompt.py` و `services/partner_rhythm.py`. تبدیل صدا به متن در مرورگر (`static/js/lesson.js`)؛ سرور هیچ صدایی دریافت نمی‌کند.
 - **گفتاریار، فاز ۴:** خودت رو محک بزن در `services/partner_selftest.py` (دفترچه و سطح)، قاعده‌ی سطح مشترک در `services/partner_levels.py`، و تلاش دوباره از پنل مدیر: `POST /admin/api/self-tests/{id}/reprocess`.
 - **گفتاریار، فاز ۳:** گفتگوی آزاد `POST /v1/students/{id}/free-conversation`، ریتم درس در `services/partner_rhythm.py` و مسیرهای `/v1/sessions/{id}/rhythm`، حالت‌های ترجمه و مرور و جمع‌بندی در `services/partner_prompt.py`.

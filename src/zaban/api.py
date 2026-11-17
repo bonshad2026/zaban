@@ -549,7 +549,7 @@ def send_message(
             rhythm = segment_state(session, now)
             mode, seconds = rhythm["mode"], rhythm["seconds_left"]
             sentence = sentence_seconds(db, student) if mode == "translation" else None
-        partner_prompt = session.start_prompt + "\n\n" + mode_part(db, mode, free).text + "\n\n" + turn_block(mode, block, seconds, sentence)
+        partner_prompt = session.start_prompt + "\n\n" + mode_part(db, mode, free, student).text + "\n\n" + turn_block(mode, block, seconds, sentence)
         reply = tutor_reply(partner_prompt, history)
         turn = parse_output(reply.text)
         if turn.valid:

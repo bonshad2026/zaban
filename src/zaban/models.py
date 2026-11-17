@@ -620,6 +620,22 @@ class SessionLogEntry(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
+class ContentItem(Base):
+    # A text the partner may use for stories, poems and listening (docs/conversation-partner.md, sections 4.5, 4.12 and 8).
+    # Every item records where it comes from and under which licence. A text without a licence is not stored.
+    __tablename__ = "content_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    kind: Mapped[str] = mapped_column(String(12), index=True)  # story, poem or listening
+    level: Mapped[str] = mapped_column(String(4), index=True)  # A1 to C2
+    title: Mapped[str] = mapped_column(String(120))
+    text: Mapped[str] = mapped_column(Text)
+    source: Mapped[str] = mapped_column(String(200))  # where the text comes from, or "made by the system"
+    licence: Mapped[str] = mapped_column(String(120))  # for example public domain, or the licence of the source
+    active: Mapped[bool] = mapped_column(default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
 class LearnerMemory(Base):
     # The teacher notebook of one learner (section 14). The learner never sees it; only the administrator does.
     __tablename__ = "learner_memory"
