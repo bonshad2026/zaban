@@ -194,7 +194,11 @@
  "پیوندهای پایین صفحه": "Footer links",
  "زبان": "Zaban",
  "معلم": "Your teacher",
- "گفتگوی آزاد با معلم": "Free talk with your teacher"
+ "گفتگوی آزاد با معلم": "Free talk with your teacher",
+ "نسخه‌ی درست‌تر": "Better version",
+ "جمله‌ی شما": "Your sentence",
+ "عبارت تازه": "New phrase",
+ "کاربرد": "Use it when"
 };
 
   const isEnglish = () => Z.currentLang() === "en";

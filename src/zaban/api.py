@@ -20,6 +20,10 @@ from zaban.schemas import (
 )
 from zaban.security import Auth, get_auth, get_student_for_auth, issue_student_token, require_manager
 from zaban.services.ai import tutor_reply
+from zaban.services.partner_output import parse_output
+from zaban.services.partner_prompt import build_prompt, turn_block
+from zaban.services.partner_settings import partner_value
+from zaban.services.partner_turns import apply_turn
 from zaban.models import LearnerDetails
 from zaban.services.evaluation import course_note, evaluate_session, past_evaluations, score_pending_sessions
 from zaban.services.learner_details import details_out, save_details
@@ -446,7 +450,10 @@ def start_session(
         db.commit()
         out["topic"] = {"id": topic.id, "title": topic.title, "variant": variant.id if variant else None}
     # The start prompt is composed once here and sent as the first input of every reply in this lesson.
-    if has_saved_template(db):
+    if partner_value(db, "partner_engine") == "new":
+        # The conversation partner builds its own five-part prompt once, when the lesson starts (section 7.1).
+        session.start_prompt = build_prompt(db, student)
+    elif has_saved_template(db):
         # The administrator's template is filled with this learner's stored values, once, at the start of the lesson.
         session.start_prompt, _ = render(get_template(db), learner_values(db, student, session.duration_minutes))
     else:
@@ -519,7 +526,19 @@ def send_message(
             past_notes=past_evaluations(db, student.id),
             course_note=course_note(db, student),
         )
-    reply = tutor_reply(system_prompt, history)
+    partner = None
+    if partner_value(db, "partner_engine") == "new" and session.start_prompt:
+        # The partner answers in JSON. Only a valid answer is shown as a reply and written to the learner's record.
+        partner_prompt = session.start_prompt + "\n\n" + turn_block("conversation", block, max(0, int((session.ends_at - now).total_seconds())))
+        reply = tutor_reply(partner_prompt, history)
+        turn = parse_output(reply.text)
+        if turn.valid:
+            apply_turn(db, student, session.id, turn, text, now)
+        partner = {"valid": turn.valid, "feedback": turn.feedback, "new_phrase": turn.new_phrase, "next_action": turn.next_action}
+        shown = turn.reply
+    else:
+        reply = tutor_reply(system_prompt, history)
+        shown = reply.text
 
     db.add(Message(session_id=session.id, role="user", content=text))
     db.add(Message(session_id=session.id, role="assistant", content=reply.text))
@@ -534,13 +553,14 @@ def send_message(
     db.commit()
     seconds_left = max(0, int((session.ends_at - now).total_seconds()))
     return {
-        "reply": reply.text,
+        "reply": shown,
         "block": block,
         "guarded": None,
         "mode": reply.mode,
         "seconds_left": seconds_left,
         "closed": closed,
         "notice": PLAN_USED_NOTICE if closed else None,
+        "partner": partner,
     }
 
 

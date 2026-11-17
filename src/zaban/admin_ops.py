@@ -28,6 +28,7 @@ from zaban.models import (
     utcnow,
 )
 from zaban.services.partner_settings import save_settings as save_partner_settings, settings_view
+from zaban.services.partner_prompt import build_parts
 from zaban.services.evaluation import past_evaluations
 from zaban.services.learner_details import details_out
 from zaban.services.settings_store import (
@@ -225,6 +226,19 @@ def save_partner_settings_api(body: PartnerSettingsUpdate, db: DBSession = Depen
         raise HTTPException(status_code=400, detail=str(error)) from error
     db.commit()
     return settings_view(db)
+
+
+@router.get("/partner-prompt")
+def preview_partner_prompt(student_id: str, mode: str = "conversation", db: DBSession = Depends(get_db)) -> dict:
+    # Read only. Shows each part of the partner prompt for one learner, with where the part comes from.
+    student = db.get(Student, student_id)
+    if student is None:
+        raise HTTPException(status_code=404, detail="Learner not found")
+    try:
+        parts = build_parts(db, student, mode)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    return {"parts": [{"name": part.name, "source": part.source, "text": part.text} for part in parts]}
 
 
 @router.get("/learners")

@@ -1039,6 +1039,20 @@
   async function loadPartner() {
     const specs = await Z.request("GET", `${API}/partner-settings`);
     $("partnerFields").replaceChildren(...specs.map(partnerField));
+    const learners = await Z.request("GET", `${API}/learners`);
+    $("partnerLearner").replaceChildren(...learners.map((l) => option(l.id, l.name)));
+  }
+
+  // Shows each part of the partner prompt for the chosen learner. The text goes through textContent only.
+  async function showPartnerPrompt() {
+    setError("partnerPreviewError", "");
+    const id = encodeURIComponent($("partnerLearner").value);
+    const data = await Z.request("GET", `${API}/partner-prompt?student_id=${id}`);
+    $("partnerParts").replaceChildren(...data.parts.map((part) => {
+      const block = Z.el("div", "partner-part");
+      block.append(Z.el("h4", "", part.name), Z.el("p", "muted", `منبع: ${part.source}`), Z.el("pre", "ltr-field", part.text));
+      return block;
+    }));
   }
 
   async function savePartner(event) {
@@ -1635,6 +1649,7 @@
     $("genCopy").addEventListener("click", () => navigator.clipboard.writeText($("genOutput").value));
     $("globalForm").addEventListener("submit", saveGlobalPrompt);
     $("partnerForm").addEventListener("submit", savePartner);
+    $("partnerPreview").addEventListener("click", () => run(showPartnerPrompt));
     $("voiceForm").addEventListener("submit", addVoice);
     $("globalText").addEventListener("input", updateGlobalCount);
     $("learnerForm").addEventListener("submit", loadLearner);

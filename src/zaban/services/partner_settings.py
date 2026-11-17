@@ -4,7 +4,8 @@ from sqlalchemy.orm import Session as DBSession
 
 from zaban.services.settings_store import get_setting, set_setting
 
-LEVEL_CODES = ["A1", "A2", "B1", "B2", "C1", "C2"]
+from zaban.services.partner_policy import LEVEL_CODES, parse_override
+
 RHYTHM_MODES = ["conversation", "translation", "review", "summary"]
 
 SHARED_RULES_DEFAULT = (
@@ -39,8 +40,8 @@ PARTNER_SETTINGS = [
     {"key": "partner_shared_rules", "label": "قواعد مشترک", "kind": "text", "default": SHARED_RULES_DEFAULT},
     {"key": "partner_mode_rules", "label": "قواعد هر حالت", "kind": "text", "default": "",
      "help": "در فاز ۱ استفاده می‌شود."},
-    {"key": "partner_level_policy", "label": "جدول سیاست سطح", "kind": "text", "default": "",
-     "help": "خالی یعنی جدول پیش‌فرض بخش ۵.۲. در فاز ۱ استفاده می‌شود."},
+    {"key": "partner_level_policy", "label": "جدول سیاست سطح", "kind": "policy", "default": "",
+     "help": "هر خط: سطح | جمله | واژگان | پرسش | اصلاح | نوبت (به انگلیسی، چون در پرامپت می‌رود). خالی یعنی جدول پیش‌فرض."},
 ]
 
 SPEC_BY_KEY = {spec["key"]: spec for spec in PARTNER_SETTINGS}
@@ -55,6 +56,12 @@ def normalize(spec: dict, raw: str) -> str:
     # Returns the value in the stored form, or raises ValueError with a short English reason.
     value = raw.strip()
     kind = spec["kind"]
+    if kind == "policy":
+        try:
+            parse_override(value)
+        except ValueError as error:
+            raise ValueError(f"{spec['key']}: {error}") from error
+        return value
     if kind == "text":
         if len(value) > TEXT_MAX_LENGTH:
             raise ValueError(f"{spec['key']} is longer than {TEXT_MAX_LENGTH} characters")

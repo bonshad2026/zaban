@@ -70,6 +70,30 @@ const Lesson = (() => {
     return node;
   }
 
+  // The partner's correction and new phrase, shown under its reply. The English text is left to right, the Persian labels follow the page.
+  function partnerCards(partner) {
+    if (!partner || !partner.valid) return;
+    if (partner.feedback) {
+      const card = Z.el("div", "bubble note partner-card");
+      card.dir = "ltr";
+      card.append(
+        Z.el("strong", "", Z.tr("جمله‌ی شما")), document.createTextNode(`: ${partner.feedback.original}`), document.createElement("br"),
+        Z.el("strong", "", Z.tr("نسخه‌ی درست‌تر")), document.createTextNode(`: ${partner.feedback.better}`),
+      );
+      $("chat").appendChild(card);
+    }
+    if (partner.new_phrase) {
+      const card = Z.el("div", "bubble note partner-card");
+      card.dir = "ltr";
+      card.append(
+        Z.el("strong", "", Z.tr("عبارت تازه")), document.createTextNode(`: ${partner.new_phrase.text}`), document.createElement("br"),
+        Z.el("strong", "", Z.tr("کاربرد")), document.createTextNode(`: ${partner.new_phrase.situation}`),
+      );
+      $("chat").appendChild(card);
+    }
+    $("chat").scrollTop = $("chat").scrollHeight;
+  }
+
   function note(text) {
     $("chat").appendChild(Z.el("div", "bubble note", text));
     $("chat").scrollTop = $("chat").scrollHeight;
@@ -127,6 +151,7 @@ const Lesson = (() => {
       thinking.remove();
       if (reply.guarded) note(GUARD_NOTE);
       bubble("assistant", reply.reply);
+      partnerCards(reply.partner);
       if (reply.seconds_left !== null && reply.seconds_left !== undefined) setTimer(reply.seconds_left);
       await speak(reply.reply);
       if (reply.closed) {
