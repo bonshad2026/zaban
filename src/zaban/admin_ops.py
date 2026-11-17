@@ -35,6 +35,7 @@ from zaban.services.partner_notebook import current_notebook, notebook_problems,
 from zaban.services.partner_output import REGISTERS
 from zaban.services.partner_policy import LEVEL_CODES
 from zaban.services.phrase_library import add_phrase
+from zaban.services.partner_selftest import reprocess_test
 from zaban.services.partner_prompt import build_parts
 from zaban.services.evaluation import past_evaluations
 from zaban.services.learner_details import details_out
@@ -339,6 +340,16 @@ def reprocess_lesson(session_id: str, db: DBSession = Depends(get_db)) -> dict:
     if session.engine != "new":
         raise HTTPException(status_code=400, detail="Only lessons of the conversation partner can be processed again")
     return {"end_status": reprocess_session_end(db, session)}
+
+
+@router.post("/self-tests/{test_id}/reprocess")
+def reprocess_self_test(test_id: str, db: DBSession = Depends(get_db)) -> dict:
+    # Tries the notebook and level update of one self-test again, when it is waiting or was closed without one.
+    test = db.get(SelfTest, test_id)
+    if test is None:
+        raise HTTPException(status_code=404, detail="Test not found")
+    student = db.get(Student, test.student_id)
+    return {"partner_status": reprocess_test(db, student, test)}
 
 
 @router.get("/phrase-review")

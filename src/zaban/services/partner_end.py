@@ -1,5 +1,6 @@
 # The end-of-lesson routine of the conversation partner (docs/conversation-partner.md, sections 6.2, 13.7, 14.4 and 15.5).
 # The summary, the criteria, the level changes and the notebook are saved together, or none of them is saved.
+# The judging and notebook steps are shared with the self-test (services/partner_selftest.py).
 from datetime import datetime
 
 from sqlalchemy.orm import Session as DBSession
@@ -7,7 +8,7 @@ from sqlalchemy.orm import Session as DBSession
 from zaban.models import Guardian, Message, PhraseItem, SessionLogEntry, Student, Tenant, TutorSession, utcnow
 from zaban.services.ai_gateway import AIResult, complete
 from zaban.services.metering import record_usage
-from zaban.services.partner_levels import CRITERION_COLUMNS, apply_criteria
+from zaban.services.partner_levels import CRITERION_COLUMNS, apply_criteria, recent_evaluations
 from zaban.services.partner_notebook import NOTEBOOK_RULES, current_notebook, notebook_problems, save_notebook
 from zaban.services.partner_output import read_json_object
 from zaban.services.partner_policy import LEVEL_CODES
@@ -29,11 +30,11 @@ class EndError(Exception):
     pass
 
 
-def _transcript(messages: list[Message]) -> str:
+def transcript(messages: list[Message]) -> str:
     return "\n".join(f"{'Student' if m.role == 'user' else 'Teacher'}: {m.content}" for m in messages[-40:])
 
 
-def _read_summary(text: str) -> dict:
+def read_summary(text: str) -> dict:
     data = read_json_object(text)
     if not data or not isinstance(data.get("criteria"), dict) or not isinstance(data.get("summary"), str):
         raise EndError("summary is not in the contract")
@@ -43,6 +44,28 @@ def _read_summary(text: str) -> dict:
     if not data["summary"].strip():
         raise EndError("summary is empty")
     return {"criteria": {key: criteria[key] for key in CRITERION_COLUMNS}, "summary": data["summary"].strip()[:1500]}
+
+
+class Calls:
+    # Counts the tokens of every model call of one run, and records each one against the tenant.
+    def __init__(self, db: DBSession, tenant: Tenant, record_id: str):
+        self.db, self.tenant, self.record_id, self.used = db, tenant, record_id, 0
+
+    def __call__(self, system: str, user: str, max_tokens: int) -> AIResult:
+        result = complete(system, [{"role": "user", "content": user}], max_tokens=max_tokens)
+        record_usage(self.db, self.tenant, self.record_id, result.input_tokens, result.output_tokens)
+        self.used += result.input_tokens + result.output_tokens
+        return result
+
+
+def write_notebook(calls: Calls, student: Student, db: DBSession, event: str, max_words: int) -> str:
+    # Asks for the whole notebook again, with the event. Two tries; a notebook that fails the checks is never saved.
+    user = f"Current notebook:\n{current_notebook(db, student) or '(empty: this is the first update)'}\n\nNew event:\n{event}"
+    for _ in range(2):
+        text = calls(NOTEBOOK_RULES.format(max_words=max_words), user, 3000).text.strip()
+        if not notebook_problems(text, max_words, student.display_name or ""):
+            return text
+    raise EndError("notebook was refused twice")
 
 
 def _event_text(db: DBSession, session: TutorSession, learner_turns: int, summary: dict, changes: dict) -> str:
@@ -72,36 +95,19 @@ def _event_text(db: DBSession, session: TutorSession, learner_turns: int, summar
 
 
 def _run(db: DBSession, student: Student, session: TutorSession, messages: list[Message], now: datetime) -> None:
-    tenant = db.get(Tenant, student.tenant_id)
     owner = db.get(Guardian, student.self_owner_id) if student.self_owner_id else None
-    used = 0
-
-    def call(system: str, user: str, max_tokens: int) -> AIResult:
-        nonlocal used
-        result = complete(system, [{"role": "user", "content": user}], max_tokens=max_tokens)
-        record_usage(db, tenant, session.id, result.input_tokens, result.output_tokens)
-        used += result.input_tokens + result.output_tokens
-        return result
-
-    summary = _read_summary(call(SUMMARY_INSTRUCTIONS, _transcript(messages), 600).text)
-    changes = apply_criteria(db, student, session, summary["criteria"])
+    calls = Calls(db, db.get(Tenant, student.tenant_id), session.id)
+    summary = read_summary(calls(SUMMARY_INSTRUCTIONS, transcript(messages), 600).text)
+    window = max(int(partner_value(db, "partner_level_up_sessions")), int(partner_value(db, "partner_level_down_sessions")))
+    history = recent_evaluations(db, student.id, session.id, window)
+    changes = apply_criteria(db, student, session, summary["criteria"], history)
     session.evaluation = summary["summary"]
-
     max_words = int(partner_value(db, "partner_memory_max_words"))
     learner_turns = sum(1 for m in messages if m.role == "user")
-    user = f"Current notebook:\n{current_notebook(db, student) or '(empty: this is the first update)'}\n\nNew event:\n{_event_text(db, session, learner_turns, summary, changes)}"
-    notebook = None
-    for _ in range(2):
-        text = call(NOTEBOOK_RULES.format(max_words=max_words), user, 3000).text.strip()
-        if not notebook_problems(text, max_words, student.display_name or ""):
-            notebook = text
-            break
-    if notebook is None:
-        raise EndError("notebook was refused twice")
+    notebook = write_notebook(calls, student, db, _event_text(db, session, learner_turns, summary, changes), max_words)
     save_notebook(db, student, notebook, "session_end", now)
-
     if owner is not None:
-        owner.plan_tokens_used += used
+        owner.plan_tokens_used += calls.used
     session.end_status = "evaluated"
 
 

@@ -459,6 +459,15 @@ class SelfTest(Base):
     # A score from 0 to 100 that Niko gives at the end. Empty for tests finished before scores existed.
     score: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    # The five speaking criteria (CEFR), given only for speaking and mixed tests (docs/conversation-partner.md, section 4.14).
+    eval_range: Mapped[str | None] = mapped_column(String(4), nullable=True)
+    eval_accuracy: Mapped[str | None] = mapped_column(String(4), nullable=True)
+    eval_fluency: Mapped[str | None] = mapped_column(String(4), nullable=True)
+    eval_interaction: Mapped[str | None] = mapped_column(String(4), nullable=True)
+    eval_coherence: Mapped[str | None] = mapped_column(String(4), nullable=True)
+    # "" for tests before the partner, then evaluated, pending or no_evaluation (the same states as a lesson).
+    partner_status: Mapped[str] = mapped_column(String(12), default="")
+    partner_attempts: Mapped[int] = mapped_column(Integer, default=0)
 
     messages: Mapped[list["SelfTestMessage"]] = relationship(
         back_populates="test", cascade="all, delete-orphan", order_by="SelfTestMessage.id"

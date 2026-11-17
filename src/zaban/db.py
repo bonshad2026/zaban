@@ -57,6 +57,13 @@ ADDED_COLUMNS = [
     ("sessions", "rhythm", "TEXT NOT NULL DEFAULT ''"),
     ("sessions", "mode_index", "INTEGER NOT NULL DEFAULT 0"),
     ("sessions", "mode_started_at", "TIMESTAMP"),
+    ("self_tests", "eval_range", "VARCHAR(4)"),
+    ("self_tests", "eval_accuracy", "VARCHAR(4)"),
+    ("self_tests", "eval_fluency", "VARCHAR(4)"),
+    ("self_tests", "eval_interaction", "VARCHAR(4)"),
+    ("self_tests", "eval_coherence", "VARCHAR(4)"),
+    ("self_tests", "partner_status", "VARCHAR(12) NOT NULL DEFAULT ''"),
+    ("self_tests", "partner_attempts", "INTEGER NOT NULL DEFAULT 0"),
 ]
 
 # The five speaking criteria start from the speaking level the learner chose before the first lesson.

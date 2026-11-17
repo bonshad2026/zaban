@@ -8,6 +8,8 @@ from zaban.models import SelfTest, SelfTestMessage, Student, Tenant, utcnow
 from zaban.services.ai_gateway import complete
 from zaban.services.curriculum import DEFAULT_LEVEL, band_code
 from zaban.services.metering import ensure_quota, record_usage
+from zaban.services.partner_selftest import finish_partner_test
+from zaban.services.partner_settings import partner_value
 from zaban.services.self_test_prompt import build_prompt
 
 def choose_kind(kind: str, level: str) -> str:
@@ -103,6 +105,9 @@ def finish_test(db: DBSession, student: Student, test: SelfTest) -> SelfTest:
     test.result, test.score = split_score(_ask(db, student, test, system, closing, 600))
     test.status = "finished"
     db.commit()
+    # The report is kept either way. The notebook and the levels are updated only when the conversation partner is on.
+    if partner_value(db, "partner_engine") == "new":
+        finish_partner_test(db, student, test)
     return test
 
 

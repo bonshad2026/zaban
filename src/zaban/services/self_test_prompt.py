@@ -3,7 +3,7 @@ import re
 
 from sqlalchemy.orm import Session as DBSession
 
-from zaban.models import Student
+from zaban.models import LearnerMemory, Student
 from zaban.services.prompt_template import learner_values, render
 from zaban.services.settings_store import get_setting, set_setting
 
@@ -73,6 +73,9 @@ DEFAULT_TEMPLATE = """[نقش معلم]
 سطح انگلیسی: {{learner.level}}
 یادداشت مدیر: {{learner.instructions}}
 
+[دفترچه‌ی معلم]
+{{learner.notebook}}
+
 [پرامپت شخصی]
 {{personal_text}}
 """
@@ -90,6 +93,7 @@ DATABASE_PLACEHOLDERS = [
     ("learner.interests", "علاقه‌ها"),
     ("learner.level", "سطح انگلیسی"),
     ("learner.instructions", "یادداشت مدیر"),
+    ("learner.notebook", "دفترچه‌ی معلم (برای شریک؛ دانش‌آموز آن را نمی‌بیند)"),
     ("personal_text", "پرامپت شخصی دانش‌آموز"),
 ]
 
@@ -153,6 +157,12 @@ def rule_values(rules: dict[str, str], kind: str, skill: str) -> dict[str, str]:
 
 def build_prompt(db: DBSession, student: Student, kind_requested: str, kind: str, skill: str, minutes: int, level: str) -> tuple[str, list[str]]:
     rules = stored_rules(db)
-    values = {**learner_values(db, student, minutes), **session_values(kind_requested, kind, skill, minutes, level), **rule_values(rules, kind, skill)}
+    notebook = db.get(LearnerMemory, student.id)
+    values = {
+        **learner_values(db, student, minutes),
+        **session_values(kind_requested, kind, skill, minutes, level),
+        **rule_values(rules, kind, skill),
+        "learner.notebook": notebook.text if notebook and notebook.text else "(empty)",
+    }
     text, unknown = render(get_template(db), values)
     return f"{text.strip()}\n\n{SAFETY_RULES}", unknown
