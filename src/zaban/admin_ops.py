@@ -41,11 +41,7 @@ from zaban.services.partner_prompt import build_parts
 from zaban.services.evaluation import past_evaluations
 from zaban.services.learner_details import details_out
 from zaban.services.settings_store import (
-    EXPECTED_OUTPUT_KEY,
     PAYMENT_PROVIDER_KEY,
-    PROMPT_MODE_DEFAULT,
-    PROMPT_MODE_KEY,
-    MODE_LABELS,
     PUBLIC_BASE_URL_KEY,
     PROMPT_TOKEN_TTL_KEY,
     AI_API_KEY_KEY,
@@ -59,7 +55,6 @@ from zaban.services.settings_store import (
     get_setting,
     set_setting,
 )
-from zaban.services.prompt_template import DEFAULT_TEMPLATE, PLACEHOLDERS, get_template, learner_values, render, save_template
 from zaban.services.sms import sms_provider_for
 from zaban.services.metering import session_usage
 from zaban.services.payments import has_active_plan
@@ -102,9 +97,6 @@ def overview(db: DBSession = Depends(get_db)) -> dict:
 def read_settings(db: DBSession = Depends(get_db)) -> dict:
     # Secret values are never returned. The panel only shows whether each one is set in the environment.
     return {
-        "prompt_mode": get_setting(db, PROMPT_MODE_KEY, PROMPT_MODE_DEFAULT),
-        "prompt_mode_labels": MODE_LABELS,
-        "expected_output": get_setting(db, EXPECTED_OUTPUT_KEY),
         "conversation_prompt_ttl_seconds": prompt_ttl_seconds(db),
         "payment_provider": get_setting(db, PAYMENT_PROVIDER_KEY, settings.payment_gateway),
         "secrets": {
@@ -117,18 +109,12 @@ def read_settings(db: DBSession = Depends(get_db)) -> dict:
 
 
 class SettingsUpdate(BaseModel):
-    prompt_mode: str | None = Field(default=None, pattern=r"^(student|general|student_db|all)$")
-    expected_output: str | None = Field(default=None, max_length=2000)
     payment_provider: str | None = Field(default=None, pattern=r"^(fake|zarinpal)$")
     conversation_prompt_ttl_seconds: int | None = Field(default=None, ge=60, le=86400)
 
 
 @router.post("/settings")
 def save_settings(body: SettingsUpdate, db: DBSession = Depends(get_db)) -> dict:
-    if body.prompt_mode is not None:
-        set_setting(db, PROMPT_MODE_KEY, body.prompt_mode)
-    if body.expected_output is not None:
-        set_setting(db, EXPECTED_OUTPUT_KEY, body.expected_output.strip())
     if body.payment_provider is not None:
         set_setting(db, PAYMENT_PROVIDER_KEY, body.payment_provider)
     if body.conversation_prompt_ttl_seconds is not None:
@@ -533,39 +519,6 @@ def revoke_sessions(body: SessionRevoke, db: DBSession = Depends(get_db)) -> dic
     )
     db.commit()
     return {"revoked": count}
-
-
-@router.get("/prompt-template")
-def read_prompt_template(db: DBSession = Depends(get_db)) -> dict:
-    return {
-        "template": get_template(db),
-        "default_template": DEFAULT_TEMPLATE,
-        "placeholders": [{"key": key, "label": label} for key, label in PLACEHOLDERS],
-    }
-
-
-class PromptTemplateUpdate(BaseModel):
-    template: str = Field(min_length=1, max_length=8000)
-
-
-@router.post("/prompt-template")
-def write_prompt_template(body: PromptTemplateUpdate, db: DBSession = Depends(get_db)) -> dict:
-    save_template(db, body.template)
-    return {"ok": True}
-
-
-class PromptGenerate(BaseModel):
-    student_id: str = Field(min_length=1, max_length=32)
-
-
-@router.post("/prompt/generate")
-def generate_prompt(body: PromptGenerate, db: DBSession = Depends(get_db)) -> dict:
-    # The template is filled with stored values only. Placeholders that have no value are returned, so the administrator can fix them.
-    student = db.get(Student, body.student_id)
-    if student is None:
-        raise HTTPException(status_code=404, detail="Not found")
-    text, unknown = render(get_template(db), learner_values(db, student))
-    return {"prompt": text, "unknown_placeholders": unknown}
 
 
 class PlacementQuestionIn(BaseModel):

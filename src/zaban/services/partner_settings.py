@@ -18,8 +18,6 @@ SHARED_RULES_DEFAULT = (
 
 # kind: choice, int, int_list (comma separated numbers), pairs (LEVEL:number), rhythm (mode:percent), text.
 PARTNER_SETTINGS = [
-    {"key": "partner_engine", "label": "روال درس", "kind": "choice", "choices": ["old", "new"], "default": "old",
-     "help": "قدیم: روال فعلی درس. جدید: گفتگوی شریک. تا فاز ۳ روی «قدیم» بماند."},
     {"key": "partner_mastery_count", "label": "تعداد گفتگوی تسلط عبارت", "kind": "int", "min": 1, "max": 10, "default": "2",
      "help": "عبارت وقتی تسلط می‌گیرد که در این تعداد گفتگوی جدا، بدون کمک به کار رود."},
     {"key": "partner_review_intervals", "label": "فاصله‌های مرور (روز)", "kind": "int_list", "min": 1, "max": 365, "default": "3,7,14,30",

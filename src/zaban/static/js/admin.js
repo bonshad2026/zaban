@@ -71,8 +71,6 @@
     partner: loadPartner,
     payment: loadPayment,
     sessions: loadSessions,
-    promptgen: loadPromptGen,
-    promptview: loadPromptView,
     selftest: loadSelfTest,
     placementbank: loadBank,
     adults: loadAdults,
@@ -85,7 +83,7 @@
 
   function openTab(name) {
     document.querySelectorAll(".admin-tabs .tab").forEach((t) => t.classList.toggle("is-active", t.dataset.tab === name));
-    ["overview", "consults", "cooperations", "helpcontent", "settings", "connections", "ai", "payment", "sessions", "promptgen", "promptview", "selftest", "placementbank", "adults", "payments", "plans", "curriculum", "global", "voices", "partner"]
+    ["overview", "consults", "cooperations", "helpcontent", "settings", "connections", "ai", "payment", "sessions", "selftest", "placementbank", "adults", "payments", "plans", "curriculum", "global", "voices", "partner"]
       .forEach((n) => show(`tab-${n}`, n === name));
     return run(loaders[name]);
   }
@@ -646,8 +644,6 @@
 
   async function loadSettings() {
     const data = await Z.request("GET", `${API}/settings`);
-    $("setMode").value = data.prompt_mode;
-    $("setExpected").value = data.expected_output || "";
     $("setPromptTtl").value = data.conversation_prompt_ttl_seconds;
     // Only the AI key belongs to the prompt settings. The SMS and payment keys are shown in their own sections.
     $("secretsList").replaceChildren(
@@ -660,8 +656,6 @@
   function saveSettings() {
     return run(async () => {
       await Z.request("POST", `${API}/settings`, {
-        prompt_mode: $("setMode").value,
-        expected_output: $("setExpected").value,
         conversation_prompt_ttl_seconds: Number($("setPromptTtl").value),
       });
       $("settingsNotice").hidden = false;
@@ -1402,58 +1396,6 @@
 
   // Tabs are only visible when their group is open, so choosing a tab never needs to open a group.
 
-  // ----- Prompt generator -----
-
-  // «ساختار پرامپت»: the template only.
-  async function loadPromptGen() {
-    const data = await Z.request("GET", `${API}/prompt-template`);
-    $("genTemplate").value = data.template;
-    $("genPlaceholders").replaceChildren(
-      ...data.placeholders.map((p) => Z.el("li", "", `{{${p.key}}}  ${p.label}`)),
-    );
-  }
-
-  // «مشاهده پرامپت»: pick a learner and see the finished prompt for them.
-  async function loadPromptView() {
-    const students = await Z.request("GET", `${API}/students`);
-    $("genLearner").replaceChildren(
-      ...students.map((s) => {
-        const option = Z.el("option", "", `${s.name || "—"}${s.kind === "self" ? " (یادگیری خود)" : ""}`);
-        option.value = s.id;
-        return option;
-      }),
-    );
-    if (students.length) return generatePrompt();
-    $("genOutput").value = "";
-    return null;
-  }
-
-  function saveGenTemplate(text) {
-    return run(async () => {
-      await Z.request("POST", `${API}/prompt-template`, { template: text });
-      $("genNotice").hidden = false;
-      $("genNotice").textContent = "قالب ذخیره شد.";
-    });
-  }
-
-  function generatePrompt() {
-    return run(async () => {
-      show("genError", false);
-      show("genUnknown", false);
-      if (!$("genLearner").value) {
-        $("genError").hidden = false;
-        $("genError").textContent = "ابتدا یک دانش‌آموز انتخاب کنید.";
-        return;
-      }
-      const result = await Z.request("POST", `${API}/prompt/generate`, { student_id: $("genLearner").value });
-      $("genOutput").value = result.prompt;
-      if (result.unknown_placeholders.length) {
-        $("genUnknown").hidden = false;
-        $("genUnknown").textContent = `این کلیدها در سامانه نیستند و خالی ماندند: ${result.unknown_placeholders.join("، ")}`;
-      }
-    });
-  }
-
   // ----- Level test question bank -----
 
   let bankRows = [];
@@ -1745,14 +1687,6 @@
       renderSessions();
     });
     $("sesRevoke").addEventListener("click", revokeSessions);
-    $("genTemplateSave").addEventListener("click", () => saveGenTemplate($("genTemplate").value));
-    $("genTemplateReset").addEventListener("click", async () => {
-      const data = await Z.request("GET", `${API}/prompt-template`);
-      $("genTemplate").value = data.default_template;
-    });
-    $("genRun").addEventListener("click", generatePrompt);
-    $("genLearner").addEventListener("change", () => run(generatePrompt));
-    $("genCopy").addEventListener("click", () => navigator.clipboard.writeText($("genOutput").value));
     $("globalForm").addEventListener("submit", saveGlobalPrompt);
     $("partnerForm").addEventListener("submit", savePartner);
     $("partnerPreview").addEventListener("click", () => run(showPartnerPrompt));

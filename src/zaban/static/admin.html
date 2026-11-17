@@ -136,11 +136,9 @@
         </div>
         <div class="admin-group" data-group="prompts">
           <button type="button" class="admin-group-title" aria-expanded="true">مجموعه پرامپت</button>
-          <button type="button" class="tab" data-tab="promptgen">ساختار پرامپت</button>
-          <button type="button" class="tab" data-tab="promptview">مشاهده پرامپت</button>
           <button type="button" class="tab" data-tab="selftest">پرامپت آزمون</button>
           <button type="button" class="tab" data-tab="global">پرامپت کلی</button>
-          <button type="button" class="tab" data-tab="settings">تنظیمات پرامپت</button>
+          <button type="button" class="tab" data-tab="settings">تنظیمات سامانه</button>
           <button type="button" class="tab" data-tab="partner">تنظیمات گفتاریار</button>
         </div>
         <div class="admin-group">
@@ -267,18 +265,9 @@
       </dialog>
 
       <section class="card" id="tab-settings" hidden>
-        <h2>تنظیمات پرامپت</h2>
-        <p class="muted">ترکیب پرامپت کلاس، خروجی‌های موردانتظار و پرامپت آزمون. درگاه پرداخت و پیامک در بخش خودشان هستند.</p>
+        <h2>تنظیمات سامانه</h2>
+        <p class="muted">مدت اعتبار توکن گفتگو و وضعیت کلیدهای سرویس. درگاه پرداخت و پیامک در بخش خودشان هستند.</p>
         <p class="notice" id="settingsNotice" hidden></p>
-        <label for="setMode">ترکیب پرامپت کلاس</label>
-        <select id="setMode">
-          <option value="student">فقط پرامپت دانش‌آموز</option>
-          <option value="general">فقط پرامپت عمومی</option>
-          <option value="student_db">پرامپت دانش‌آموز همراه با اطلاعات دیتابیس</option>
-          <option value="all">ترکیب تمام پرامپت‌ها و اطلاعات دیتابیس</option>
-        </select>
-        <label for="setExpected">خروجی‌های موردانتظار از هوش مصنوعی</label>
-        <textarea id="setExpected" rows="4" maxlength="2000"></textarea>
         <label for="setPromptTtl">مدت اعتبار توکن پرامپت (ثانیه، بین ۶۰ و ۸۶۴۰۰)</label>
         <input id="setPromptTtl" type="number" min="60" max="86400" step="60" class="ltr-field">
         <p><button type="button" id="setSave">ذخیره‌ی تنظیمات</button></p>
@@ -359,21 +348,7 @@
         <div id="sesList"></div>
       </section>
 
-      <section class="card" id="tab-promptgen" hidden>
-        <h2>ساختار پرامپت</h2>
-        <p class="muted">این قالبی است که هر پرامپت از روی آن ساخته می‌شود. قالب را یک بار بنویسید. هر جا که نوشته‌ی {{کلید}} باشد، با مقدار ذخیره‌شده جایگزین می‌شود. ساخت پرامپت از هوش مصنوعی نیست؛ همان قالب و همان دانش‌آموز همیشه یک متن می‌دهد.</p>
-        <p class="notice" id="genNotice" hidden></p>
-        <h3>قالب</h3>
-        <label for="genTemplate">متن قالب</label>
-        <textarea id="genTemplate" rows="16" maxlength="8000" class="ltr-field"></textarea>
-        <p><button type="button" id="genTemplateSave">ذخیره‌ی قالب</button> <button type="button" id="genTemplateReset" class="ghost">برگشت به قالب پیش‌فرض</button></p>
-        <details class="placeholder-help">
-          <summary>کلیدهای قابل استفاده</summary>
-          <ul id="genPlaceholders" class="plain"></ul>
-        </details>
-      </section>
-
-      <section class="card" id="tab-selftest" hidden>
+            <section class="card" id="tab-selftest" hidden>
         <h2>پرامپت آزمون</h2>
         <p class="muted">این پرامپت برای آزمون «خودت رو محک بزن» ساخته می‌شود و مثل ساختار پرامپت با کلیدهای {{…}} پر می‌شود. کلیدهای داده از دیتابیس می‌آیند، قاعده‌ها را همین‌جا تعریف می‌کنید، و یادداشت‌های هر دانش‌آموز هم در آن می‌آید. قاعده‌ی ایمنی همیشه در انتهای پرامپت اضافه می‌شود.</p>
         <p class="notice" id="stNotice" hidden></p>
@@ -423,20 +398,7 @@
         <textarea id="stOutput" rows="18" readonly></textarea>
       </section>
 
-      <section class="card" id="tab-promptview" hidden>
-        <h2>مشاهده پرامپت</h2>
-        <p class="muted">یک دانش‌آموز را از فهرست انتخاب کنید. پرامپت همان دانش‌آموز با ساختار فعلی ساخته و نمایش داده می‌شود؛ هیچ چیزی ذخیره نمی‌شود.</p>
-        <p class="error" id="genError" hidden></p>
-        <p class="notice" id="genUnknown" hidden></p>
-        <label for="genLearner">دانش‌آموز</label>
-        <select id="genLearner"></select>
-        <p><button type="button" id="genRun">ساخت دوباره‌ی پرامپت</button></p>
-        <label for="genOutput">پرامپت آماده</label>
-        <textarea id="genOutput" rows="18" readonly></textarea>
-        <p><button type="button" id="genCopy" class="ghost">کپی پرامپت</button></p>
-      </section>
-
-
+      
       <section class="card" id="tab-placementbank" hidden>
         <h2>بانک سؤال تعیین سطح</h2>
         <p class="muted">هر سؤال یک مهارت و یک سطح دارد. گزینه‌ها را هر کدام در یک خط بنویسید. شمارهٔ گزینهٔ درست از صفر شروع می‌شود. برای شنیداری، متن جمله‌ای که باید خوانده شود را در «متن صوتی» بنویسید؛ مرورگر آن را پخش می‌کند.</p>
@@ -562,7 +524,7 @@
 
       <section class="card" id="tab-global" hidden>
         <h2>پرامپت کلی</h2>
-        <p class="muted">این متن در جلسه‌ی همه‌ی دانش‌آموزان استفاده می‌شود، قبل از اطلاعات هر دانش‌آموز. قوانین ایمنی همیشه بالاتر از این متن هستند.</p>
+        <p class="muted">این متن در پرامپت آزمون «خودت رو محک بزن» استفاده می‌شود، قبل از اطلاعات هر دانش‌آموز. قوانین ایمنی همیشه بالاتر از این متن هستند.</p>
         <form id="globalForm">
           <label for="globalText">پرامپت کلی</label>
           <textarea id="globalText" rows="12" maxlength="4000" placeholder="مثلاً: با لحن گرم و تشویقی صحبت کن. جمله‌ها کوتاه باشند. اشتباه‌ها را با یک مثال ساده اصلاح کن."></textarea>

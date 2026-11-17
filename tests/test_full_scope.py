@@ -2,8 +2,7 @@ import base64
 import os
 
 from zaban.db import SessionLocal
-from zaban.models import Guardian, LearnerDetails, Student
-from zaban.services.sessions import build_system_prompt
+from zaban.models import Guardian
 from helpers_learner import learner_login, self_student
 
 ADMIN_PASSWORD = os.environ["ADMIN_PASSWORD"]
@@ -88,40 +87,6 @@ def test_learner_sets_their_own_level(client):
     _student(client)
     assert client.put("/v1/web/student/level", json={"cefr_level": "B1"}).json()["cefr_level"] == "B1"
     assert client.put("/v1/web/student/level", json={"cefr_level": "Z9"}).status_code == 422
-
-
-def test_prompt_modes_choose_the_sources(client):
-    with SessionLocal() as db:
-        student = self_student(db)
-        db.expunge(student)
-    details = LearnerDetails(student_id=student.id, free_text="FOOTBALL_TOKEN")
-    kwargs = {"details": details, "global_prompt": "GENERAL_TOKEN", "course_note": "COURSE_TOKEN", "past_notes": "PAST_TOKEN"}
-    student_only = build_system_prompt(student, None, "warm_up", 10, mode="student", **kwargs)
-    general_only = build_system_prompt(student, None, "warm_up", 10, mode="general", **kwargs)
-    student_db = build_system_prompt(student, None, "warm_up", 10, mode="student_db", **kwargs)
-    everything = build_system_prompt(student, None, "warm_up", 10, mode="all", **kwargs)
-    assert "FOOTBALL_TOKEN" in student_only and "GENERAL_TOKEN" not in student_only and "COURSE_TOKEN" not in student_only
-    assert "GENERAL_TOKEN" in general_only and "FOOTBALL_TOKEN" not in general_only
-    assert "COURSE_TOKEN" in student_db and "PAST_TOKEN" in student_db and "GENERAL_TOKEN" not in student_db
-    assert all(t in everything for t in ("FOOTBALL_TOKEN", "GENERAL_TOKEN", "COURSE_TOKEN", "PAST_TOKEN"))
-
-
-def test_prompt_contains_the_seventy_percent_rule(client):
-    with SessionLocal() as db:
-        student = self_student(db)
-        db.expunge(student)
-    assert "70 percent" in build_system_prompt(student, None, "main_practice", 10)
-
-
-def test_admin_sets_prompt_mode_and_expected_output(client):
-    _admin(client)
-    body = {"prompt_mode": "student_db", "expected_output": "Use past words", "payment_provider": "fake"}
-    assert client.post("/v1/admin/api/settings", json=body).status_code == 200
-    saved = client.get("/v1/admin/api/settings").json()
-    assert saved["prompt_mode"] == "student_db" and saved["expected_output"] == "Use past words"
-    assert "anthropic_api_key_set" in saved["secrets"]
-    assert client.post("/v1/admin/api/settings", json={"prompt_mode": "random"}).status_code == 422
-    client.post("/v1/admin/api/settings", json={"prompt_mode": "all", "expected_output": ""})
 
 
 def test_admin_reads_a_learner_detail(client):

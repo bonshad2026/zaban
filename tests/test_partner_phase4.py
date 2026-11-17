@@ -141,17 +141,6 @@ def test_the_test_does_not_write_phrases_or_errors(client, monkeypatch):
         assert db.query(LearnerPhrase).filter_by(student_id=student_id).count() == 0
 
 
-def test_old_engine_keeps_the_old_self_test(client, monkeypatch):
-    with SessionLocal() as db:
-        student = _student(db)
-        test = _test(db, student, "speaking")
-        student_id, test_id = student.id, test.id
-    test = _finish(monkeypatch, test_id, _summary(), VALID_NOTEBOOK, engine="old")
-    assert test.status == "finished" and test.partner_status == ""
-    with SessionLocal() as db:
-        assert db.get(LearnerMemory, student_id) is None
-
-
 def test_the_self_test_prompt_reads_the_notebook(client):
     with SessionLocal() as db:
         student = _student(db)

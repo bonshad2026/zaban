@@ -69,7 +69,6 @@ def test_normalize_accepts_valid_values():
     assert normalize(specs["partner_review_intervals"], "3, 7,14 ,30") == "3,7,14,30"
     assert normalize(specs["partner_translation_seconds"], "A1:20, B2:7") == "A1:20,B2:7"
     assert normalize(specs["partner_default_rhythm"], "conversation:50,translation:50") == "conversation:50,translation:50"
-    assert normalize(specs["partner_engine"], "new") == "new"
 
 
 @pytest.mark.parametrize(
@@ -84,7 +83,6 @@ def test_normalize_accepts_valid_values():
         ("partner_translation_seconds", "a1:20"),
         ("partner_default_rhythm", "conversation:60,translation:20"),
         ("partner_default_rhythm", "dance:100"),
-        ("partner_engine", "fast"),
     ],
 )
 def test_normalize_refuses_bad_values(key, raw):
@@ -98,16 +96,15 @@ def test_defaults_are_used_when_nothing_is_saved():
         assert partner_value(db, "partner_mastery_count") == "2"
         assert partner_value(db, "partner_review_intervals") == "3,7,14,30"
         assert partner_value(db, "partner_default_rhythm") == "conversation:60,translation:20,review:10,summary:10"
-        assert get_setting(db, "partner_engine") == ""
 
 
 def test_admin_lists_settings_with_defaults(client):
     _admin(client)
     rows = client.get("/v1/admin/api/partner-settings").json()
     keys = {row["key"] for row in rows}
-    assert {"partner_engine", "partner_token_reserve", "partner_memory_max_words"} <= keys
-    engine_row = next(row for row in rows if row["key"] == "partner_engine")
-    assert engine_row["value"] == "old" and engine_row["is_default"] is True
+    assert {"partner_mastery_count", "partner_token_reserve", "partner_memory_max_words"} <= keys
+    engine_row = next(row for row in rows if row["key"] == "partner_mastery_count")
+    assert engine_row["value"] == "2" and engine_row["is_default"] is True
 
 
 def test_admin_saves_valid_values_and_refuses_bad_ones(client):
@@ -124,12 +121,11 @@ def test_admin_saves_valid_values_and_refuses_bad_ones(client):
     # One bad value in the same request saves nothing, not even the good one.
     refused = client.post(
         "/v1/admin/api/partner-settings",
-        json={"values": {"partner_mastery_count": "9", "partner_engine": "fast"}},
+        json={"values": {"partner_mastery_count": "99", "partner_review_intervals": "1,1"}},
     )
     assert refused.status_code == 400
     with SessionLocal() as db:
         assert partner_value(db, "partner_mastery_count") == "4"
-        assert partner_value(db, "partner_engine") == "old"
 
 
 def test_admin_refuses_unknown_setting(client):

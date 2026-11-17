@@ -3,12 +3,11 @@ from datetime import timedelta
 from pydantic import BaseModel, Field
 
 from fastapi import APIRouter, Depends, HTTPException, Response
-from sqlalchemy import func
 from sqlalchemy.orm import Session as DBSession
 
 from zaban.config import settings
 from zaban.db import get_db
-from zaban.models import Consent, Guardian, Message, Plan, Student, StudentGoal, TutorProfile, TutorSession, new_id, utcnow
+from zaban.models import Consent, Guardian, Message, Plan, Student, StudentGoal, TutorSession, new_id, utcnow
 from zaban.schemas import (
     ConsentCreate,
     MessageCreate,
@@ -25,32 +24,19 @@ from zaban.services.ai import tutor_reply
 from zaban.services.partner_output import parse_output
 from zaban.services.partner_prompt import build_prompt, mode_part, sentence_seconds, turn_block
 from zaban.services.partner_rhythm import move as move_rhythm, segment_state, set_rhythm, start_rhythm
-from zaban.services.partner_settings import partner_value
 from zaban.services.partner_turns import apply_turn
 from zaban.services.partner_budget import reserve_reached, warnings as budget_warnings
 from zaban.services.partner_end import finish_partner_session, retry_pending
 from zaban.models import LearnerDetails
-from zaban.services.evaluation import course_note, evaluate_session, past_evaluations, score_pending_sessions
-from zaban.services.learner_details import details_out, save_details
-from zaban.services.settings_store import EXPECTED_OUTPUT_KEY, PROMPT_MODE_DEFAULT, PROMPT_MODE_KEY, get_setting
-from zaban.services.curriculum import choose_topic, record_lesson_topic, session_topic, topic_note
-from zaban.services.learner import get_accent, get_global_prompt, set_learner_profile
+from zaban.services.learner_details import save_details
+from zaban.services.curriculum import choose_topic, record_lesson_topic
+from zaban.services.learner import set_learner_profile
 from zaban.services.metering import ensure_quota, record_usage
 from zaban.services.payments import charge_plan_tokens, has_active_plan, require_plan
-from zaban.services.prompt_template import has_saved_template, learner_values, render, get_template
 from zaban.services.sessions import finish_session
 from zaban.services.passwords import hash_password
 from zaban.services.progress import build_milestones, cefr_from_score
-from zaban.services.sessions import (
-    block_line,
-    build_system_prompt,
-    compose_start_prompt,
-    current_block,
-    finish_if_due,
-    finish_session,
-    guard_message,
-    join_prompt,
-)
+from zaban.services.sessions import current_block, finish_if_due, finish_session, guard_message
 
 # Shown to the learner when the adult's plan has no tokens left. The lesson closes after it.
 PLAN_USED_NOTICE = "توکن‌های پلن شما تمام شده و این کلاس همین‌جا بسته می‌شود. برای ادامه، پلن جدید تهیه کنید."
@@ -133,29 +119,6 @@ def _session_out(session: TutorSession, now) -> dict:
         "score": session.score,
         "messages": [{"role": m.role, "content": m.content} for m in session.messages],
     }
-
-
-def _lesson_note(db: DBSession, session_id: str) -> str:
-    chosen = session_topic(db, session_id)
-    return topic_note(*chosen) if chosen else ""
-
-
-def _start_parts(db: DBSession, student: Student, session: TutorSession) -> dict[str, str]:
-    # Each source is read from the database here, so the prompt matches what the learner and administrator set.
-    return compose_start_prompt(
-        student,
-        _active_plan(db, student),
-        session.duration_minutes,
-        get_global_prompt(db),
-        db.get(TutorProfile, student.id),
-        get_accent(db, student.id),
-        _lesson_note(db, session.id),
-        details=db.get(LearnerDetails, student.id),
-        mode=get_setting(db, PROMPT_MODE_KEY, PROMPT_MODE_DEFAULT),
-        expected_output=get_setting(db, EXPECTED_OUTPUT_KEY),
-        past_notes=past_evaluations(db, student.id),
-        course_note=course_note(db, student),
-    )
 
 
 def _active_plan(db: DBSession, student: Student) -> Plan | None:
@@ -426,7 +389,6 @@ def start_session(
         if old.status == "active":
             raise HTTPException(status_code=409, detail="A lesson is already running")
 
-    score_pending_sessions(db, student.id)
     retry_pending(db, student.id)
 
     plan = _active_plan(db, student)
@@ -443,7 +405,7 @@ def start_session(
         duration_minutes=body.duration_minutes,
         started_at=now,
         ends_at=now + timedelta(minutes=body.duration_minutes),
-        engine=partner_value(db, "partner_engine"),
+        engine="new",
     )
     db.add(session)
     db.commit()
@@ -457,15 +419,9 @@ def start_session(
         db.commit()
         out["topic"] = {"id": topic.id, "title": topic.title, "variant": variant.id if variant else None}
     # The start prompt is composed once here and sent as the first input of every reply in this lesson.
-    if partner_value(db, "partner_engine") == "new":
-        # The conversation partner builds its own five-part prompt once, when the lesson starts (section 7.1).
-        session.start_prompt = build_prompt(db, student)
-        start_rhythm(db, session, now)
-    elif has_saved_template(db):
-        # The administrator's template is filled with this learner's stored values, once, at the start of the lesson.
-        session.start_prompt, _ = render(get_template(db), learner_values(db, student, session.duration_minutes))
-    else:
-        session.start_prompt = join_prompt(_start_parts(db, student, session))
+    # The conversation partner builds its five-part prompt once, when the lesson starts (section 7.1).
+    session.start_prompt = build_prompt(db, student)
+    start_rhythm(db, session, now)
     db.commit()
     return out
 
@@ -476,7 +432,7 @@ def get_session(session_id: str, auth: Auth = Depends(get_auth), db: DBSession =
     now = utcnow()
     finish_if_due(session, now)
     db.commit()
-    _evaluate_finished(db, session)
+    finish_partner_session(db, session)
     return _session_out(session, now)
 
 
@@ -519,46 +475,20 @@ def send_message(
 
     history = [{"role": m.role, "content": m.content} for m in session.messages]
     history.append({"role": "user", "content": text})
-    if session.start_prompt:
-        system_prompt = session.start_prompt + "\n\n" + block_line(block, session.duration_minutes)
-    else:
-        system_prompt = build_system_prompt(
-            student,
-            _active_plan(db, student),
-            block,
-            session.duration_minutes,
-            get_global_prompt(db),
-            db.get(TutorProfile, student.id),
-            get_accent(db, student.id),
-            _lesson_note(db, session.id),
-            details=db.get(LearnerDetails, student.id),
-            mode=get_setting(db, PROMPT_MODE_KEY, PROMPT_MODE_DEFAULT),
-            expected_output=get_setting(db, EXPECTED_OUTPUT_KEY),
-            past_notes=past_evaluations(db, student.id),
-            course_note=course_note(db, student),
-        )
-    partner = None
-    rhythm = None
-    if session.engine == "new" and session.start_prompt:
-        # The partner answers in JSON. Only a valid answer is shown as a reply and written to the learner's record.
-        # Free conversation has no time and no rhythm. A lesson uses the part of its rhythm that is running now.
-        free = session.session_kind == "free"
-        if free:
-            mode, seconds, sentence = "conversation", None, None
-        else:
-            rhythm = segment_state(session, now)
-            mode, seconds = rhythm["mode"], rhythm["seconds_left"]
-            sentence = sentence_seconds(db, student) if mode == "translation" else None
-        partner_prompt = session.start_prompt + "\n\n" + mode_part(db, mode, free, student).text + "\n\n" + turn_block(mode, block, seconds, sentence)
-        reply = tutor_reply(partner_prompt, history)
-        turn = parse_output(reply.text)
-        if turn.valid:
-            apply_turn(db, student, session.id, turn, text, now)
-        partner = {"valid": turn.valid, "feedback": turn.feedback, "new_phrase": turn.new_phrase, "next_action": turn.next_action}
-        shown = turn.reply
-    else:
-        reply = tutor_reply(system_prompt, history)
-        shown = reply.text
+    # The partner answers in JSON. Only a valid answer is shown as a reply and written to the learner's record.
+    # Free conversation has no time and no rhythm. A lesson uses the part of its rhythm that is running now.
+    free = session.session_kind == "free"
+    rhythm = None if free else segment_state(session, now)
+    mode = "conversation" if free else rhythm["mode"]
+    seconds = None if free else rhythm["seconds_left"]
+    sentence = sentence_seconds(db, student) if mode == "translation" else None
+    partner_prompt = session.start_prompt + "\n\n" + mode_part(db, mode, free, student).text + "\n\n" + turn_block(mode, block, seconds, sentence)
+    reply = tutor_reply(partner_prompt, history)
+    turn = parse_output(reply.text)
+    if turn.valid:
+        apply_turn(db, student, session.id, turn, text, now)
+    partner = {"valid": turn.valid, "feedback": turn.feedback, "new_phrase": turn.new_phrase, "next_action": turn.next_action}
+    shown = turn.reply
 
     db.add(Message(session_id=session.id, role="user", content=text))
     db.add(Message(session_id=session.id, role="assistant", content=reply.text))
@@ -696,14 +626,6 @@ def set_lesson_rhythm(
     return _rhythm_out(segment_state(session, now))
 
 
-def _evaluate_finished(db: DBSession, session: TutorSession) -> None:
-    # The conversation partner's end routine for its lessons, the old evaluation for the rest.
-    if session.engine == "new":
-        finish_partner_session(db, session)
-    else:
-        evaluate_session(db, session)
-
-
 @router.post("/sessions/{session_id}/end")
 def end_session(session_id: str, auth: Auth = Depends(get_auth), db: DBSession = Depends(get_db)) -> dict:
     session = _get_session_for_auth(db, auth, session_id)
@@ -713,7 +635,7 @@ def end_session(session_id: str, auth: Auth = Depends(get_auth), db: DBSession =
     db.commit()
     # Score the lesson now, so the learner sees it at once. If the model cannot be reached, the score is made later.
     try:
-        _evaluate_finished(db, session)
+        finish_partner_session(db, session)
     except Exception:
         db.rollback()
     return _session_out(session, now)

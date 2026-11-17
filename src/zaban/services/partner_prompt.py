@@ -6,7 +6,9 @@ from dataclasses import dataclass
 from sqlalchemy.orm import Session as DBSession
 
 from zaban.models import LearnerMemory, SessionLogEntry, Student, StudentGoal, TutorSession, utcnow
+from zaban.services.accents import accent_note
 from zaban.services.content_library import active_item
+from zaban.services.learner import get_accent
 from zaban.services.partner_output import ERROR_TYPES
 from zaban.services.partner_phrases import due_phrases, library_candidates, phrase_settings
 from zaban.services.partner_policy import CRITERIA, LEVEL_CODES, behaviour_for, policy_table
@@ -99,6 +101,7 @@ def _policy_part(db: DBSession, student: Student) -> Part:
             f"Persian: {behaviour.persian}.",
             "Levels: " + ", ".join(f"{name.replace('level_', '')} {getattr(student, name)}" for name in CRITERIA),
             f"Register: {student.register_pref or 'neutral'}.",
+            f"Spelling and accent: {accent_note(get_accent(db, student.id))}.",
         ]
     )
     return Part("policy", "level policy (profile and partner_level_policy)", text)

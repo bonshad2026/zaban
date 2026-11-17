@@ -52,10 +52,10 @@ def test_admin_sidebar_groups_are_parent_menus(client):
 
 def test_prompt_payment_and_sms_have_their_own_sections(client):
     html = client.get("/admin").text
-    for tab in ("global", "promptgen", "promptview", "settings", "payment", "connections"):
+    for tab in ("global", "settings", "payment", "connections"):
         assert f'data-tab="{tab}"' in html
     assert 'id="tab-payment"' in html and 'id="paySave"' in html and 'id="smsSave"' in html
-    # The payment gateway is no longer part of the prompt settings.
+    # The payment gateway is not part of the system settings either.
     prompt_section = html[html.index('id="tab-settings"'):html.index('id="tab-payment"')]
     assert "setProvider" not in prompt_section and "connPayProvider" not in prompt_section
 
@@ -256,26 +256,3 @@ def test_admin_page_offers_sign_out_everywhere(client):
 
 
 # ----- Lesson score from the AI's closing line, and progress by topic -----
-
-def test_ai_closing_line_gives_the_lesson_score(client, monkeypatch):
-    from zaban.services import evaluation
-    from zaban.services.ai_gateway import AIResult
-
-    def fake_complete(system, messages, max_tokens=300):
-        return AIResult(text="Good work today.\nSCORE: 72", input_tokens=10, output_tokens=5, mode="test")
-
-    monkeypatch.setattr(evaluation, "complete", fake_complete)
-    with SessionLocal() as db:
-        from zaban.models import Message, TutorSession, utcnow
-        student = self_student(db)
-        session = TutorSession(student_id=student.id, duration_minutes=10, status="completed",
-                               started_at=utcnow(), ends_at=utcnow(), ended_at=utcnow())
-        db.add(session)
-        db.flush()
-        db.add(Message(session_id=session.id, role="user", content="Hello teacher"))
-        db.commit()
-        evaluation.evaluate_session(db, session)
-        db.refresh(session)
-        assert session.score == 72.0
-        assert "SCORE" not in session.evaluation
-        assert session.evaluation.startswith("Good work")

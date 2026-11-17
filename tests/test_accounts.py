@@ -3,7 +3,7 @@ import os
 from fastapi.testclient import TestClient
 
 from zaban.main import app
-from helpers_learner import learner_login, self_student
+from helpers_learner import learner_login
 
 DEMO = {"X-API-Key": os.environ["ZABAN_DEMO_API_KEY"]}
 
@@ -31,7 +31,7 @@ def test_learner_chooses_an_accent_and_the_lesson_prompt_uses_it(client):
     from zaban.db import SessionLocal
     from zaban.models import Student
     from zaban.services.learner import get_accent, set_accent
-    from zaban.services.sessions import build_system_prompt
+    from zaban.services.partner_prompt import build_prompt
 
     created = client.post(
         "/v1/students",
@@ -50,7 +50,7 @@ def test_learner_chooses_an_accent_and_the_lesson_prompt_uses_it(client):
     student_id = learner.get("/v1/web/me").json()["id"]
     with SessionLocal() as db:
         assert get_accent(db, student_id) == "en-GB"
-        prompt = build_system_prompt(db.get(Student, student_id), None, "warm_up", 10, "", None, "en-GB")
+        prompt = build_prompt(db, db.get(Student, student_id))
     assert "British spelling" in prompt
     set_accent  # imported for completeness of the service API
 

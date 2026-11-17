@@ -13,7 +13,6 @@ from zaban.services.curriculum import (
     topic_note,
     variant_for,
 )
-from zaban.services.sessions import build_system_prompt
 
 ADMIN_PASSWORD = os.environ["ADMIN_PASSWORD"]
 
@@ -158,20 +157,3 @@ def test_a_finished_topic_is_skipped_for_the_next_lesson(client):
         recorded = session_topic(db, lesson.id)
         assert recorded[0].id == "INTRO" and recorded[1] is None
 
-
-def test_lesson_prompt_includes_the_topic_note_with_or_without_text():
-    student_id = _new_student("adult", "B1")
-    with SessionLocal() as db:
-        student = db.get(Student, student_id)
-        topic, variant = choose_topic(db, student)
-        without_text = topic_note(topic, variant)
-        prompt = build_system_prompt(student, None, "main_practice", 30, "", None, "en-US", without_text)
-        assert "Today's topic: معرفی خود" in prompt
-        assert "Version for this learner" not in prompt
-
-        text_id = _ensure_text(db, "INTRO", "A", "B1")
-        try:
-            prompt = build_system_prompt(student, None, "main_practice", 30, "", None, "en-US", topic_note(topic, variant_for(db, "INTRO", "A", "B1")))
-            assert "INTRO.A.B1" in prompt
-        finally:
-            _drop_texts(db, [text_id])

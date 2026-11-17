@@ -10,7 +10,6 @@ from sqlalchemy.orm import Session as DBSession
 from zaban.config import settings
 from zaban.db import get_db
 from zaban.models import (
-    AppSetting,
     BillingPlan,
     ConsultRequest,
     CooperationRequest,
@@ -21,18 +20,14 @@ from zaban.models import (
     HelpTag,
     Guardian,
     HelpContent,
-    LearnerDetails,
     Payment,
-    Plan,
     Student,
     TutorProfile,
     VoiceSample,
 )
-from zaban.services.evaluation import course_note, past_evaluations
 from zaban.services.help_content import delete_facet, delete_tag, facet_tree, set_content_tags, tags_by_content
-from zaban.services.learner import get_accent, get_global_prompt, set_global_prompt, set_learner_profile
-from zaban.services.settings_store import EXPECTED_OUTPUT_KEY, PROMPT_MODE_DEFAULT, PROMPT_MODE_KEY, get_setting, set_setting
-from zaban.services.sessions import compose_start_prompt, join_prompt
+from zaban.services.learner import get_global_prompt, set_global_prompt, set_learner_profile
+from zaban.services.settings_store import get_setting, set_setting
 from zaban.schemas import HelpContentCreate, VoiceSampleCreate
 from zaban.services.self_test_prompt import (
     DEFAULT_RULES,
@@ -47,8 +42,6 @@ from zaban.services.self_test_prompt import (
 )
 from zaban.services.payments import confirm_payment
 from zaban.services.curriculum import (
-    choose_topic,
-    topic_note,
     ordered_topics,
     set_topic_order,
     bump_catalog_version,
@@ -334,39 +327,6 @@ def save_profile(student_id: str, body: ProfileUpdate, db: DBSession = Depends(g
     )
     db.commit()
     return {"ok": True}
-
-
-# The prompt a lesson for this learner would start with, built from the same sources as a real lesson.
-# The parts are returned one by one, so the administrator can see where each sentence comes from.
-@router.get("/students/{student_id}/start-prompt", dependencies=[Depends(require_admin)])
-def preview_start_prompt(student_id: str, db: DBSession = Depends(get_db)) -> dict:
-    student = db.get(Student, student_id)
-    if student is None:
-        raise HTTPException(status_code=404, detail="Not found")
-    plan = (
-        db.query(Plan)
-        .filter(Plan.student_id == student.id, Plan.status == "active")
-        .order_by(Plan.start_date.desc())
-        .first()
-    )
-    # The lesson the preview shows: the topic the next lesson would use.
-    chosen = choose_topic(db, student)
-    lesson = topic_note(*chosen) if chosen else ""
-    parts = compose_start_prompt(
-        student,
-        plan,
-        10,
-        get_global_prompt(db),
-        db.get(TutorProfile, student.id),
-        get_accent(db, student.id),
-        lesson,
-        details=db.get(LearnerDetails, student.id),
-        mode=get_setting(db, PROMPT_MODE_KEY, PROMPT_MODE_DEFAULT),
-        expected_output=get_setting(db, EXPECTED_OUTPUT_KEY),
-        past_notes=past_evaluations(db, student.id),
-        course_note=course_note(db, student),
-    )
-    return {"parts": parts, "prompt": join_prompt(parts)}
 
 
 # The general prompt that every lesson uses, before the learner's own details.

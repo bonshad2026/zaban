@@ -6,63 +6,9 @@ from zaban.models import LearnerDetails, Student, TutorProfile
 from zaban.services.learner import get_accent, get_global_prompt
 from zaban.services.learner_details import details_out
 from zaban.services.curriculum import next_topic
-from zaban.services.settings_store import get_setting, set_setting
 
 # The administrator writes a template once. The prompt is then built by filling its placeholders with stored values.
 # No AI is involved: the same template and the same learner always give the same text.
-TEMPLATE_KEY = "prompt_template"
-
-DEFAULT_TEMPLATE = """[پرامپت کلی]
-{{general}}
-
-[اطلاعات دانش‌آموز]
-نام: {{learner.name}}
-سن: {{learner.age}}
-جنسیت: {{learner.gender}}
-سطح انگلیسی: {{learner.level}}
-لهجه‌ی تمرین: {{learner.accent}}
-سبک گفتگوی مورد علاقه: {{learner.conversation_style}}
-سبک پاسخ معلم: {{learner.response_style}}
-ویژگی‌ها و چیزهایی که دوست دارد: {{learner.attributes}}
-علاقه‌ها: {{learner.interests}}
-انگیزه: {{learner.motivation}}
-نمونه‌ی انگلیسی دانش‌آموز: {{learner.level_sample}}
-یادداشت مدیر: {{learner.instructions}}
-
-[این جلسه]
-درس: {{lesson.number}} {{lesson.title}}
-موضوع این جلسه: {{lesson.topic}}
-
-[پرامپت شخصی]
-{{personal_text}}
-"""
-
-# What the administrator sees for each placeholder, in the order they are offered.
-PLACEHOLDERS = [
-    ("general", "پرامپت کلی سامانه"),
-    ("learner.name", "نام دانش‌آموز"),
-    ("learner.age", "سن"),
-    ("learner.gender", "جنسیت"),
-    ("learner.level", "سطح انگلیسی"),
-    ("learner.accent", "لهجه‌ی تمرین"),
-    ("learner.level_listening", "سطح شنیداری"),
-    ("learner.level_reading", "سطح خواندن"),
-    ("learner.level_speaking_writing", "سطح گفتار و نوشتار"),
-    ("learner.level_grammar", "سطح دستور و واژگان"),
-    ("learner.conversation_style", "سبک گفتگوی مورد علاقه"),
-    ("learner.response_style", "سبک پاسخ معلم"),
-    ("learner.attributes", "ویژگی‌ها و آنچه دوست دارد معلم داشته باشد"),
-    ("learner.interests", "علاقه‌ها"),
-    ("learner.motivation", "انگیزه"),
-    ("learner.level_sample", "نمونه‌ی انگلیسی دانش‌آموز"),
-    ("learner.instructions", "یادداشت مدیر"),
-    ("lesson.number", "شماره‌ی درس فعلی در برنامه"),
-    ("lesson.title", "عنوان درس فعلی"),
-    ("lesson.topic", "موضوع این جلسه (از موارد آموزشی درس)"),
-    ("personal_text", "پرامپت شخصی (هرچه معلم باید بداند)"),
-    ("duration", "مدت کلاس"),
-]
-
 GENDER_FA = {"female": "زن", "male": "مرد", "other": "سایر"}
 STYLE_FA = {
     "chat": "گفتگوی آزاد",
@@ -77,20 +23,6 @@ STYLE_FA = {
 }
 
 PLACEHOLDER_PATTERN = re.compile(r"\{\{\s*([a-z_.]+)\s*\}\}")
-
-
-def get_template(db: DBSession) -> str:
-    return get_setting(db, TEMPLATE_KEY, DEFAULT_TEMPLATE)
-
-
-def save_template(db: DBSession, text: str) -> None:
-    set_setting(db, TEMPLATE_KEY, text)
-    db.commit()
-
-
-def has_saved_template(db: DBSession) -> bool:
-    # Until the administrator saves a template, lessons keep the automatic prompt.
-    return bool(get_setting(db, TEMPLATE_KEY))
 
 
 def learner_values(db: DBSession, student: Student, duration_minutes: int = 0) -> dict[str, str]:

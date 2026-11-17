@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session as DBSession
 from zaban.conversation import tokens
 from zaban.conversation.models import ConvMessage, ConvPrompt, Conversation
 from zaban.models import Student, Tenant, utcnow
-from zaban.services.prompt_template import get_template, learner_values, render
+from zaban.services.partner_prompt import build_prompt
 from zaban.services.settings_store import PROMPT_TOKEN_TTL_KEY, get_setting
 
 # A conversation and its messages are removed this long after it started.
@@ -27,7 +27,8 @@ def prompt_ttl_seconds(db: DBSession) -> int:
 
 def make_prompt_token(db: DBSession, tenant: Tenant, student: Student, duration_minutes: int) -> tuple[str, str]:
     # The instruction text is built here and stored on the server. The caller only receives a token for it.
-    text, _ = render(get_template(db), learner_values(db, student, duration_minutes))
+    # The conversation partner prompt (the lesson template is gone). The duration is not used by the partner prompt.
+    text = build_prompt(db, student)
     expires_at = utcnow() + timedelta(seconds=prompt_ttl_seconds(db))
     row = ConvPrompt(tenant_id=tenant.id, student_id=student.id, text=text, expires_at=expires_at)
     db.add(row)
