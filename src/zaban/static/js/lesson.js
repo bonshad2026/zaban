@@ -95,7 +95,7 @@ const Lesson = (() => {
   }
 
   // The part of the rhythm that is running (section 4.15). It is shown when the part changes, and the question about the next part is asked once when the time is up.
-  const RHYTHM_LABELS = { conversation: "گفتگو", translation: "ترجمه‌ی ذهنی", review: "مرور عبارت‌ها", summary: "جمع‌بندی" };
+  const RHYTHM_LABELS = { conversation: "گفتگو", translation: "ترجمه‌ی ذهنی", review: "مرور عبارت‌ها", summary: "جمع‌بندی", shadowing: "شادوینگ", pronunciation: "تلفظ و آهنگ" };
   let shownRhythmMode = "";
   let askedAboutMode = "";
   function rhythmNote(rhythm) {

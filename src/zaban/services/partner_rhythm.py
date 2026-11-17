@@ -8,7 +8,14 @@ from zaban.models import TutorSession
 from zaban.services.partner_settings import RHYTHM_MODES, partner_value
 
 MAX_PARTS = 8
-MODE_LABELS = {"conversation": "گفتگو", "translation": "ترجمه‌ی ذهنی", "review": "مرور عبارت‌ها", "summary": "جمع‌بندی"}
+MODE_LABELS = {
+    "conversation": "گفتگو",
+    "translation": "ترجمه‌ی ذهنی",
+    "review": "مرور عبارت‌ها",
+    "summary": "جمع‌بندی",
+    "shadowing": "شادوینگ",
+    "pronunciation": "تلفظ و آهنگ",
+}
 
 
 def _percent_pairs(text: str) -> list[tuple[str, int]]:

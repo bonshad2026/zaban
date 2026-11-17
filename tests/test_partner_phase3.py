@@ -135,7 +135,7 @@ def test_free_conversation_rules_only_reach_free_conversation(client):
 def test_unknown_mode_is_refused(client):
     with SessionLocal() as db:
         with pytest.raises(ValueError):
-            partner_prompt.mode_part(db, "shadowing")
+            partner_prompt.mode_part(db, "dance")
 
 
 # ---- routes ----

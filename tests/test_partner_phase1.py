@@ -113,7 +113,7 @@ def test_unavailable_mode_is_refused(client):
     with SessionLocal() as db:
         student = _new_student(db)
         with pytest.raises(ValueError):
-            partner_prompt.build_parts(db, student, "shadowing")
+            partner_prompt.build_parts(db, student, "dance")
 
 
 def test_prompt_never_mentions_child_or_school_fields(client):

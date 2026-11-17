@@ -30,6 +30,14 @@ MODE_SPECS = {
     "of their own. Give feedback on each use in one or two sentences.",
     "summary": "Mode: wrap-up. Say what the learner did well, give one thing to improve, and one task for next time. "
     "Ask no new questions.",
+    # Shadowing and pronunciation work in the browser only (decision of phase 5). The partner sees the words the browser
+    # recognised, never the sound, so it judges words and rhythm from the text and says so to the learner.
+    "shadowing": "Mode: shadowing. Give one short English sentence and ask the learner to say it right after the sample voice "
+    "on the page. Compare the words the learner said with the sentence and point out missing or changed words, one at a time. "
+    "Do not claim to hear the sound; you only see the words.",
+    "pronunciation": "Mode: pronunciation and rhythm. Pick one word or one sentence with a clear stress pattern. Ask the learner "
+    "to say it, then give one tip about stress or linking. You only see the words the browser recognised, so do not judge "
+    "single sounds; say that when it matters.",
 }
 
 CONTRACT = """Output contract. Answer with one JSON object and nothing else:
