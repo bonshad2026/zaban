@@ -24,6 +24,8 @@ from zaban.services.partner_output import parse_output
 from zaban.services.partner_prompt import build_prompt, turn_block
 from zaban.services.partner_settings import partner_value
 from zaban.services.partner_turns import apply_turn
+from zaban.services.partner_budget import reserve_reached, warnings as budget_warnings
+from zaban.services.partner_end import finish_partner_session, retry_pending
 from zaban.models import LearnerDetails
 from zaban.services.evaluation import course_note, evaluate_session, past_evaluations, score_pending_sessions
 from zaban.services.learner_details import details_out, save_details
@@ -422,6 +424,7 @@ def start_session(
             raise HTTPException(status_code=409, detail="A lesson is already running")
 
     score_pending_sessions(db, student.id)
+    retry_pending(db, student.id)
 
     plan = _active_plan(db, student)
     # The next topic of the lesson path decides the lesson, unless the learner asked to play a finished topic again.
@@ -437,6 +440,7 @@ def start_session(
         duration_minutes=body.duration_minutes,
         started_at=now,
         ends_at=now + timedelta(minutes=body.duration_minutes),
+        engine=partner_value(db, "partner_engine"),
     )
     db.add(session)
     db.commit()
@@ -468,7 +472,7 @@ def get_session(session_id: str, auth: Auth = Depends(get_auth), db: DBSession =
     now = utcnow()
     finish_if_due(session, now)
     db.commit()
-    evaluate_session(db, session)
+    _evaluate_finished(db, session)
     return _session_out(session, now)
 
 
@@ -490,11 +494,14 @@ def send_message(
     # The adult who pays for this learner must still have a plan with tokens left. If not, the lesson closes here.
     owner_id = student.self_owner_id
     owner = db.get(Guardian, owner_id) if owner_id else None
-    if owner is not None and not has_active_plan(owner):
+    partner_lesson = session.engine == "new"
+    if owner is not None and (not has_active_plan(owner) or (partner_lesson and reserve_reached(db, owner))):
         finish_session(session, now)
         db.commit()
+        if partner_lesson:
+            finish_partner_session(db, session)
         return {"reply": PLAN_USED_NOTICE, "block": None, "guarded": None, "mode": "closed", "seconds_left": 0,
-                "closed": True, "notice": PLAN_USED_NOTICE}
+                "closed": True, "notice": PLAN_USED_NOTICE, "warnings": []}
 
     text = body.content.strip()
     block = current_block(session.started_at, session.ends_at, now)
@@ -547,10 +554,13 @@ def send_message(
     if owner is not None:
         charge_plan_tokens(db, owner, reply.input_tokens + reply.output_tokens)
         # When the last tokens are used, the lesson ends after this reply.
-        closed = not has_active_plan(owner)
+        closed = not has_active_plan(owner) or (partner_lesson and reserve_reached(db, owner))
     if closed:
         finish_session(session, now)
     db.commit()
+    if closed and partner_lesson:
+        # The end routine runs now, with the tokens kept back for it (section 13.7).
+        finish_partner_session(db, session)
     seconds_left = max(0, int((session.ends_at - now).total_seconds()))
     return {
         "reply": shown,
@@ -561,7 +571,16 @@ def send_message(
         "closed": closed,
         "notice": PLAN_USED_NOTICE if closed else None,
         "partner": partner,
+        "warnings": budget_warnings(db, owner, now) if partner_lesson else [],
     }
+
+
+def _evaluate_finished(db: DBSession, session: TutorSession) -> None:
+    # The conversation partner's end routine for its lessons, the old evaluation for the rest.
+    if session.engine == "new":
+        finish_partner_session(db, session)
+    else:
+        evaluate_session(db, session)
 
 
 @router.post("/sessions/{session_id}/end")
@@ -573,7 +592,7 @@ def end_session(session_id: str, auth: Auth = Depends(get_auth), db: DBSession =
     db.commit()
     # Score the lesson now, so the learner sees it at once. If the model cannot be reached, the score is made later.
     try:
-        evaluate_session(db, session)
+        _evaluate_finished(db, session)
     except Exception:
         db.rollback()
     return _session_out(session, now)

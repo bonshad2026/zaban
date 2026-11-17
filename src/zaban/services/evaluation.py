@@ -22,7 +22,7 @@ def _transcript(session: TutorSession) -> str:
 def evaluate_session(db: DBSession, session: TutorSession) -> None:
     # Written once, when the lesson ends. The same answer gives the score (0 to 100), which the averages use.
     # Lessons with no student turns get no evaluation and no score.
-    if session.score is not None or session.status != "completed" or not session.messages:
+    if session.score is not None or session.status != "completed" or not session.messages or session.engine == "new":
         return
     student = db.get(Student, session.student_id)
     result = complete(EVALUATION_INSTRUCTIONS, [{"role": "user", "content": _transcript(session)}], max_tokens=400)
@@ -39,7 +39,12 @@ def score_pending_sessions(db: DBSession, student_id: str) -> None:
     # Finished lessons that have no score yet are scored before the next lesson starts.
     pending = (
         db.query(TutorSession)
-        .filter(TutorSession.student_id == student_id, TutorSession.status == "completed", TutorSession.score.is_(None))
+        .filter(
+            TutorSession.student_id == student_id,
+            TutorSession.status == "completed",
+            TutorSession.score.is_(None),
+            TutorSession.engine == "old",
+        )
         .all()
     )
     for session in pending:

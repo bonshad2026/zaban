@@ -27,7 +27,14 @@ from zaban.models import (
     Usage,
     utcnow,
 )
-from zaban.services.partner_settings import save_settings as save_partner_settings, settings_view
+from zaban.services.partner_settings import partner_value, save_settings as save_partner_settings, settings_view
+from zaban.models import LearnerError, LearnerMemoryVersion, LearnerPhrase, PhraseItem, PhraseReview
+from zaban.services.partner_end import reprocess as reprocess_session_end
+from zaban.services.partner_levels import CRITERION_COLUMNS
+from zaban.services.partner_notebook import current_notebook, notebook_problems, save_notebook
+from zaban.services.partner_output import REGISTERS
+from zaban.services.partner_policy import LEVEL_CODES
+from zaban.services.phrase_library import add_phrase
 from zaban.services.partner_prompt import build_parts
 from zaban.services.evaluation import past_evaluations
 from zaban.services.learner_details import details_out
@@ -226,6 +233,139 @@ def save_partner_settings_api(body: PartnerSettingsUpdate, db: DBSession = Depen
         raise HTTPException(status_code=400, detail=str(error)) from error
     db.commit()
     return settings_view(db)
+
+
+class PartnerCriteriaUpdate(BaseModel):
+    # Keys are the summary names: range, accuracy, fluency, interaction, coherence.
+    values: dict[str, str] = Field(default_factory=dict, max_length=5)
+
+
+class PartnerNotebookUpdate(BaseModel):
+    text: str = Field(min_length=1, max_length=20000)
+
+
+class PartnerRevertUpdate(BaseModel):
+    version_id: int
+
+
+class PhraseReviewUpdate(BaseModel):
+    action: str = Field(pattern=r"^(add|dismiss)$")
+    level: str | None = Field(default=None, max_length=2)
+    tone: str | None = Field(default=None, max_length=12)
+
+
+def _learner_or_404(db: DBSession, student_id: str) -> Student:
+    student = db.get(Student, student_id)
+    if student is None:
+        raise HTTPException(status_code=404, detail="Learner not found")
+    return student
+
+
+@router.get("/learners/{student_id}/partner")
+def read_learner_partner(student_id: str, db: DBSession = Depends(get_db)) -> dict:
+    # Everything the conversation partner knows about one learner: levels, notebook and its versions, lessons, phrases and errors.
+    student = _learner_or_404(db, student_id)
+    versions = db.query(LearnerMemoryVersion).filter(LearnerMemoryVersion.student_id == student.id).order_by(LearnerMemoryVersion.id.desc()).limit(20).all()
+    lessons = db.query(TutorSession).filter(TutorSession.student_id == student.id).order_by(TutorSession.started_at.desc()).limit(20).all()
+    phrases = (
+        db.query(LearnerPhrase, PhraseItem)
+        .join(PhraseItem, PhraseItem.id == LearnerPhrase.phrase_id)
+        .filter(LearnerPhrase.student_id == student.id)
+        .all()
+    )
+    errors = db.query(LearnerError).filter(LearnerError.student_id == student.id).all()
+    return {
+        "criteria": {key: getattr(student, column) for key, column in CRITERION_COLUMNS.items()},
+        "notebook": current_notebook(db, student),
+        "max_words": int(partner_value(db, "partner_memory_max_words")),
+        "versions": [
+            {"id": v.id, "event": v.event, "created_at": v.created_at.isoformat(), "text": v.text} for v in versions
+        ],
+        "sessions": [
+            {
+                "id": s.id,
+                "started_at": s.started_at.isoformat(),
+                "engine": s.engine,
+                "end_status": s.end_status,
+                "end_attempts": s.end_attempts,
+                "evaluation": s.evaluation or "",
+            }
+            for s in lessons
+        ],
+        "phrases": [{"text": item.text, "status": row.status, "clean_sessions": row.clean_sessions} for row, item in phrases],
+        "errors": [{"error_type": e.error_type, "count": e.count} for e in errors],
+    }
+
+
+@router.post("/learners/{student_id}/partner/criteria")
+def save_learner_criteria(student_id: str, body: PartnerCriteriaUpdate, db: DBSession = Depends(get_db)) -> dict:
+    student = _learner_or_404(db, student_id)
+    for key, value in body.values.items():
+        if key not in CRITERION_COLUMNS or value not in LEVEL_CODES:
+            raise HTTPException(status_code=400, detail="Each criterion needs a known name and a level from A1 to C2")
+        setattr(student, CRITERION_COLUMNS[key], value)
+    db.commit()
+    return {"ok": True}
+
+
+@router.post("/learners/{student_id}/partner/notebook")
+def save_learner_notebook(student_id: str, body: PartnerNotebookUpdate, db: DBSession = Depends(get_db)) -> dict:
+    student = _learner_or_404(db, student_id)
+    text = body.text.strip()
+    problems = notebook_problems(text, int(partner_value(db, "partner_memory_max_words")), student.display_name or "")
+    if problems:
+        raise HTTPException(status_code=400, detail="; ".join(problems))
+    save_notebook(db, student, text, "admin_edit", utcnow())
+    db.commit()
+    return {"ok": True}
+
+
+@router.post("/learners/{student_id}/partner/notebook/revert")
+def revert_learner_notebook(student_id: str, body: PartnerRevertUpdate, db: DBSession = Depends(get_db)) -> dict:
+    student = _learner_or_404(db, student_id)
+    version = db.get(LearnerMemoryVersion, body.version_id)
+    if version is None or version.student_id != student.id:
+        raise HTTPException(status_code=404, detail="Version not found")
+    save_notebook(db, student, version.text, "revert", utcnow())
+    db.commit()
+    return {"ok": True}
+
+
+@router.post("/sessions/{session_id}/reprocess")
+def reprocess_lesson(session_id: str, db: DBSession = Depends(get_db)) -> dict:
+    session = db.get(TutorSession, session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+    if session.engine != "new":
+        raise HTTPException(status_code=400, detail="Only lessons of the conversation partner can be processed again")
+    return {"end_status": reprocess_session_end(db, session)}
+
+
+@router.get("/phrase-review")
+def list_phrase_review(db: DBSession = Depends(get_db)) -> list[dict]:
+    rows = db.query(PhraseReview).filter(PhraseReview.status == "pending").order_by(PhraseReview.id).all()
+    return [
+        {"id": r.id, "text": r.text, "situation": r.situation, "register": r.register, "student_id": r.student_id}
+        for r in rows
+    ]
+
+
+@router.post("/phrase-review/{review_id}")
+def decide_phrase_review(review_id: int, body: PhraseReviewUpdate, db: DBSession = Depends(get_db)) -> dict:
+    row = db.get(PhraseReview, review_id)
+    if row is None or row.status != "pending":
+        raise HTTPException(status_code=404, detail="Phrase not waiting for review")
+    if body.action == "dismiss":
+        row.status = "dismissed"
+    else:
+        if body.level not in LEVEL_CODES:
+            raise HTTPException(status_code=400, detail="Choose the level of the phrase")
+        register = body.tone if body.tone in REGISTERS else row.register
+        if add_phrase(db, row.text, body.level, situation=row.situation, register=register, source="review") is None:
+            raise HTTPException(status_code=400, detail="This phrase is already in the library. Dismiss it instead.")
+        row.status = "added"
+    db.commit()
+    return {"ok": True}
 
 
 @router.get("/partner-prompt")

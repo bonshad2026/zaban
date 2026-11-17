@@ -94,6 +94,13 @@ const Lesson = (() => {
     $("chat").scrollTop = $("chat").scrollHeight;
   }
 
+  // The plan warnings the server sends with a reply (section 13.7).
+  function warningText(warning) {
+    if (warning.kind === "tokens") return `توکن‌های پلن شما به ${warning.percent}٪ رسیده است. بهتر است جلسه را جمع‌بندی کنید.`;
+    if (warning.days_left === 0) return "امروز آخرین روز پلن شماست.";
+    return `پلن شما ${warning.days_left} روز دیگر تمام می‌شود.`;
+  }
+
   function note(text) {
     $("chat").appendChild(Z.el("div", "bubble note", text));
     $("chat").scrollTop = $("chat").scrollHeight;
@@ -152,6 +159,7 @@ const Lesson = (() => {
       if (reply.guarded) note(GUARD_NOTE);
       bubble("assistant", reply.reply);
       partnerCards(reply.partner);
+      (reply.warnings || []).forEach((warning) => note(warningText(warning)));
       if (reply.seconds_left !== null && reply.seconds_left !== undefined) setTimer(reply.seconds_left);
       await speak(reply.reply);
       if (reply.closed) {

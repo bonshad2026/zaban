@@ -44,7 +44,7 @@ def _new_phrase(value: object) -> dict | None:
     return {"text": text, "situation": _as_text(value.get("situation")) or "", "register": register}
 
 
-def _json_object(raw: str) -> dict | None:
+def read_json_object(raw: str) -> dict | None:
     # Some models wrap the JSON in a code fence. Take the outermost object.
     start, end = raw.find("{"), raw.rfind("}")
     if start == -1 or end <= start:
@@ -58,7 +58,7 @@ def _json_object(raw: str) -> dict | None:
 
 def parse_output(raw: str) -> PartnerTurn:
     text = (raw or "").strip()
-    data = _json_object(text)
+    data = read_json_object(text)
     reply = _as_text(data.get("reply")) if data else None
     if data is None or reply is None:
         return PartnerTurn(valid=False, reply=text, raw=text)

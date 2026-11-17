@@ -52,6 +52,8 @@ ADDED_COLUMNS = [
     ("sessions", "eval_coherence", "VARCHAR(4)"),
     ("sessions", "end_status", "VARCHAR(20) NOT NULL DEFAULT 'active'"),
     ("sessions", "session_kind", "VARCHAR(20) NOT NULL DEFAULT 'lesson'"),
+    ("sessions", "engine", "VARCHAR(10) NOT NULL DEFAULT 'old'"),
+    ("sessions", "end_attempts", "INTEGER NOT NULL DEFAULT 0"),
 ]
 
 # The five speaking criteria start from the speaking level the learner chose before the first lesson.

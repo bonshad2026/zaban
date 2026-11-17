@@ -1041,6 +1041,8 @@
     $("partnerFields").replaceChildren(...specs.map(partnerField));
     const learners = await Z.request("GET", `${API}/learners`);
     $("partnerLearner").replaceChildren(...learners.map((l) => option(l.id, l.name)));
+    await loadLearnerPartner();
+    await loadPhraseReview();
   }
 
   // Shows each part of the partner prompt for the chosen learner. The text goes through textContent only.
@@ -1071,6 +1073,110 @@
     } catch (err) {
       setError("partnerError", err.message);
     }
+  }
+
+  // ----- Conversation partner: one learner's levels, notebook and lessons, and the phrase review queue -----
+
+  const PARTNER_LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
+  const PARTNER_CRITERIA = [["range", "دامنه"], ["accuracy", "دقت"], ["fluency", "روانی"], ["interaction", "تعامل"], ["coherence", "انسجام"]];
+
+  function partnerNote(text) {
+    $("partnerLearnerNotice").hidden = false;
+    $("partnerLearnerNotice").textContent = text;
+  }
+
+  function shortTime(iso) {
+    return iso.slice(0, 16).replace("T", " ");
+  }
+
+  async function loadLearnerPartner() {
+    const id = $("partnerLearner").value;
+    if (!id) return;
+    const data = await Z.request("GET", `${API}/learners/${encodeURIComponent(id)}/partner`);
+    $("partnerCriteria").replaceChildren(...PARTNER_CRITERIA.map(([key, label]) => {
+      const wrap = Z.el("div", "partner-field");
+      const select = Z.el("select", "");
+      select.id = `partner_criteria_${key}`;
+      select.dataset.key = key;
+      PARTNER_LEVELS.forEach((level) => select.appendChild(option(level, level)));
+      select.value = data.criteria[key];
+      wrap.append(Z.el("label", "", label), select);
+      return wrap;
+    }));
+    $("partnerNotebook").value = data.notebook;
+    $("partnerVersions").replaceChildren(...data.versions.map((v) => option(String(v.id), `${shortTime(v.created_at)} — ${v.event}`)));
+    $("partnerSessions").replaceChildren(...data.sessions.map(partnerSessionRow));
+  }
+
+  function partnerSessionRow(s) {
+    const row = Z.el("div", "partner-session");
+    const engine = s.engine === "new" ? "گفتگوگر" : "روال قدیم";
+    row.appendChild(Z.el("span", "", `${shortTime(s.started_at)} — ${engine} — ${s.end_status}`));
+    if (s.engine === "new" && (s.end_status === "pending" || s.end_status === "no_evaluation")) {
+      const button = Z.el("button", "ghost", "پردازش دوباره");
+      button.type = "button";
+      button.addEventListener("click", () => run(async () => {
+        const result = await Z.request("POST", `${API}/sessions/${s.id}/reprocess`);
+        partnerNote(`وضعیت جلسه: ${result.end_status}`);
+        await loadLearnerPartner();
+      }));
+      row.appendChild(button);
+    }
+    if (s.evaluation) row.appendChild(Z.el("p", "muted", s.evaluation));
+    return row;
+  }
+
+  function savePartnerCriteria() {
+    return run(async () => {
+      const values = {};
+      document.querySelectorAll("#partnerCriteria [data-key]").forEach((field) => { values[field.dataset.key] = field.value; });
+      await Z.request("POST", `${API}/learners/${encodeURIComponent($("partnerLearner").value)}/partner/criteria`, { values });
+      partnerNote("پنج معیار ذخیره شد.");
+      await loadLearnerPartner();
+    });
+  }
+
+  function savePartnerNotebook() {
+    return run(async () => {
+      await Z.request("POST", `${API}/learners/${encodeURIComponent($("partnerLearner").value)}/partner/notebook`, { text: $("partnerNotebook").value });
+      partnerNote("دفترچه ذخیره شد و نسخه‌ی تازه ساخته شد.");
+      await loadLearnerPartner();
+    });
+  }
+
+  function revertPartnerNotebook() {
+    return run(async () => {
+      if (!$("partnerVersions").value) return;
+      await Z.request("POST", `${API}/learners/${encodeURIComponent($("partnerLearner").value)}/partner/notebook/revert`, { version_id: Number($("partnerVersions").value) });
+      partnerNote("دفترچه به نسخه‌ی قبل برگشت.");
+      await loadLearnerPartner();
+    });
+  }
+
+  async function loadPhraseReview() {
+    const rows = await Z.request("GET", `${API}/phrase-review`);
+    $("partnerReview").replaceChildren(...(rows.length ? rows.map(reviewRow) : [Z.el("p", "muted", "صف خالی است.")]));
+  }
+
+  function reviewRow(item) {
+    const row = Z.el("div", "partner-review");
+    row.append(Z.el("strong", "ltr-field", item.text), Z.el("span", "muted", ` ${item.situation}`));
+    const level = Z.el("select", "");
+    PARTNER_LEVELS.forEach((code) => level.appendChild(option(code, code)));
+    const add = Z.el("button", "", "افزودن به کتابخانه");
+    add.type = "button";
+    add.addEventListener("click", () => run(async () => {
+      await Z.request("POST", `${API}/phrase-review/${item.id}`, { action: "add", level: level.value, tone: item.register });
+      await loadPhraseReview();
+    }));
+    const dismiss = Z.el("button", "ghost", "رد");
+    dismiss.type = "button";
+    dismiss.addEventListener("click", () => run(async () => {
+      await Z.request("POST", `${API}/phrase-review/${item.id}`, { action: "dismiss" });
+      await loadPhraseReview();
+    }));
+    row.append(level, add, dismiss);
+    return row;
   }
 
   // ----- Curriculum: topic, conversation goal and the points to talk about -----
@@ -1650,6 +1756,10 @@
     $("globalForm").addEventListener("submit", saveGlobalPrompt);
     $("partnerForm").addEventListener("submit", savePartner);
     $("partnerPreview").addEventListener("click", () => run(showPartnerPrompt));
+    $("partnerLearner").addEventListener("change", () => run(loadLearnerPartner));
+    $("partnerCriteriaSave").addEventListener("click", savePartnerCriteria);
+    $("partnerNotebookSave").addEventListener("click", savePartnerNotebook);
+    $("partnerRevert").addEventListener("click", revertPartnerNotebook);
     $("voiceForm").addEventListener("submit", addVoice);
     $("globalText").addEventListener("input", updateGlobalCount);
     $("learnerForm").addEventListener("submit", loadLearner);

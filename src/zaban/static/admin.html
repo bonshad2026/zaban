@@ -541,6 +541,23 @@
         <select id="partnerLearner"></select>
         <p><button type="button" id="partnerPreview" class="ghost">نمایش پرامپت</button></p>
         <div id="partnerParts"></div>
+        <h3>دفترچه و عددهای زبان‌آموز</h3>
+        <p class="muted">این بخش فقط برای مدیر است. زبان‌آموز دفترچه را نمی‌بیند. هر ذخیره‌ی دستی یک نسخه‌ی تازه می‌سازد.</p>
+        <p class="notice" id="partnerLearnerNotice" hidden></p>
+        <p class="notice" id="partnerLearnerError" hidden></p>
+        <div id="partnerCriteria"></div>
+        <p><button type="button" id="partnerCriteriaSave">ذخیره‌ی پنج معیار</button></p>
+        <label for="partnerNotebook">دفترچه‌ی معلم</label>
+        <textarea id="partnerNotebook" rows="16" maxlength="20000" class="ltr-field"></textarea>
+        <p><button type="button" id="partnerNotebookSave">ذخیره‌ی دفترچه</button></p>
+        <label for="partnerVersions">نسخه‌های قبلی</label>
+        <select id="partnerVersions"></select>
+        <p><button type="button" id="partnerRevert" class="ghost">برگشت به این نسخه</button></p>
+        <h3>جلسه‌ها</h3>
+        <div id="partnerSessions"></div>
+        <h3>صف بازبینی عبارت</h3>
+        <p class="muted">عبارت‌هایی که شریک گفته و در کتابخانه نبوده‌اند. با سطح مشخص به کتابخانه اضافه کنید، یا رد کنید.</p>
+        <div id="partnerReview"></div>
       </section>
 
       <section class="card" id="tab-global" hidden>
