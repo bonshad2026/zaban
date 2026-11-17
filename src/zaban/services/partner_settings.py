@@ -12,8 +12,11 @@ RHYTHM_MODES = [
 ]
 
 SHARED_RULES_DEFAULT = (
-    "فارسی فقط برای رفع ابهام و در یک جمله‌ی کوتاه؛ زبان‌آموز حدود ۷۰٪ زمان صحبت کند؛ "
-    "فقط روی تمرین انگلیسی بماند؛ از دفترچه‌ی معلم استفاده کند."
+    "- Use Persian only to clear up confusion: one short sentence, then back to English.\n"
+    "- Let the learner speak about 70 percent of the time.\n"
+    "- Stay on practising English. If the learner asks for something else, bring them back in one sentence.\n"
+    "- Use the teacher notebook: follow up open topics, do not repeat topics already covered unless for review, "
+    "take new topics from the suggested list, do not re-teach what the learner has mastered, and use what works for this learner."
 )
 
 # kind: choice, int, int_list (comma separated numbers), pairs (LEVEL:number), rhythm (mode:percent), text.
@@ -39,8 +42,10 @@ PARTNER_SETTINGS = [
     {"key": "partner_default_rhythm", "label": "ریتم پیش‌فرض جلسه (درصد)", "kind": "rhythm",
      "default": "conversation:60,translation:20,review:10,summary:10", "help": "جمع درصدها باید ۱۰۰ باشد."},
     {"key": "partner_shared_rules", "label": "قواعد مشترک", "kind": "text", "default": SHARED_RULES_DEFAULT},
-    {"key": "partner_mode_rules", "label": "قواعد هر حالت درس", "kind": "text", "default": "",
-     "help": "برای همه‌ی حالت‌های ریتم درس (گفتگو، ترجمه، مرور، جمع‌بندی)."},
+    {"key": "partner_mode_rules", "label": "قواعد اختصاصی هر حالت درس", "kind": "mode_rules", "default": "",
+     "help": "هر خط یک حالت: کلید حالت، دونقطه، سپس قاعده (مثلاً «translation: کوتاه بگو»). کلیدها: conversation، translation، review، summary، shadowing، pronunciation، task، functions، phrases، casual، listening، story، poetry، repeat."},
+    {"key": "partner_notebook_rules", "label": "قاعده‌ی نوشتن دفترچه", "kind": "text", "default": "",
+     "help": "خالی یعنی قاعده‌ی پیش‌فرض کد. می‌توانید {max_words} را بنویسید تا سقف کلمه جای آن بنشیند."},
     {"key": "partner_free_rules", "label": "قواعد گفتگوی آزاد", "kind": "text", "default": "",
      "help": "فقط برای گفتگوی آزاد. مثلاً لحن یا موضوع‌های ترجیحی."},
     {"key": "partner_level_policy", "label": "جدول سیاست سطح", "kind": "policy", "default": "",
@@ -51,6 +56,16 @@ SPEC_BY_KEY = {spec["key"]: spec for spec in PARTNER_SETTINGS}
 TEXT_MAX_LENGTH = 4000
 
 
+def mode_rules_of(text: str) -> dict[str, str]:
+    # Reads the per-mode rules: one line for each mode, written as mode: rule.
+    rules: dict[str, str] = {}
+    for line in text.splitlines():
+        mode, sep, rule = line.partition(":")
+        if sep and mode.strip() in RHYTHM_MODES and rule.strip():
+            rules[mode.strip()] = rule.strip()
+    return rules
+
+
 def partner_value(db: DBSession, key: str) -> str:
     return get_setting(db, key, SPEC_BY_KEY[key]["default"])
 
@@ -59,6 +74,16 @@ def normalize(spec: dict, raw: str) -> str:
     # Returns the value in the stored form, or raises ValueError with a short English reason.
     value = raw.strip()
     kind = spec["kind"]
+    if kind == "mode_rules":
+        for number, line in enumerate(value.splitlines(), start=1):
+            if not line.strip():
+                continue
+            mode, sep, rule = line.partition(":")
+            if not sep or mode.strip() not in RHYTHM_MODES or not rule.strip():
+                raise ValueError(f"{spec['key']} line {number} must look like mode: rule, with a known mode")
+        if len(value) > TEXT_MAX_LENGTH:
+            raise ValueError(f"{spec['key']} is longer than {TEXT_MAX_LENGTH} characters")
+        return value
     if kind == "policy":
         try:
             parse_override(value)

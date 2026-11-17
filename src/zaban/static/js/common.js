@@ -779,6 +779,8 @@ const Z = (() => {
     items.push({ href: "/plan", fa: "پلن و اعتبار", en: "Plan and credit", active: path === "/plan" });
     items.push({ href: "/level", fa: "تعیین سطح", en: "Set level", active: path === "/level" });
     items.push({ href: "/student?tab=help", fa: "کمک‌آموزشی", en: "Help", active: onLearnerPage && tool === "help" });
+    // Free conversation (section 4.1) opens on the learner page, in the same chat, without a time limit.
+    items.push({ href: "/student?free=1", fa: "گفتگوی آزاد", en: "Free talk", active: onLearnerPage && new URLSearchParams(location.search).get("free") === "1" });
     // "My students" appears once at least one adult has chosen this account as their teacher.
     if (teaches > 0) {
       items.push({ href: "/students", fa: "دانش‌آموزان من", en: "My students", active: path === "/students" });

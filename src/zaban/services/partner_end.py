@@ -61,8 +61,10 @@ class Calls:
 def write_notebook(calls: Calls, student: Student, db: DBSession, event: str, max_words: int) -> str:
     # Asks for the whole notebook again, with the event. Two tries; a notebook that fails the checks is never saved.
     user = f"Current notebook:\n{current_notebook(db, student) or '(empty: this is the first update)'}\n\nNew event:\n{event}"
+    # The administrator can change the writing rule; the code's rule is used when that setting is empty.
+    rules = (partner_value(db, "partner_notebook_rules") or NOTEBOOK_RULES).replace("{max_words}", str(max_words))
     for _ in range(2):
-        text = calls(NOTEBOOK_RULES.format(max_words=max_words), user, 3000).text.strip()
+        text = calls(rules, user, 3000).text.strip()
         if not notebook_problems(text, max_words, student.display_name or ""):
             return text
     raise EndError("notebook was refused twice")
@@ -138,9 +140,12 @@ def finish_partner_session(db: DBSession, session: TutorSession, now: datetime |
 
 
 def retry_pending(db: DBSession, student_id: str) -> None:
-    # Lessons whose routine failed are tried again before the learner's next lesson starts.
+    # Lessons that ended by time without the learner's end (end_status active) are finished here too.
     pending = db.query(TutorSession).filter(
-        TutorSession.student_id == student_id, TutorSession.engine == "new", TutorSession.end_status == "pending"
+        TutorSession.student_id == student_id,
+        TutorSession.engine == "new",
+        TutorSession.status == "completed",
+        TutorSession.end_status.in_(["pending", "active"]),
     ).all()
     for session in pending:
         finish_partner_session(db, session)

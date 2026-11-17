@@ -69,6 +69,9 @@
     connections: loadSms,
     ai: loadAi,
     partner: loadPartner,
+    partnerrules: loadPartnerRules,
+    partnerpolicy: loadPartnerPolicy,
+    partnercontent: loadPartnerContent,
     payment: loadPayment,
     sessions: loadSessions,
     selftest: loadSelfTest,
@@ -83,7 +86,7 @@
 
   function openTab(name) {
     document.querySelectorAll(".admin-tabs .tab").forEach((t) => t.classList.toggle("is-active", t.dataset.tab === name));
-    ["overview", "consults", "cooperations", "helpcontent", "settings", "connections", "ai", "payment", "sessions", "selftest", "placementbank", "adults", "payments", "plans", "curriculum", "global", "voices", "partner"]
+    ["overview", "consults", "cooperations", "helpcontent", "settings", "connections", "ai", "payment", "sessions", "selftest", "placementbank", "adults", "payments", "plans", "curriculum", "global", "voices", "partner", "partnerrules", "partnerpolicy", "partnercontent"]
       .forEach((n) => show(`tab-${n}`, n === name));
     return run(loaders[name]);
   }
@@ -1011,7 +1014,7 @@
     if (spec.kind === "choice") {
       input = Z.el("select", "");
       spec.choices.forEach((choice) => input.appendChild(option(choice, choice)));
-    } else if (spec.kind === "text") {
+    } else if (spec.kind === "text" || spec.kind === "mode_rules") {
       input = Z.el("textarea", "");
       input.rows = 4;
       input.maxLength = 4000;
@@ -1030,13 +1033,129 @@
     return wrap;
   }
 
+  // The rules, the level policy and the numbers are three tabs. Each one saves only its own keys.
+  const PARTNER_RULE_KEYS = ["partner_shared_rules", "partner_mode_rules", "partner_free_rules", "partner_notebook_rules"];
+  const PARTNER_POLICY_KEY = "partner_level_policy";
+  const POLICY_FIELDS = ["sentence", "vocab", "question", "correction", "turn"];
+  const POLICY_LABELS = ["جمله", "واژگان", "پرسش", "اصلاح", "نوبت"];
+  const POLICY_LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
+
+  function renderPartnerNumbers(specs) {
+    $("partnerFields").replaceChildren(...specs.filter((s) => !PARTNER_RULE_KEYS.includes(s.key) && s.key !== PARTNER_POLICY_KEY).map(partnerField));
+  }
+
   async function loadPartner() {
     const specs = await Z.request("GET", `${API}/partner-settings`);
-    $("partnerFields").replaceChildren(...specs.map(partnerField));
+    renderPartnerNumbers(specs);
     const learners = await Z.request("GET", `${API}/learners`);
     $("partnerLearner").replaceChildren(...learners.map((l) => option(l.id, l.name)));
     await loadLearnerPartner();
     await loadPhraseReview();
+  }
+
+  async function loadPartnerRules() {
+    const specs = await Z.request("GET", `${API}/partner-settings`);
+    const fixed = await Z.request("GET", `${API}/partner-fixed-rules`);
+    $("fixedRules").textContent = fixed.text;
+    $("rulesFields").replaceChildren(...specs.filter((s) => PARTNER_RULE_KEYS.includes(s.key)).map(partnerField));
+  }
+
+  async function savePartnerRules(event) {
+    event.preventDefault();
+    setError("rulesError", "");
+    $("rulesNotice").hidden = true;
+    const values = {};
+    document.querySelectorAll("#rulesFields [data-key]").forEach((field) => { values[field.dataset.key] = field.value; });
+    try {
+      await Z.request("POST", `${API}/partner-settings`, { values });
+      $("rulesNotice").hidden = false;
+      $("rulesNotice").textContent = "قواعد گفتاریار ذخیره شد.";
+      await loadPartnerRules();
+    } catch (err) {
+      setError("rulesError", err.message);
+    }
+  }
+
+  // The level policy as a table. Each cell is written as one line per level when the table is saved.
+  async function loadPartnerPolicy() {
+    const rows = await Z.request("GET", `${API}/partner-policy`);
+    const table = Z.el("table", "partner-policy");
+    const head = Z.el("tr", "");
+    head.append(Z.el("th", "", "سطح"), ...POLICY_LABELS.map((label) => Z.el("th", "", label)));
+    table.appendChild(head);
+    rows.forEach((row) => {
+      const tr = Z.el("tr", "");
+      tr.appendChild(Z.el("td", "", row.level));
+      POLICY_FIELDS.forEach((field) => {
+        const cell = Z.el("td", "");
+        const input = Z.el("input", "ltr-field");
+        input.type = "text";
+        input.maxLength = 200;
+        input.value = row[field];
+        input.dataset.level = row.level;
+        input.dataset.field = field;
+        cell.appendChild(input);
+        tr.appendChild(cell);
+      });
+      table.appendChild(tr);
+    });
+    $("policyTable").replaceChildren(table);
+  }
+
+  async function savePartnerPolicy() {
+    setError("policyError", "");
+    $("policyNotice").hidden = true;
+    const lines = POLICY_LEVELS.map((level) => {
+      const cells = POLICY_FIELDS.map((field) => document.querySelector(`#policyTable input[data-level="${level}"][data-field="${field}"]`).value.trim());
+      return [level, ...cells].join(" | ");
+    });
+    try {
+      await Z.request("POST", `${API}/partner-settings`, { values: { [PARTNER_POLICY_KEY]: lines.join("\n") } });
+      $("policyNotice").hidden = false;
+      $("policyNotice").textContent = "سیاست سطح ذخیره شد.";
+      await loadPartnerPolicy();
+    } catch (err) {
+      setError("policyError", err.message);
+    }
+  }
+
+  // The content library (section 8 and 4.12): stories, poems and listening texts, each with its source and licence.
+  async function loadPartnerContent() {
+    $("contentLevel").replaceChildren(...POLICY_LEVELS.map((level) => option(level, level)));
+    const rows = await Z.request("GET", `${API}/content`);
+    const kindName = { story: "داستان کوتاه", poem: "شعر", listening: "متن شنیداری" };
+    fill($("contentTable"), ["نوع", "سطح", "عنوان", "منبع", "مجوز", "فعال", "عملیات"],
+      rows.map((r) => {
+        const toggle = Z.el("button", "ghost", r.active ? "خاموش کردن" : "روشن کردن");
+        toggle.type = "button";
+        toggle.addEventListener("click", () => run(async () => {
+          await Z.request("POST", `${API}/content/${r.id}/active`, { active: !r.active });
+          await loadPartnerContent();
+        }));
+        return [kindName[r.kind] || r.kind, r.level, r.title, r.source, r.licence, r.active ? "بله" : "خیر", toggle];
+      }));
+  }
+
+  async function savePartnerContent(event) {
+    event.preventDefault();
+    setError("contentError", "");
+    $("contentNotice").hidden = true;
+    try {
+      await Z.request("POST", `${API}/content`, {
+        kind: $("contentKind").value,
+        level: $("contentLevel").value,
+        title: $("contentTitle").value,
+        text: $("contentText").value,
+        source: $("contentSource").value,
+        licence: $("contentLicence").value,
+      });
+      $("contentForm").reset();
+      $("contentNotice").hidden = false;
+      $("contentNotice").textContent = "متن به کتابخانه اضافه شد.";
+      await loadPartnerContent();
+    } catch (err) {
+      setError("contentError", err.message);
+    }
   }
 
   // Shows each part of the partner prompt for the chosen learner. The text goes through textContent only.
@@ -1061,7 +1180,7 @@
     });
     try {
       const specs = await Z.request("POST", `${API}/partner-settings`, { values });
-      $("partnerFields").replaceChildren(...specs.map(partnerField));
+      renderPartnerNumbers(specs);
       $("partnerNotice").hidden = false;
       $("partnerNotice").textContent = "تنظیمات گفتاریار ذخیره شد.";
     } catch (err) {
@@ -1689,6 +1808,9 @@
     $("sesRevoke").addEventListener("click", revokeSessions);
     $("globalForm").addEventListener("submit", saveGlobalPrompt);
     $("partnerForm").addEventListener("submit", savePartner);
+    $("rulesForm").addEventListener("submit", savePartnerRules);
+    $("policySave").addEventListener("click", savePartnerPolicy);
+    $("contentForm").addEventListener("submit", savePartnerContent);
     $("partnerPreview").addEventListener("click", () => run(showPartnerPrompt));
     $("partnerLearner").addEventListener("change", () => run(loadLearnerPartner));
     $("partnerCriteriaSave").addEventListener("click", savePartnerCriteria);

@@ -16,6 +16,7 @@ class PartnerTurn:
     mode: str | None = None
     feedback: dict | None = None  # error_type, original, better
     new_phrase: dict | None = None  # text, situation, register
+    target: str | None = None  # the sentence to repeat in shadowing (section 4.3)
     next_action: str = "continue"
     raw: str = field(default="", repr=False)
 
@@ -69,6 +70,7 @@ def parse_output(raw: str) -> PartnerTurn:
         mode=data.get("mode") if data.get("mode") in MODES else None,
         feedback=_feedback(data.get("feedback")),
         new_phrase=_new_phrase(data.get("new_phrase")),
+        target=_as_text(data.get("target")),
         next_action=next_action,
         raw=text,
     )

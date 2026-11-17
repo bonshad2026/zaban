@@ -102,8 +102,8 @@ def test_prompt_has_five_parts_in_order(client):
         student = _new_student(db)
         parts = partner_prompt.build_parts(db, student, "conversation")
     assert [part.name for part in parts] == ["core", "mode", "policy", "learner", "contract"]
-    assert parts[0].text.startswith("Core rules")
-    assert "Shared rules:" in parts[0].text
+    assert parts[0].text.startswith("[Fixed rules]")
+    assert "[Shared rules]" in parts[0].text
     assert "range B1" in parts[2].text
     assert "Teacher notebook" in parts[3].text
     assert "next_action" in parts[4].text

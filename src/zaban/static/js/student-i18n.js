@@ -198,7 +198,29 @@
  "نسخه‌ی درست‌تر": "Better version",
  "جمله‌ی شما": "Your sentence",
  "عبارت تازه": "New phrase",
- "کاربرد": "Use it when"
+ "کاربرد": "Use it when",
+ "زمان تمام شد، ادامه می‌دهی؟": "Time is up. Do you want to go on?",
+ "ادامه بدون محدودیت": "Go on with no time limit",
+ "پایان جلسه": "End the lesson",
+ "بدون محدودیت زمان": "No time limit",
+ "ادامه می‌دهیم. هر وقت خواستی، دکمه‌ی پایان را بزن.": "We continue. Press End whenever you want.",
+ "جمع‌بندی جلسه": "Lesson summary",
+ "عبارت‌های این جلسه": "Phrases in this lesson",
+ "دامنه": "Range",
+ "دقت": "Accuracy",
+ "روانی": "Fluency",
+ "تعامل": "Interaction",
+ "انسجام": "Coherence",
+ "دیده‌شده": "Seen",
+ "به‌کار رفته": "Used",
+ "متسلط": "Mastered",
+ "هنوز عبارتی ثبت نشده است.": "No phrases recorded yet.",
+ "نمره‌ی کلمه‌ها": "Word score",
+ "جا افتاد": "Missed",
+ "اضافه گفتی": "Extra words",
+ "جمله‌ی تکرار": "Sentence to repeat",
+ "پخش نمونه": "Play sample",
+ "نمونه‌ی صوتی برای این لهجه ثبت نشده است.": "No sample voice is recorded for this accent."
 };
 
   const isEnglish = () => Z.currentLang() === "en";

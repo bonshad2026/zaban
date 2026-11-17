@@ -36,7 +36,8 @@
             <option value="20">۲۰ دقیقه</option>
             <option value="30">۳۰ دقیقه</option>
           </select>
-          <p><button id="startBtn" type="button">شروع جلسه</button></p>
+          <p><button id="startBtn" type="button">شروع جلسه</button>
+            <button id="freeBtn" type="button" class="ghost" data-fa="گفتگوی آزاد (بدون محدودیت زمان)" data-en="Free talk (no time limit)">گفتگوی آزاد (بدون محدودیت زمان)</button></p>
           <p class="error" id="startError" hidden></p>
         </div>
 
@@ -98,6 +99,14 @@
             <p class="muted" id="progressSummary"></p>
             <p class="muted" id="progressAverage"></p>
             <p class="muted progress-howto" id="progressHowto"></p>
+          </div>
+
+          <div class="partner-progress" id="partnerProgress">
+            <h3 data-fa="پنج معیار گفتاری" data-en="Five speaking criteria">پنج معیار گفتاری</h3>
+            <p class="muted" data-fa="این سطح‌ها را گفتاریار بر اساس جلسه‌ها تغییر می‌دهد." data-en="The partner changes these levels after your lessons.">این سطح‌ها را گفتاریار بر اساس جلسه‌ها تغییر می‌دهد.</p>
+            <ul class="plain" id="partnerCriteria"></ul>
+            <h3 data-fa="عبارت‌های من" data-en="My phrases">عبارت‌های من</h3>
+            <ul class="plain" id="partnerPhrases"></ul>
           </div>
 
           <div class="path-wrap">

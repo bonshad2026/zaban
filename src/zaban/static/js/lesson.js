@@ -102,16 +102,86 @@ const Lesson = (() => {
   };
   let shownRhythmMode = "";
   let askedAboutMode = "";
+  const RHYTHM_EN = {
+    conversation: "Conversation", translation: "Sentence translation", review: "Phrase review", summary: "Wrap-up",
+    shadowing: "Shadowing", pronunciation: "Pronunciation and rhythm", task: "Goal task", functions: "Speech functions",
+    phrases: "Phrases", casual: "Casual speech", listening: "Listening", story: "Short story", poetry: "Poem", repeat: "Timed repetition",
+  };
+  const rhythmLabel = (mode) => Z.pick(RHYTHM_LABELS[mode] || mode, RHYTHM_EN[mode] || mode);
+
   function rhythmNote(rhythm) {
     if (rhythm.mode !== shownRhythmMode) {
       shownRhythmMode = rhythm.mode;
-      note(`الان: ${rhythm.label}`);
+      note(`${Z.tr("الان")}: ${rhythmLabel(rhythm.mode)}`);
     }
     if (rhythm.over && askedAboutMode !== rhythm.mode) {
       askedAboutMode = rhythm.mode;
-      const next = rhythm.next_mode ? `رفتن به ${RHYTHM_LABELS[rhythm.next_mode]}` : "پایان جلسه";
-      note(`زمان این قسمت تمام شد. ادامه‌ی همین قسمت یا ${next}؟`);
+      note(Z.tr("زمان این قسمت تمام شد. ادامه‌ی همین قسمت یا رفتن به قسمت بعد؟"));
+      const row = Z.el("div", "bubble note rhythm-choice");
+      const same = Z.el("button", "", Z.tr("ادامه‌ی همین قسمت"));
+      same.type = "button";
+      same.addEventListener("click", () => run(() => moveRhythm("current")));
+      row.appendChild(same);
+      if (rhythm.next_mode) {
+        const next = Z.el("button", "ghost", Z.pick(`رفتن به ${rhythmLabel(rhythm.next_mode)}`, `Go to ${rhythmLabel(rhythm.next_mode)}`));
+        next.type = "button";
+        next.addEventListener("click", () => run(() => moveRhythm("next")));
+        row.appendChild(next);
+      }
+      const edit = Z.el("button", "ghost", Z.tr("ویرایش ریتم"));
+      edit.type = "button";
+      edit.addEventListener("click", () => openRhythmEditor(rhythm.parts));
+      row.appendChild(edit);
+      $("chat").appendChild(row);
+      $("chat").scrollTop = $("chat").scrollHeight;
     }
+  }
+
+  // Moves to another part of the rhythm, or starts the same part again. The server keeps the new state.
+  async function moveRhythm(to) {
+    const state = await Z.request("POST", `/v1/sessions/${S.sessionId}/rhythm/move`, { to });
+    shownRhythmMode = "";
+    askedAboutMode = "";
+    rhythmNote(state);
+  }
+
+  // The rhythm editor: the order, the part and the minutes of each part (section 4.15). The server checks the total.
+  function openRhythmEditor(parts) {
+    const box = Z.el("div", "bubble note rhythm-editor");
+    const rows = [];
+    const addRow = (part) => {
+      const line = Z.el("div", "rhythm-row");
+      const mode = Z.el("select", "");
+      Object.keys(RHYTHM_LABELS).forEach((key) => {
+        const choice = Z.el("option", "", rhythmLabel(key));
+        choice.value = key;
+        mode.appendChild(choice);
+      });
+      mode.value = part ? part.mode : "conversation";
+      const minutes = Z.el("input", "ltr-field");
+      minutes.type = "number";
+      minutes.min = "1";
+      minutes.value = part ? String(part.minutes) : "5";
+      line.append(mode, minutes);
+      rows.push({ mode, minutes });
+      box.insertBefore(line, box.lastChild);
+    };
+    (parts || []).forEach(addRow);
+    const add = Z.el("button", "ghost", Z.tr("قسمت تازه"));
+    add.type = "button";
+    add.addEventListener("click", () => addRow(null));
+    const save = Z.el("button", "", Z.tr("ذخیره‌ی ریتم"));
+    save.type = "button";
+    save.addEventListener("click", () => run(async () => {
+      const body = { parts: rows.map((r) => ({ mode: r.mode.value, minutes: Number(r.minutes.value) })) };
+      const state = await Z.request("PUT", `/v1/sessions/${S.sessionId}/rhythm`, body);
+      box.remove();
+      shownRhythmMode = "";
+      rhythmNote(state);
+    }));
+    box.append(add, save);
+    $("chat").appendChild(box);
+    $("chat").scrollTop = $("chat").scrollHeight;
   }
 
   // The plan warnings the server sends with a reply (section 13.7).
@@ -119,6 +189,58 @@ const Lesson = (() => {
     if (warning.kind === "tokens") return `توکن‌های پلن شما به ${warning.percent}٪ رسیده است. بهتر است جلسه را جمع‌بندی کنید.`;
     if (warning.days_left === 0) return "امروز آخرین روز پلن شماست.";
     return `پلن شما ${warning.days_left} روز دیگر تمام می‌شود.`;
+  }
+
+  // Shadowing (section 4.3): the words the browser heard are checked against the sentence to repeat. The sample voice of the accent is played on request.
+  let voiceSamples = null;
+  async function sampleForAccent(accent) {
+    if (voiceSamples === null) {
+      try {
+        voiceSamples = await Z.request("GET", "/v1/web/student/voice-samples");
+      } catch (_) {
+        voiceSamples = [];
+      }
+    }
+    return voiceSamples.find((s) => s.accent === accent) || null;
+  }
+
+  async function playSample() {
+    const sample = await sampleForAccent(Accents.current);
+    if (!sample) {
+      note(Z.tr("نمونه‌ی صوتی برای این لهجه ثبت نشده است."));
+      return;
+    }
+    await new Audio(`/v1/web/student/voice-samples/${sample.id}/audio`).play();
+  }
+
+  function shadowingNote(shadowing) {
+    if (!shadowing) return;
+    if (shadowing.check) {
+      const check = shadowing.check;
+      const parts = [`${Z.tr("نمره‌ی کلمه‌ها")}: ${check.score}٪`];
+      if (check.missing.length) parts.push(`${Z.tr("جا افتاد")}: ${check.missing.join(", ")}`);
+      if (check.extra.length) parts.push(`${Z.tr("اضافه گفتی")}: ${check.extra.join(", ")}`);
+      note(parts.join(" — "));
+    }
+    if (shadowing.target) {
+      const card = Z.el("div", "bubble note shadow-target");
+      card.dir = "ltr";
+      const play = Z.el("button", "ghost", Z.tr("پخش نمونه"));
+      play.type = "button";
+      play.addEventListener("click", () => run(playSample));
+      card.append(Z.el("strong", "", Z.tr("جمله‌ی تکرار")), document.createTextNode(`: ${shadowing.target}`), play);
+      $("chat").appendChild(card);
+      $("chat").scrollTop = $("chat").scrollHeight;
+    }
+  }
+
+  // Runs an action from a button. A failure is shown in the chat instead of breaking the lesson.
+  async function run(action) {
+    try {
+      await action();
+    } catch (err) {
+      note(err.message);
+    }
   }
 
   function note(text) {
@@ -138,7 +260,32 @@ const Lesson = (() => {
     const minutes = String(Math.floor(left / 60)).padStart(2, "0");
     const seconds = String(left % 60).padStart(2, "0");
     $("timeLeft").textContent = Z.pick(`زمان باقی‌مانده: ${minutes}:${seconds}`, `Time left: ${minutes}:${seconds}`);
-    if (left === 0 && S.sessionId && S.phase !== "ended") endLesson(true);
+    if (left === 0 && S.sessionId && S.phase !== "ended" && !S.askedTimeUp) askTimeUp();
+  }
+
+  // When the time runs out the learner decides: go on without a time limit, or end the lesson (section 13.3).
+  function askTimeUp() {
+    S.askedTimeUp = true;
+    clearInterval(S.tickTimer);
+    note(Z.tr("زمان تمام شد، ادامه می‌دهی؟"));
+    const row = Z.el("div", "bubble note time-up");
+    const more = Z.el("button", "", Z.tr("ادامه بدون محدودیت"));
+    more.type = "button";
+    more.addEventListener("click", () => run(continueLesson));
+    const finish = Z.el("button", "ghost", Z.tr("پایان جلسه"));
+    finish.type = "button";
+    finish.addEventListener("click", () => endLesson(false));
+    row.append(more, finish);
+    $("chat").appendChild(row);
+    $("chat").scrollTop = $("chat").scrollHeight;
+  }
+
+  async function continueLesson() {
+    await Z.request("POST", `/v1/sessions/${S.sessionId}/continue`);
+    S.askedTimeUp = false;
+    $("timeLeft").textContent = Z.pick("بدون محدودیت زمان", "No time limit");
+    note(Z.tr("ادامه می‌دهیم. هر وقت خواستی، دکمه‌ی پایان را بزن."));
+    setPhase("your_turn");
   }
 
   function speak(text) {
@@ -179,6 +326,7 @@ const Lesson = (() => {
       if (reply.guarded) note(GUARD_NOTE);
       bubble("assistant", reply.reply);
       partnerCards(reply.partner);
+      shadowingNote(reply.shadowing);
       (reply.warnings || []).forEach((warning) => note(warningText(warning)));
       if (reply.rhythm) rhythmNote(reply.rhythm);
       if (reply.seconds_left !== null && reply.seconds_left !== undefined) setTimer(reply.seconds_left);
@@ -317,16 +465,57 @@ const Lesson = (() => {
     setPhase("ended");
     $("timeLeft").textContent = "";
     note((customNote || (automatic ? Z.tr("زمان جلسه تمام شد. کار خوبی بود!") : Z.tr("جلسه تمام شد. آفرین!"))) + scoreText);
+    await showSummary(sessionId);
     if (S.onEnded) S.onEnded();
+  }
+
+  // The end-of-lesson page: the summary, the five criteria and the phrases of this lesson (section 15.5).
+  const CRITERIA_LABELS = { range: "دامنه", accuracy: "دقت", fluency: "روانی", interaction: "تعامل", coherence: "انسجام" };
+  const PHRASE_STATUS = { seen: "دیده‌شده", used: "به‌کار رفته", mastered: "متسلط" };
+  async function showSummary(sessionId) {
+    let data;
+    try {
+      data = await Z.request("GET", `/v1/sessions/${sessionId}/summary`);
+    } catch (_) {
+      return;
+    }
+    if (data.end_status !== "evaluated") return;
+    const card = Z.el("div", "bubble note lesson-summary");
+    card.dir = "auto";
+    card.append(Z.el("strong", "", Z.tr("جمع‌بندی جلسه")), document.createElement("br"), document.createTextNode(data.summary));
+    const list = Z.el("ul", "plain");
+    Object.entries(CRITERIA_LABELS).forEach(([key, label]) => {
+      list.appendChild(Z.el("li", "", `${Z.tr(label)}: ${data.criteria[key] || "—"}`));
+    });
+    card.append(list);
+    if (data.phrases.length) {
+      const phrases = Z.el("ul", "plain");
+      data.phrases.forEach((p) => phrases.appendChild(Z.el("li", "", `${p.text} — ${Z.tr(PHRASE_STATUS[p.status] || p.status)}`)));
+      card.append(Z.el("strong", "", Z.tr("عبارت‌های این جلسه")), phrases);
+    }
+    $("chat").appendChild(card);
+    $("chat").scrollTop = $("chat").scrollHeight;
   }
 
   // Starts a fresh lesson. The server has already created the session.
   function start(session) {
     S.sessionId = session.id;
+    S.askedTimeUp = false;
     S.lastError = "";
     $("chat").innerHTML = "";
-    setTimer(session.seconds_left);
+    showClock(session);
     ask(OPENING, false);
+  }
+
+  // A free conversation has no time limit, so the clock is not shown or counted (section 4.1).
+  function showClock(session) {
+    S.free = Boolean(session.free);
+    if (S.free) {
+      clearInterval(S.tickTimer);
+      $("timeLeft").textContent = Z.pick("بدون محدودیت زمان", "No time limit");
+      return;
+    }
+    setTimer(session.seconds_left);
   }
 
   // Resumes a lesson that is still running, for example after a page reload.
@@ -338,7 +527,7 @@ const Lesson = (() => {
       if (message.role === "user" && message.content === OPENING) continue;
       bubble(message.role === "user" ? "user" : "assistant", message.content);
     }
-    setTimer(session.seconds_left);
+    showClock(session);
     setPhase("your_turn");
   }
 

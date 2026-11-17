@@ -34,7 +34,8 @@ from zaban.services.partner_end import reprocess as reprocess_session_end
 from zaban.services.partner_levels import CRITERION_COLUMNS
 from zaban.services.partner_notebook import current_notebook, notebook_problems, save_notebook
 from zaban.services.partner_output import REGISTERS
-from zaban.services.partner_policy import LEVEL_CODES
+from zaban.services.partner_policy import LEVEL_CODES, policy_table
+from zaban.services.partner_prompt import CORE_RULES
 from zaban.services.phrase_library import add_phrase
 from zaban.services.partner_selftest import reprocess_test
 from zaban.services.partner_prompt import build_parts
@@ -406,6 +407,19 @@ def set_content_active(item_id: int, body: ContentActive, db: DBSession = Depend
     item.active = body.active
     db.commit()
     return {"ok": True}
+
+
+@router.get("/partner-fixed-rules")
+def read_partner_fixed_rules() -> dict:
+    # The core rules are fixed in the code. The panel shows them and cannot change them (section 5.1).
+    return {"text": CORE_RULES}
+
+
+@router.get("/partner-policy")
+def read_partner_policy(db: DBSession = Depends(get_db)) -> list[dict]:
+    # The level policy as it is now: the defaults with the administrator's lines written over them.
+    table = policy_table(partner_value(db, "partner_level_policy"))
+    return [{"level": level, **table[level]} for level in LEVEL_CODES]
 
 
 @router.get("/partner-prompt")

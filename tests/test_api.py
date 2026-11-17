@@ -57,7 +57,7 @@ def test_full_lesson_flow_and_reports(client):
 
     with SessionLocal() as db:
         start_prompt = db.get(TutorSession, session_id).start_prompt
-    assert start_prompt.startswith("Core rules") and "Output contract" in start_prompt
+    assert start_prompt.startswith("[Fixed rules]") and "[Output contract]" in start_prompt
 
     reply = client.post(f"/v1/sessions/{session_id}/messages", json={"content": "I like football"}, headers=DEMO)
     assert reply.status_code == 200

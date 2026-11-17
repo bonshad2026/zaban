@@ -20,7 +20,7 @@ from zaban.services.curriculum import band_code
 from zaban.services.help_content import GENDERS, LEVELS, facet_tree, tags_by_content
 from zaban.services.self_test import answer_test, finish_test, owned_test, start_test
 from zaban.services.curriculum import covered_topic_ids, path_topics
-from zaban.models import LessonTopic
+from zaban.models import LearnerPhrase, LessonTopic, PhraseItem, TutorSession
 from zaban.web import _student_from_cookie
 
 # Learner-facing learning aids: the help content library and the self-test ("خودت رو محک بزن").
@@ -372,9 +372,17 @@ def set_skill_levels(
         "grammar": "level_grammar",
         "speaking_writing": "level_speaking_writing",
     }
-    for key, value in body.model_dump(exclude_unset=True).items():
-        if value is not None:
-            setattr(student, columns[key], value)
+    changes = {key: value for key, value in body.model_dump(exclude_unset=True).items() if value is not None}
+    if "speaking_writing" in changes:
+        # The speaking level is chosen once, before the first lesson. After that the five speaking criteria change only by the system rule or the administrator.
+        has_lesson = db.query(TutorSession.id).filter(TutorSession.student_id == student.id).first() is not None
+        if has_lesson:
+            raise HTTPException(status_code=409, detail="The speaking level can only be chosen before the first lesson")
+        # Before the first lesson the five criteria start at the chosen level (section 13.6).
+        for criterion in ("level_range", "level_accuracy", "level_fluency", "level_interaction", "level_coherence"):
+            setattr(student, criterion, changes["speaking_writing"])
+    for key, value in changes.items():
+        setattr(student, columns[key], value)
     db.commit()
     return {"skill_levels": skill_levels(student)}
 
@@ -402,6 +410,29 @@ def set_my_level(
     student.cefr_level = body.cefr_level
     db.commit()
     return {"cefr_level": student.cefr_level}
+
+
+@router.get("/partner")
+def my_partner_progress(zaban_student: str | None = Cookie(default=None), db: DBSession = Depends(get_db)) -> dict:
+    # What the learner sees of the conversation partner: the five speaking criteria (view only) and the phrases with their status.
+    student = _student_from_cookie(db, zaban_student)
+    rows = (
+        db.query(LearnerPhrase, PhraseItem)
+        .join(PhraseItem, PhraseItem.id == LearnerPhrase.phrase_id)
+        .filter(LearnerPhrase.student_id == student.id)
+        .order_by(LearnerPhrase.id)
+        .all()
+    )
+    return {
+        "criteria": {
+            "range": student.level_range,
+            "accuracy": student.level_accuracy,
+            "fluency": student.level_fluency,
+            "interaction": student.level_interaction,
+            "coherence": student.level_coherence,
+        },
+        "phrases": [{"text": item.text, "status": row.status} for row, item in rows],
+    }
 
 
 @router.get("/progress")

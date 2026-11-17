@@ -140,6 +140,9 @@
           <button type="button" class="tab" data-tab="global">پرامپت کلی</button>
           <button type="button" class="tab" data-tab="settings">تنظیمات سامانه</button>
           <button type="button" class="tab" data-tab="partner">تنظیمات گفتاریار</button>
+          <button type="button" class="tab" data-tab="partnerrules">قواعد گفتاریار</button>
+          <button type="button" class="tab" data-tab="partnerpolicy">سیاست سطح</button>
+          <button type="button" class="tab" data-tab="partnercontent">کتابخانه‌ی محتوا</button>
         </div>
         <div class="admin-group">
           <button type="button" class="admin-group-title" aria-expanded="true">تنظیمات</button>
@@ -520,6 +523,56 @@
         <h3>صف بازبینی عبارت</h3>
         <p class="muted">عبارت‌هایی که شریک گفته و در کتابخانه نبوده‌اند. با سطح مشخص به کتابخانه اضافه کنید، یا رد کنید.</p>
         <div id="partnerReview"></div>
+      </section>
+
+      <section class="card" id="tab-partnerrules" hidden>
+        <h2>قواعد گفتاریار</h2>
+        <p class="muted">قواعد ثابت فقط برای دیدن است و در کد نوشته شده است. قواعد مشترک، قواعد هر حالت، قواعد گفتگوی آزاد و قاعده‌ی نوشتن دفترچه قابل ویرایش‌اند.</p>
+        <p class="notice" id="rulesNotice" hidden></p>
+        <p class="error" id="rulesError" hidden></p>
+        <h3>قواعد ثابت (فقط دیدن)</h3>
+        <pre class="ltr-field" id="fixedRules"></pre>
+        <form id="rulesForm">
+          <div id="rulesFields" class="partner-settings"></div>
+          <p><button type="submit" id="rulesSave">ذخیره‌ی قواعد</button></p>
+        </form>
+      </section>
+
+      <section class="card" id="tab-partnerpolicy" hidden>
+        <h2>سیاست سطح</h2>
+        <p class="muted">برای هر سطح، شکل جمله‌های شریک را بنویسید. متن به انگلیسی نوشته می‌شود، چون در پرامپت می‌رود. این جدول همان چیزی است که شریک استفاده می‌کند.</p>
+        <p class="notice" id="policyNotice" hidden></p>
+        <p class="error" id="policyError" hidden></p>
+        <div id="policyTable"></div>
+        <p><button type="button" id="policySave">ذخیره‌ی سیاست سطح</button></p>
+      </section>
+
+      <section class="card" id="tab-partnercontent" hidden>
+        <h2>کتابخانه‌ی محتوا</h2>
+        <p class="muted">داستان، شعر و متن شنیداری که شریک استفاده می‌کند. هر متن باید منبع و مجوز داشته باشد. متنی که مدل می‌سازد، منبع «ساخته‌ی سامانه» می‌گیرد و نیاز به مجوز جدا ندارد.</p>
+        <p class="notice" id="contentNotice" hidden></p>
+        <p class="error" id="contentError" hidden></p>
+        <form id="contentForm">
+          <label for="contentKind">نوع</label>
+          <select id="contentKind">
+            <option value="story">داستان کوتاه</option>
+            <option value="poem">شعر</option>
+            <option value="listening">متن شنیداری</option>
+          </select>
+          <label for="contentLevel">سطح</label>
+          <select id="contentLevel"></select>
+          <label for="contentTitle">عنوان</label>
+          <input id="contentTitle" maxlength="120" required>
+          <label for="contentText">متن</label>
+          <textarea id="contentText" rows="8" maxlength="6000" class="ltr-field" required></textarea>
+          <label for="contentSource">منبع</label>
+          <input id="contentSource" maxlength="200" class="ltr-field" required>
+          <label for="contentLicence">مجوز</label>
+          <input id="contentLicence" maxlength="120" class="ltr-field" required>
+          <p><button type="submit" id="contentSave">افزودن متن</button></p>
+        </form>
+        <h3>متن‌های موجود</h3>
+        <div id="contentTable"></div>
       </section>
 
       <section class="card" id="tab-global" hidden>

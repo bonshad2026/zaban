@@ -56,6 +56,16 @@ docker compose exec app python -m zaban.cli adult --phone 09121234567 --name "<f
 docker compose exec app python -m zaban.cli tenant "Customer Name" --quota 1000000 --days 30
 ```
 
+## Conversation partner (گفتاریار)
+
+Lessons and free conversation use the conversation partner, described in `docs/conversation-partner.md`.
+
+- The partner answers in JSON. A valid answer is shown and logged; an invalid one is shown as plain text and logs nothing.
+- Speech is turned into text in the browser. The server never receives audio, and no outside pronunciation service is used.
+- When a lesson's time runs out the learner decides: go on without a time limit, or end it. The end routine (summary, five criteria, notebook) runs at the end or at the next lesson.
+- The administrator sets the numbers, rules, level policy, rhythm, the content library and the notebook rule in the «مجموعه پرامپت» group of the admin panel.
+- The learner's notebook is never shown to the learner.
+
 ## Lesson rules
 
 - Consent is required before a lesson can start. A website adult accepts the terms at sign-up, and that is stored as their consent when their learner profile is created. Customer sites record consent with `POST /students/{id}/consent`.

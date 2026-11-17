@@ -22,12 +22,13 @@ from zaban.schemas import (
 from zaban.security import Auth, get_auth, get_student_for_auth, issue_student_token, require_manager
 from zaban.services.ai import tutor_reply
 from zaban.services.partner_output import parse_output
+from zaban.services.partner_shadowing import compare
 from zaban.services.partner_prompt import build_prompt, mode_part, sentence_seconds, turn_block
 from zaban.services.partner_rhythm import move as move_rhythm, segment_state, set_rhythm, start_rhythm
 from zaban.services.partner_turns import apply_turn
 from zaban.services.partner_budget import reserve_reached, warnings as budget_warnings
 from zaban.services.partner_end import finish_partner_session, retry_pending
-from zaban.models import LearnerDetails
+from zaban.models import LearnerDetails, PhraseItem, SessionLogEntry
 from zaban.services.learner_details import save_details
 from zaban.services.curriculum import choose_topic, record_lesson_topic
 from zaban.services.learner import set_learner_profile
@@ -117,6 +118,7 @@ def _session_out(session: TutorSession, now) -> dict:
         "seconds_left": seconds_left,
         "block": current_block(session.started_at, session.ends_at, now) if is_active else "closed",
         "score": session.score,
+        "free": session.session_kind == "free",
         "messages": [{"role": m.role, "content": m.content} for m in session.messages],
     }
 
@@ -432,7 +434,7 @@ def get_session(session_id: str, auth: Auth = Depends(get_auth), db: DBSession =
     now = utcnow()
     finish_if_due(session, now)
     db.commit()
-    finish_partner_session(db, session)
+    # The end routine waits for the learner's end or the next lesson, so a learner who is asked about the time can still continue.
     return _session_out(session, now)
 
 
@@ -483,11 +485,23 @@ def send_message(
     seconds = None if free else rhythm["seconds_left"]
     sentence = sentence_seconds(db, student) if mode == "translation" else None
     partner_prompt = session.start_prompt + "\n\n" + mode_part(db, mode, free, student).text + "\n\n" + turn_block(mode, block, seconds, sentence)
+    # In shadowing, the learner's words are checked against the sentence the partner asked them to repeat.
+    previous_target = None
+    if mode == "shadowing":
+        last = next((m for m in reversed(session.messages) if m.role == "assistant"), None)
+        earlier = parse_output(last.content) if last is not None else None
+        previous_target = earlier.target if earlier is not None and earlier.valid else None
     reply = tutor_reply(partner_prompt, history)
     turn = parse_output(reply.text)
     if turn.valid:
         apply_turn(db, student, session.id, turn, text, now)
     partner = {"valid": turn.valid, "feedback": turn.feedback, "new_phrase": turn.new_phrase, "next_action": turn.next_action}
+    shadowing = None
+    if mode == "shadowing":
+        shadowing = {
+            "target": turn.target if turn.valid else None,
+            "check": compare(previous_target, text) if previous_target else None,
+        }
     shown = turn.reply
 
     db.add(Message(session_id=session.id, role="user", content=text))
@@ -514,6 +528,7 @@ def send_message(
         "closed": closed,
         "notice": PLAN_USED_NOTICE if closed else None,
         "partner": partner,
+        "shadowing": shadowing,
         "warnings": budget_warnings(db, owner, now) if partner_lesson else [],
         "rhythm": _rhythm_out(rhythm) if rhythm else None,
     }
@@ -624,6 +639,47 @@ def set_lesson_rhythm(
         raise HTTPException(status_code=400, detail=str(error)) from error
     db.commit()
     return _rhythm_out(segment_state(session, now))
+
+
+@router.get("/sessions/{session_id}/summary")
+def lesson_summary(session_id: str, auth: Auth = Depends(get_auth), db: DBSession = Depends(get_db)) -> dict:
+    # The end-of-lesson page (section 15.5): the summary, the five criteria and the phrases of this lesson.
+    session = _get_session_for_auth(db, auth, session_id)
+    if session.end_status != "evaluated":
+        return {"end_status": session.end_status}
+    logs = db.query(SessionLogEntry).filter(SessionLogEntry.session_id == session.id, SessionLogEntry.kind == "phrase").all()
+    phrase_ids = [int(log.key) for log in logs]
+    texts = {item.id: item.text for item in db.query(PhraseItem).filter(PhraseItem.id.in_(phrase_ids)).all()} if phrase_ids else {}
+    return {
+        "end_status": session.end_status,
+        "summary": session.evaluation or "",
+        "criteria": {
+            "range": session.eval_range,
+            "accuracy": session.eval_accuracy,
+            "fluency": session.eval_fluency,
+            "interaction": session.eval_interaction,
+            "coherence": session.eval_coherence,
+        },
+        "phrases": [{"text": texts.get(int(log.key), ""), "status": log.detail} for log in logs if int(log.key) in texts],
+    }
+
+
+@router.post("/sessions/{session_id}/continue")
+def continue_lesson(session_id: str, auth: Auth = Depends(get_auth), db: DBSession = Depends(get_db)) -> dict:
+    # The time of a lesson ran out and the learner chose to go on without a time limit (section 15.5).
+    session = _get_session_for_auth(db, auth, session_id)
+    now = utcnow()
+    if session.engine != "new" or session.status != "completed" or session.end_status in ("evaluated", "no_evaluation"):
+        raise HTTPException(status_code=409, detail="This lesson cannot continue")
+    student = db.get(Student, session.student_id)
+    owner = db.get(Guardian, student.self_owner_id) if student.self_owner_id else None
+    if owner is not None:
+        require_plan(owner)
+    session.status = "active"
+    session.ended_at = None
+    session.ends_at = now + timedelta(hours=24)
+    db.commit()
+    return _session_out(session, now)
 
 
 @router.post("/sessions/{session_id}/end")

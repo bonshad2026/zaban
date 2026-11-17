@@ -110,6 +110,8 @@
     if (session) {
       showLesson(true);
       Lesson.resume(session);
+    } else if (new URLSearchParams(location.search).get("free") === "1") {
+      await startFree();
     } else {
       showLesson(false);
     }
@@ -122,6 +124,18 @@
   function showLesson(on) {
     Z.show($("setupBox"), !on);
     Z.show($("lessonBox"), on);
+  }
+
+  // Free conversation (section 4.1): the same chat, without a time limit and without a rhythm.
+  async function startFree() {
+    Z.showError($("startError"), "");
+    try {
+      const session = await Z.request("POST", `/v1/students/${me.id}/free-conversation`);
+      showLesson(true);
+      Lesson.start(session);
+    } catch (err) {
+      Z.showError($("startError"), err.message);
+    }
   }
 
   async function startLesson() {
@@ -250,6 +264,7 @@
     Z.initLang();
     Lesson.init({ onEnded: () => { showLesson(false); } });
     $("startBtn").addEventListener("click", startLesson);
+    $("freeBtn").addEventListener("click", startFree);
     document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => selectTab(tab.dataset.tab)));
 
     try {

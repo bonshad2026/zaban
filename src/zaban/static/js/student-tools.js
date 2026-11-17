@@ -203,7 +203,20 @@
 
   // Scrolls the path by most of a screen. In a right-to-left page the later lessons are on the left.
 
+  // The conversation partner's part of the progress tab: the five criteria (view only) and the phrases with their status.
+  const PARTNER_CRITERIA = { range: "دامنه", accuracy: "دقت", fluency: "روانی", interaction: "تعامل", coherence: "انسجام" };
+  const PARTNER_PHRASE_STATUS = { seen: "دیده‌شده", used: "به‌کار رفته", mastered: "متسلط" };
+
+  async function loadPartnerProgress() {
+    const data = await Z.request("GET", "/v1/web/student/partner");
+    $("partnerCriteria").replaceChildren(...Object.entries(PARTNER_CRITERIA).map(([key, label]) =>
+      el("li", "", `${Z.tr(label)}: ${data.criteria[key] || "—"}`)));
+    const phrases = data.phrases.map((p) => el("li", "", `${p.text} — ${Z.tr(PARTNER_PHRASE_STATUS[p.status] || p.status)}`));
+    $("partnerPhrases").replaceChildren(...(phrases.length ? phrases : [el("li", "muted", Z.tr("هنوز عبارتی ثبت نشده است."))]));
+  }
+
   async function loadProgress() {
+    loadPartnerProgress().catch(() => {});
     try {
       progress = await Z.request("GET", "/v1/web/student/progress");
       Z.showError($("progressNotice"), "");
