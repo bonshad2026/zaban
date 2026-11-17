@@ -31,6 +31,14 @@ Then open:
 
 To use real Claude replies, set `ANTHROPIC_API_KEY` in `.env`. Without it the app runs in offline mode, which costs nothing.
 
+Docker reads `.env` only when the container is created. After you change a value in `.env` (for example `ADMIN_PASSWORD`), recreate the app container:
+
+```bash
+docker compose up -d --force-recreate app
+```
+
+The app is then at http://127.0.0.1:8020 (or the port set by `ZABAN_PORT`).
+
 ### Demo accounts (optional, development only)
 
 To create demo accounts for testing, fill these values in `.env` and restart:
