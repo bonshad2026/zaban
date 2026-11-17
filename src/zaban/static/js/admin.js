@@ -68,6 +68,7 @@
     settings: loadSettings,
     connections: loadSms,
     ai: loadAi,
+    partner: loadPartner,
     payment: loadPayment,
     sessions: loadSessions,
     promptgen: loadPromptGen,
@@ -84,7 +85,7 @@
 
   function openTab(name) {
     document.querySelectorAll(".admin-tabs .tab").forEach((t) => t.classList.toggle("is-active", t.dataset.tab === name));
-    ["overview", "consults", "cooperations", "helpcontent", "settings", "connections", "ai", "payment", "sessions", "promptgen", "promptview", "selftest", "placementbank", "adults", "payments", "plans", "curriculum", "global", "voices"]
+    ["overview", "consults", "cooperations", "helpcontent", "settings", "connections", "ai", "payment", "sessions", "promptgen", "promptview", "selftest", "placementbank", "adults", "payments", "plans", "curriculum", "global", "voices", "partner"]
       .forEach((n) => show(`tab-${n}`, n === name));
     return run(loaders[name]);
   }
@@ -1006,6 +1007,58 @@
     }
   }
 
+  // ----- Conversation partner settings: the numbers and rules the partner uses -----
+
+  // Each field is drawn from the server's list. Values are checked on the server, so the panel only shapes the input.
+  function partnerField(spec) {
+    const wrap = Z.el("div", "partner-field");
+    const label = Z.el("label", "", spec.label);
+    let input;
+    if (spec.kind === "choice") {
+      input = Z.el("select", "");
+      spec.choices.forEach((choice) => input.appendChild(option(choice, choice)));
+    } else if (spec.kind === "text") {
+      input = Z.el("textarea", "");
+      input.rows = 4;
+      input.maxLength = 4000;
+    } else {
+      input = Z.el("input", "ltr-field");
+      input.type = "text";
+      input.autocomplete = "off";
+    }
+    input.id = `partner_${spec.key}`;
+    label.htmlFor = input.id;
+    input.dataset.key = spec.key;
+    input.value = spec.value;
+    wrap.append(label, input);
+    if (spec.help) wrap.append(Z.el("p", "muted", spec.help));
+    wrap.append(Z.el("p", "muted", `پیش‌فرض: ${spec.default || "(خالی)"}`));
+    return wrap;
+  }
+
+  async function loadPartner() {
+    const specs = await Z.request("GET", `${API}/partner-settings`);
+    $("partnerFields").replaceChildren(...specs.map(partnerField));
+  }
+
+  async function savePartner(event) {
+    event.preventDefault();
+    setError("partnerError", "");
+    $("partnerNotice").hidden = true;
+    const values = {};
+    document.querySelectorAll("#partnerFields [data-key]").forEach((field) => {
+      values[field.dataset.key] = field.value;
+    });
+    try {
+      const specs = await Z.request("POST", `${API}/partner-settings`, { values });
+      $("partnerFields").replaceChildren(...specs.map(partnerField));
+      $("partnerNotice").hidden = false;
+      $("partnerNotice").textContent = "تنظیمات گفتاریار ذخیره شد.";
+    } catch (err) {
+      setError("partnerError", err.message);
+    }
+  }
+
   // ----- Curriculum: topic, conversation goal and the points to talk about -----
 
   // Keeps the current choice of a select when it still exists after the list is refilled.
@@ -1581,6 +1634,7 @@
     $("genLearner").addEventListener("change", () => run(generatePrompt));
     $("genCopy").addEventListener("click", () => navigator.clipboard.writeText($("genOutput").value));
     $("globalForm").addEventListener("submit", saveGlobalPrompt);
+    $("partnerForm").addEventListener("submit", savePartner);
     $("voiceForm").addEventListener("submit", addVoice);
     $("globalText").addEventListener("input", updateGlobalCount);
     $("learnerForm").addEventListener("submit", loadLearner);

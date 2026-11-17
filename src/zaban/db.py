@@ -39,7 +39,23 @@ ADDED_COLUMNS = [
     ("students", "level_reading", "VARCHAR(4) NOT NULL DEFAULT 'A1'"),
     ("students", "level_grammar", "VARCHAR(4) NOT NULL DEFAULT 'A1'"),
     ("students", "level_speaking_writing", "VARCHAR(4) NOT NULL DEFAULT 'A1'"),
+    ("students", "level_range", "VARCHAR(4) NOT NULL DEFAULT 'A1'"),
+    ("students", "level_accuracy", "VARCHAR(4) NOT NULL DEFAULT 'A1'"),
+    ("students", "level_fluency", "VARCHAR(4) NOT NULL DEFAULT 'A1'"),
+    ("students", "level_interaction", "VARCHAR(4) NOT NULL DEFAULT 'A1'"),
+    ("students", "level_coherence", "VARCHAR(4) NOT NULL DEFAULT 'A1'"),
+    ("students", "register_pref", "VARCHAR(12) NOT NULL DEFAULT 'neutral'"),
+    ("sessions", "eval_range", "VARCHAR(4)"),
+    ("sessions", "eval_accuracy", "VARCHAR(4)"),
+    ("sessions", "eval_fluency", "VARCHAR(4)"),
+    ("sessions", "eval_interaction", "VARCHAR(4)"),
+    ("sessions", "eval_coherence", "VARCHAR(4)"),
+    ("sessions", "end_status", "VARCHAR(20) NOT NULL DEFAULT 'active'"),
+    ("sessions", "session_kind", "VARCHAR(20) NOT NULL DEFAULT 'lesson'"),
 ]
+
+# The five speaking criteria start from the speaking level the learner chose before the first lesson.
+SPEAKING_CRITERIA = ["level_range", "level_accuracy", "level_fluency", "level_interaction", "level_coherence"]
 
 
 class Base(DeclarativeBase):
@@ -58,6 +74,7 @@ def allow_lessons_without_text() -> None:
 
 def add_missing_columns() -> None:
     inspector = inspect(engine)
+    added: set[tuple[str, str]] = set()
     with engine.begin() as conn:
         for table, column, column_type in ADDED_COLUMNS:
             if not inspector.has_table(table):
@@ -65,9 +82,23 @@ def add_missing_columns() -> None:
             existing = {c["name"] for c in inspector.get_columns(table)}
             if column not in existing:
                 conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {column_type}"))
+                added.add((table, column))
                 if (table, column) == ("guardians", "plan_token_allowance"):
                     # Adults who already paid get a standard allowance, so their plan stays usable until its date.
                     conn.execute(text("UPDATE guardians SET plan_token_allowance = 1000000 WHERE plan_expires_at IS NOT NULL"))
+        if ("students", SPEAKING_CRITERIA[0]) in added:
+            # Learners who existed before the partner had their speaking level copied into the five criteria, once.
+            conn.execute(
+                text(
+                    "UPDATE students SET level_range = level_speaking_writing, level_accuracy = level_speaking_writing, "
+                    "level_fluency = level_speaking_writing, level_interaction = level_speaking_writing, "
+                    "level_coherence = level_speaking_writing"
+                )
+            )
+        if ("sessions", "end_status") in added:
+            # Sessions that already ended before the status existed: evaluated if they have a summary, otherwise no_evaluation.
+            conn.execute(text("UPDATE sessions SET end_status = 'evaluated' WHERE evaluation IS NOT NULL"))
+            conn.execute(text("UPDATE sessions SET end_status = 'no_evaluation' WHERE ended_at IS NOT NULL AND evaluation IS NULL"))
 
 
 def get_db() -> Iterator[Session]:

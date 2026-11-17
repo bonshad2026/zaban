@@ -879,6 +879,8 @@ Return only the full notebook.
 
 ### ۱۵.۳ فاز ۰: پایه‌ی داده و تنظیمات
 
+**وضعیت:** انجام شد در شاخه‌ی `feature/conversation-partner-phase-0` (از `develop`). روال درس دست‌نخورده است؛ `partner_engine` روی «قدیم» است.
+
 **هدف:** همه‌ی جدول‌ها، ستون‌ها و تنظیمات طرح ساخته شوند، بدون تغییر در رفتار فعلی.
 
 - **ستون‌های تازه در `students`:** پنج معیار (`level_range`، `level_accuracy`، `level_fluency`، `level_interaction`، `level_coherence`) و `register_pref`.

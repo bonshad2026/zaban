@@ -24,6 +24,7 @@ from zaban.public import router as public_router
 from zaban.services.curriculum import ensure_topic_positions, seed_curriculum
 from zaban.services.referrals import ensure_referral_codes
 from zaban.services.help_content import seed_help_facets, seed_help_samples
+from zaban.services.phrase_library import seed_phrase_library
 from zaban.services.sms import dev_outbox
 from zaban.admin_ops import router as admin_ops_router
 from zaban.ai_api import router as ai_router
@@ -49,6 +50,7 @@ async def lifespan(_: FastAPI):
         ensure_referral_codes(db)
         seed_help_facets(db)
         seed_help_samples(db)
+        seed_phrase_library(db)
     if settings.environment == "development":
         with SessionLocal() as db:
             tenant = seed_demo_tenant(db, settings.demo_api_key)

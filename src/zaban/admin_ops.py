@@ -27,6 +27,7 @@ from zaban.models import (
     Usage,
     utcnow,
 )
+from zaban.services.partner_settings import save_settings as save_partner_settings, settings_view
 from zaban.services.evaluation import past_evaluations
 from zaban.services.learner_details import details_out
 from zaban.services.settings_store import (
@@ -203,6 +204,27 @@ def save_connections(body: ConnectionsUpdate, db: DBSession = Depends(get_db)) -
         set_setting(db, PUBLIC_BASE_URL_KEY, address)
     db.commit()
     return {"ok": True}
+
+
+class PartnerSettingsUpdate(BaseModel):
+    # Only the keys sent are changed. Every value is checked before anything is saved.
+    values: dict[str, str] = Field(default_factory=dict, max_length=40)
+
+
+@router.get("/partner-settings")
+def read_partner_settings(db: DBSession = Depends(get_db)) -> list[dict]:
+    return settings_view(db)
+
+
+@router.post("/partner-settings")
+def save_partner_settings_api(body: PartnerSettingsUpdate, db: DBSession = Depends(get_db)) -> list[dict]:
+    try:
+        save_partner_settings(db, body.values)
+    except ValueError as error:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    db.commit()
+    return settings_view(db)
 
 
 @router.get("/learners")

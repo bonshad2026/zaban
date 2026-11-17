@@ -155,6 +155,15 @@ class Student(Base):
     level_reading: Mapped[str] = mapped_column(String(4), default="A1")
     level_grammar: Mapped[str] = mapped_column(String(4), default="A1")
     level_speaking_writing: Mapped[str] = mapped_column(String(4), default="A1")
+    # The conversation partner (docs/conversation-partner.md, section 3): one CEFR level for each of the five speaking criteria.
+    # They start from level_speaking_writing and are then changed only by the system rule or by the administrator.
+    level_range: Mapped[str] = mapped_column(String(4), default="A1")
+    level_accuracy: Mapped[str] = mapped_column(String(4), default="A1")
+    level_fluency: Mapped[str] = mapped_column(String(4), default="A1")
+    level_interaction: Mapped[str] = mapped_column(String(4), default="A1")
+    level_coherence: Mapped[str] = mapped_column(String(4), default="A1")
+    # Tone the partner uses with the learner: formal, neutral or casual (section 5.4).
+    register_pref: Mapped[str] = mapped_column(String(12), default="neutral")
     # Password login protection: after repeated wrong passwords the login is paused for a while.
     failed_logins: Mapped[int] = mapped_column(Integer, default=0)
     locked_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -241,6 +250,16 @@ class TutorSession(Base):
     evaluation: Mapped[str | None] = mapped_column(Text, nullable=True)
     # The system prompt built when the lesson started: admin guidance, database facts, the learner and the lesson item.
     start_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # The summary scores of the five speaking criteria (CEFR levels), written by the end-of-session summary.
+    eval_range: Mapped[str | None] = mapped_column(String(4), nullable=True)
+    eval_accuracy: Mapped[str | None] = mapped_column(String(4), nullable=True)
+    eval_fluency: Mapped[str | None] = mapped_column(String(4), nullable=True)
+    eval_interaction: Mapped[str | None] = mapped_column(String(4), nullable=True)
+    eval_coherence: Mapped[str | None] = mapped_column(String(4), nullable=True)
+    # active, pending, evaluated or no_evaluation (section 13.7). Only evaluated sessions change the learner's levels.
+    end_status: Mapped[str] = mapped_column(String(20), default="active")
+    # lesson (has a rhythm and the curriculum moves on) or free conversation (section 4.1).
+    session_kind: Mapped[str] = mapped_column(String(20), default="lesson")
 
     student: Mapped[Student] = relationship(back_populates="sessions")
     messages: Mapped[list["Message"]] = relationship(
@@ -507,3 +526,97 @@ class PlacementAttempt(Base):
     started_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
+
+
+class PhraseItem(Base):
+    # The phrase library (docs/conversation-partner.md, section 8). Only phrases from here go into a learner profile.
+    __tablename__ = "phrase_library"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    text: Mapped[str] = mapped_column(String(200))
+    # The comparison key: lower case, no punctuation. Two phrases with the same key are the same phrase.
+    text_key: Mapped[str] = mapped_column(String(200), unique=True)
+    situation: Mapped[str] = mapped_column(Text, default="")
+    level: Mapped[str] = mapped_column(String(4), index=True)  # A1 to C2
+    register: Mapped[str] = mapped_column(String(12), default="neutral")  # formal, neutral or casual
+    source: Mapped[str] = mapped_column(String(20), default="admin")  # curriculum, admin or review
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class PhraseReview(Base):
+    # A phrase the model used that is not in the library. The administrator decides whether to add it (section 6.1).
+    __tablename__ = "phrase_review_queue"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    text: Mapped[str] = mapped_column(String(200))
+    text_key: Mapped[str] = mapped_column(String(200), index=True)
+    situation: Mapped[str] = mapped_column(Text, default="")
+    register: Mapped[str] = mapped_column(String(12), default="neutral")
+    student_id: Mapped[str | None] = mapped_column(ForeignKey("students.id", ondelete="SET NULL"), nullable=True)
+    session_id: Mapped[str | None] = mapped_column(ForeignKey("sessions.id", ondelete="SET NULL"), nullable=True)
+    status: Mapped[str] = mapped_column(String(12), default="pending")  # pending, added or dismissed
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class LearnerPhrase(Base):
+    # One phrase of one learner: its status and when it is due for review (section 3.1 and 3.3).
+    __tablename__ = "learner_phrases"
+    __table_args__ = (UniqueConstraint("student_id", "phrase_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    student_id: Mapped[str] = mapped_column(ForeignKey("students.id", ondelete="CASCADE"), index=True)
+    phrase_id: Mapped[int] = mapped_column(ForeignKey("phrase_library.id", ondelete="CASCADE"), index=True)
+    status: Mapped[str] = mapped_column(String(12), default="seen")  # seen, used or mastered
+    # How many separate conversations the learner used the phrase in without help (the mastery rule).
+    clean_sessions: Mapped[int] = mapped_column(Integer, default=0)
+    # Position in the review intervals. The next review is due at next_review_at.
+    review_step: Mapped[int] = mapped_column(Integer, default=0)
+    next_review_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_session_id: Mapped[str | None] = mapped_column(ForeignKey("sessions.id", ondelete="SET NULL"), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class LearnerError(Base):
+    # The error log of one learner: how often each error category came up (section 3.2).
+    __tablename__ = "learner_errors"
+    __table_args__ = (UniqueConstraint("student_id", "error_type"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    student_id: Mapped[str] = mapped_column(ForeignKey("students.id", ondelete="CASCADE"), index=True)
+    error_type: Mapped[str] = mapped_column(String(30))
+    count: Mapped[int] = mapped_column(Integer, default=0)
+    last_session_id: Mapped[str | None] = mapped_column(ForeignKey("sessions.id", ondelete="SET NULL"), nullable=True)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class SessionLogEntry(Base):
+    # What happened during one session: an error or a phrase, in order. Used by the turn-by-turn block and the summary.
+    __tablename__ = "session_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    session_id: Mapped[str] = mapped_column(ForeignKey("sessions.id", ondelete="CASCADE"), index=True)
+    student_id: Mapped[str] = mapped_column(ForeignKey("students.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str] = mapped_column(String(10))  # error or phrase
+    key: Mapped[str] = mapped_column(String(60))  # error category, or the phrase id
+    detail: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class LearnerMemory(Base):
+    # The teacher notebook of one learner (section 14). The learner never sees it; only the administrator does.
+    __tablename__ = "learner_memory"
+
+    student_id: Mapped[str] = mapped_column(ForeignKey("students.id", ondelete="CASCADE"), primary_key=True)
+    text: Mapped[str] = mapped_column(Text, default="")
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class LearnerMemoryVersion(Base):
+    # Every saved version of the notebook, so the administrator can go back to an earlier one.
+    __tablename__ = "learner_memory_versions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    student_id: Mapped[str] = mapped_column(ForeignKey("students.id", ondelete="CASCADE"), index=True)
+    text: Mapped[str] = mapped_column(Text, default="")
+    event: Mapped[str] = mapped_column(String(40), default="")  # for example session_end or admin_edit
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)

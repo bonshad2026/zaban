@@ -141,6 +141,7 @@
           <button type="button" class="tab" data-tab="selftest">پرامپت آزمون</button>
           <button type="button" class="tab" data-tab="global">پرامپت کلی</button>
           <button type="button" class="tab" data-tab="settings">تنظیمات پرامپت</button>
+          <button type="button" class="tab" data-tab="partner">تنظیمات گفتاریار</button>
         </div>
         <div class="admin-group">
           <button type="button" class="admin-group-title" aria-expanded="true">تنظیمات</button>
@@ -523,6 +524,17 @@
           <button type="button" class="ghost" id="curClose">بستن</button>
         </div>
       </dialog>
+
+      <section class="card" id="tab-partner" hidden>
+        <h2>تنظیمات گفتاریار</h2>
+        <p class="muted">عددها و قاعده‌های گفتاریار، یعنی شریک گفتگوی زبان‌آموز. هر بخش که خالی بماند، همان مقدار پیش‌فرض استفاده می‌شود. هنوز در جلسه‌ها اثر ندارد، مگر روال جدید درس فعال شده باشد.</p>
+        <p class="notice" id="partnerNotice" hidden></p>
+        <p class="notice" id="partnerError" hidden></p>
+        <form id="partnerForm">
+          <div id="partnerFields"></div>
+          <p><button type="submit" id="partnerSave">ذخیره‌ی تنظیمات گفتاریار</button></p>
+        </form>
+      </section>
 
       <section class="card" id="tab-global" hidden>
         <h2>پرامپت کلی</h2>
