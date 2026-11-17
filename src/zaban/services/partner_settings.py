@@ -38,8 +38,10 @@ PARTNER_SETTINGS = [
     {"key": "partner_default_rhythm", "label": "ریتم پیش‌فرض جلسه (درصد)", "kind": "rhythm",
      "default": "conversation:60,translation:20,review:10,summary:10", "help": "جمع درصدها باید ۱۰۰ باشد."},
     {"key": "partner_shared_rules", "label": "قواعد مشترک", "kind": "text", "default": SHARED_RULES_DEFAULT},
-    {"key": "partner_mode_rules", "label": "قواعد هر حالت", "kind": "text", "default": "",
-     "help": "در فاز ۱ استفاده می‌شود."},
+    {"key": "partner_mode_rules", "label": "قواعد هر حالت درس", "kind": "text", "default": "",
+     "help": "برای همه‌ی حالت‌های ریتم درس (گفتگو، ترجمه، مرور، جمع‌بندی)."},
+    {"key": "partner_free_rules", "label": "قواعد گفتگوی آزاد", "kind": "text", "default": "",
+     "help": "فقط برای گفتگوی آزاد. مثلاً لحن یا موضوع‌های ترجیحی."},
     {"key": "partner_level_policy", "label": "جدول سیاست سطح", "kind": "policy", "default": "",
      "help": "هر خط: سطح | جمله | واژگان | پرسش | اصلاح | نوبت (به انگلیسی، چون در پرامپت می‌رود). خالی یعنی جدول پیش‌فرض."},
 ]

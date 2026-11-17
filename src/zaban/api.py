@@ -1,5 +1,7 @@
 from datetime import timedelta
 
+from pydantic import BaseModel, Field
+
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import func
 from sqlalchemy.orm import Session as DBSession
@@ -21,7 +23,8 @@ from zaban.schemas import (
 from zaban.security import Auth, get_auth, get_student_for_auth, issue_student_token, require_manager
 from zaban.services.ai import tutor_reply
 from zaban.services.partner_output import parse_output
-from zaban.services.partner_prompt import build_prompt, turn_block
+from zaban.services.partner_prompt import build_prompt, mode_part, sentence_seconds, turn_block
+from zaban.services.partner_rhythm import move as move_rhythm, segment_state, set_rhythm, start_rhythm
 from zaban.services.partner_settings import partner_value
 from zaban.services.partner_turns import apply_turn
 from zaban.services.partner_budget import reserve_reached, warnings as budget_warnings
@@ -457,6 +460,7 @@ def start_session(
     if partner_value(db, "partner_engine") == "new":
         # The conversation partner builds its own five-part prompt once, when the lesson starts (section 7.1).
         session.start_prompt = build_prompt(db, student)
+        start_rhythm(db, session, now)
     elif has_saved_template(db):
         # The administrator's template is filled with this learner's stored values, once, at the start of the lesson.
         session.start_prompt, _ = render(get_template(db), learner_values(db, student, session.duration_minutes))
@@ -534,9 +538,18 @@ def send_message(
             course_note=course_note(db, student),
         )
     partner = None
-    if partner_value(db, "partner_engine") == "new" and session.start_prompt:
+    rhythm = None
+    if session.engine == "new" and session.start_prompt:
         # The partner answers in JSON. Only a valid answer is shown as a reply and written to the learner's record.
-        partner_prompt = session.start_prompt + "\n\n" + turn_block("conversation", block, max(0, int((session.ends_at - now).total_seconds())))
+        # Free conversation has no time and no rhythm. A lesson uses the part of its rhythm that is running now.
+        free = session.session_kind == "free"
+        if free:
+            mode, seconds, sentence = "conversation", None, None
+        else:
+            rhythm = segment_state(session, now)
+            mode, seconds = rhythm["mode"], rhythm["seconds_left"]
+            sentence = sentence_seconds(db, student) if mode == "translation" else None
+        partner_prompt = session.start_prompt + "\n\n" + mode_part(db, mode, free).text + "\n\n" + turn_block(mode, block, seconds, sentence)
         reply = tutor_reply(partner_prompt, history)
         turn = parse_output(reply.text)
         if turn.valid:
@@ -572,7 +585,115 @@ def send_message(
         "notice": PLAN_USED_NOTICE if closed else None,
         "partner": partner,
         "warnings": budget_warnings(db, owner, now) if partner_lesson else [],
+        "rhythm": _rhythm_out(rhythm) if rhythm else None,
     }
+
+
+class RhythmPart(BaseModel):
+    mode: str = Field(max_length=20)
+    minutes: int
+
+
+class RhythmUpdate(BaseModel):
+    parts: list[RhythmPart] = Field(max_length=8)
+
+
+class RhythmMove(BaseModel):
+    # "current" starts this part again, "next" goes to the part after it, or a mode name jumps to that part.
+    to: str = Field(min_length=1, max_length=20)
+
+
+def _rhythm_out(state: dict) -> dict:
+    return {
+        "mode": state["mode"],
+        "label": state["label"],
+        "seconds_left": state["seconds_left"],
+        "over": state["over"],
+        "next_mode": state["next_mode"],
+        "parts": state["parts"],
+        "index": state.get("index", 0),
+    }
+
+
+@router.post("/students/{student_id}/free-conversation", status_code=201)
+def start_free_conversation(
+    student_id: str,
+    auth: Auth = Depends(get_auth),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    # Free conversation (section 4.1): no time, no rhythm and no step in the curriculum. It always uses the conversation partner.
+    student = get_student_for_auth(db, auth, student_id)
+    _require_consent(db, student)
+    _require_student_plan(db, student)
+    _require_complete_profile(db, student)
+    ensure_quota(auth.tenant)
+    now = utcnow()
+    for old in db.query(TutorSession).filter(TutorSession.student_id == student.id, TutorSession.status == "active"):
+        finish_if_due(old, now)
+        if old.status == "active":
+            raise HTTPException(status_code=409, detail="A lesson is already running")
+    plan = _active_plan(db, student)
+    session = TutorSession(
+        student_id=student.id,
+        plan_id=plan.id if plan else None,
+        duration_minutes=0,
+        started_at=now,
+        ends_at=now + timedelta(hours=24),
+        session_kind="free",
+        engine="new",
+    )
+    db.add(session)
+    db.commit()
+    db.refresh(session)
+    session.start_prompt = build_prompt(db, student)
+    db.commit()
+    return _session_out(session, now)
+
+
+@router.get("/sessions/{session_id}/rhythm")
+def get_rhythm(session_id: str, auth: Auth = Depends(get_auth), db: DBSession = Depends(get_db)) -> dict:
+    session = _get_session_for_auth(db, auth, session_id)
+    if session.engine != "new" or session.session_kind == "free":
+        return {"rhythm": None}
+    return _rhythm_out(segment_state(session, utcnow()))
+
+
+@router.post("/sessions/{session_id}/rhythm/move")
+def move_lesson_rhythm(
+    session_id: str,
+    body: RhythmMove,
+    auth: Auth = Depends(get_auth),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    session = _get_session_for_auth(db, auth, session_id)
+    now = utcnow()
+    if session.status != "active" or session.session_kind == "free":
+        raise HTTPException(status_code=409, detail="This lesson is closed or has no rhythm")
+    try:
+        move_rhythm(session, now, body.to)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    db.commit()
+    return _rhythm_out(segment_state(session, now))
+
+
+@router.put("/sessions/{session_id}/rhythm")
+def set_lesson_rhythm(
+    session_id: str,
+    body: RhythmUpdate,
+    auth: Auth = Depends(get_auth),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    session = _get_session_for_auth(db, auth, session_id)
+    now = utcnow()
+    if session.status != "active" or session.session_kind == "free":
+        raise HTTPException(status_code=409, detail="This lesson is closed or has no rhythm")
+    try:
+        set_rhythm(session, now, [part.model_dump() for part in body.parts])
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    db.commit()
+    return _rhythm_out(segment_state(session, now))
 
 
 def _evaluate_finished(db: DBSession, session: TutorSession) -> None:

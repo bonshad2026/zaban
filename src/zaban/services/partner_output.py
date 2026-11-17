@@ -3,7 +3,7 @@
 import json
 from dataclasses import dataclass, field
 
-MODES = ["conversation", "task", "shadowing", "translation", "pronunciation", "fluency", "functions", "listening", "story", "poetry", "phrases", "casual"]
+MODES = ["conversation", "task", "shadowing", "translation", "pronunciation", "fluency", "functions", "listening", "story", "poetry", "phrases", "casual", "review", "summary"]
 ERROR_TYPES = ["tense", "word_order", "preposition", "literal_translation", "article", "register", "pronunciation"]
 REGISTERS = ["formal", "neutral", "casual"]
 NEXT_ACTIONS = ["continue", "switch_mode", "ask_learner", "end"]

@@ -94,6 +94,22 @@ const Lesson = (() => {
     $("chat").scrollTop = $("chat").scrollHeight;
   }
 
+  // The part of the rhythm that is running (section 4.15). It is shown when the part changes, and the question about the next part is asked once when the time is up.
+  const RHYTHM_LABELS = { conversation: "گفتگو", translation: "ترجمه‌ی ذهنی", review: "مرور عبارت‌ها", summary: "جمع‌بندی" };
+  let shownRhythmMode = "";
+  let askedAboutMode = "";
+  function rhythmNote(rhythm) {
+    if (rhythm.mode !== shownRhythmMode) {
+      shownRhythmMode = rhythm.mode;
+      note(`الان: ${rhythm.label}`);
+    }
+    if (rhythm.over && askedAboutMode !== rhythm.mode) {
+      askedAboutMode = rhythm.mode;
+      const next = rhythm.next_mode ? `رفتن به ${RHYTHM_LABELS[rhythm.next_mode]}` : "پایان جلسه";
+      note(`زمان این قسمت تمام شد. ادامه‌ی همین قسمت یا ${next}؟`);
+    }
+  }
+
   // The plan warnings the server sends with a reply (section 13.7).
   function warningText(warning) {
     if (warning.kind === "tokens") return `توکن‌های پلن شما به ${warning.percent}٪ رسیده است. بهتر است جلسه را جمع‌بندی کنید.`;
@@ -160,6 +176,7 @@ const Lesson = (() => {
       bubble("assistant", reply.reply);
       partnerCards(reply.partner);
       (reply.warnings || []).forEach((warning) => note(warningText(warning)));
+      if (reply.rhythm) rhythmNote(reply.rhythm);
       if (reply.seconds_left !== null && reply.seconds_left !== undefined) setTimer(reply.seconds_left);
       await speak(reply.reply);
       if (reply.closed) {

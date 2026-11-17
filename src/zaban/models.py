@@ -264,6 +264,11 @@ class TutorSession(Base):
     engine: Mapped[str] = mapped_column(String(10), default="old")
     # How many times the end routine has tried this session. After the last try it becomes no_evaluation.
     end_attempts: Mapped[int] = mapped_column(Integer, default=0)
+    # The lesson rhythm as JSON: [{"mode": "conversation", "minutes": 12}, ...] (section 4.15). Free conversation has none.
+    rhythm: Mapped[str] = mapped_column(Text, default="")
+    # Which part of the rhythm is running, and when it started (the time of the part is counted from here).
+    mode_index: Mapped[int] = mapped_column(Integer, default=0)
+    mode_started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     student: Mapped[Student] = relationship(back_populates="sessions")
     messages: Mapped[list["Message"]] = relationship(
