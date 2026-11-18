@@ -98,6 +98,16 @@ app.include_router(admin_ops_router, prefix="/v1")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
+@app.middleware("http")
+async def static_files_revalidate(request, call_next):
+    # The browser checks a static file with the server each time (a 304 when it is unchanged).
+    # Without this, a browser can keep an old script or page after the app is rebuilt.
+    response = await call_next(request)
+    if request.url.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -175,6 +185,11 @@ def plan_page() -> HTMLResponse:
 @app.get("/level", include_in_schema=False)
 def level_page() -> HTMLResponse:
     return _page("level.html", "/level")
+
+
+@app.get("/learning-info", include_in_schema=False)
+def learning_info_page() -> HTMLResponse:
+    return _page("learning-info.html", "/learning-info")
 
 
 @app.get("/students", include_in_schema=False)

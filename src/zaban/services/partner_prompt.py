@@ -179,9 +179,13 @@ def build_parts(db: DBSession, student: Student, mode: str = "conversation", fre
     ]
 
 
-def build_prompt(db: DBSession, student: Student) -> str:
+def build_prompt(db: DBSession, student: Student, free_minutes: int | None = None) -> str:
     # The start prompt: everything except the mode, which is added on each turn (see mode_part).
-    return "\n\n".join(part.text for part in build_parts(db, student) if part.name != "mode")
+    text = "\n\n".join(part.text for part in build_parts(db, student) if part.name != "mode")
+    if free_minutes:
+        # A free conversation chosen with a length: the partner paces the talk to fit in it.
+        text += f"\n\n[Session length]\nThis free conversation lasts {free_minutes} minutes. Pace the talk so that it fits in this time."
+    return text
 
 
 def sentence_seconds(db: DBSession, student: Student) -> int:

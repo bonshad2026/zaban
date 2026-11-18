@@ -155,7 +155,7 @@
  "معلم در حال فکر کردن است…": "Your teacher is thinking…",
  "معلم در حال صحبت است… لطفاً صبر کن": "Your teacher is speaking… please wait",
  "جلسه تمام شد": "Lesson finished",
- "Enter یعنی ارسال. برای خط جدید Shift+Enter را بزن.": "Enter sends. For a new line, press Shift+Enter.",
+ "برای ارسال، روی دکمه‌ی «ارسال» بزن. Enter فقط خط جدید می‌سازد.": "Press the Send button to send. Enter only makes a new line.",
  "حرف بزن. هر وقت تمام شد، روی «ارسال» بزن.": "Speak. When you finish, press \"Send\".",
  "منتظر جواب معلم باش.": "Wait for your teacher's reply.",
  "وقت معلم است. بعد از تمام شدن جواب، نوبت تو می‌شود.": "It is your teacher's turn. Your turn comes after the reply.",

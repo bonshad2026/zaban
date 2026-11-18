@@ -450,23 +450,6 @@ const Z = (() => {
     dialog.showModal();
   }
 
-  // Opens the learning details (goal, levels, how the teacher should talk) from the side menu.
-  async function openLearningInfo() {
-    const dialog = byId("accLearningDialog");
-    showError(byId("accLearningError"), "");
-    show(byId("accLearningOk"), false);
-    try {
-      const me = await request("GET", "/v1/web/user/profile");
-      byId("accGoal").value = me.goal || "";
-    } catch (err) {
-      showError(byId("accLearningError"), err.message);
-    }
-    const learner = await learnerDetails();
-    learnerReady = Boolean(learner);
-    fillLearner(learner);
-    dialog.showModal();
-  }
-
   // Whether this adult already has a learner profile. It only checks; it never starts learning.
   let learnerReady = false;
   async function hasLearnerProfile() {
@@ -475,58 +458,6 @@ const Z = (() => {
       return true;
     } catch (_) {
       return false;
-    }
-  }
-
-  // The learning details need the learner sign-in. The adult gets it by starting their own learning, which needs a plan.
-  // Without one, the levels and teacher settings stay hidden.
-  async function learnerDetails() {
-    try {
-      return await request("GET", "/v1/web/student/details");
-    } catch (_) { /* not signed in as the learner yet */ }
-    try {
-      await request("POST", "/v1/web/user/self");
-      return await request("GET", "/v1/web/student/details");
-    } catch (_) {
-      return null;
-    }
-  }
-
-  function fillLearner(data) {
-    byId("accLearnerBox").hidden = !data;
-    show(byId("accLearningNone"), !data);
-    if (!data) return;
-    const d = data.details;
-    const levels = data.skill_levels || {};
-    byId("accLevelListening").value = levels.listening || "A1";
-    byId("accLevelReading").value = levels.reading || "A1";
-    byId("accLevelGrammar").value = levels.grammar || "A1";
-    byId("accLevelSpeakingWriting").value = levels.speaking_writing || "A1";
-    // The speaking level is chosen once, before the first lesson. After that it only shows.
-    byId("accLevelSpeakingWriting").disabled = Boolean(data.speaking_locked);
-    show(byId("accSpeakingLocked"), Boolean(data.speaking_locked));
-    byId("accAttributes").value = d.attributes || "";
-    byId("accConversation").value = d.conversation_style || "";
-    byId("accResponse").value = d.response_style || "";
-    byId("accSample").value = d.level_sample || "";
-    byId("accFree").value = d.free_text || "";
-  }
-
-  // Saves the learning text fields. Levels are not sent: they come from the level test (and the level page).
-  // The speaking level is sent only while it can still be chosen.
-  async function saveLearner() {
-    const nullIfEmpty = (value) => value || null;
-    await request("PUT", "/v1/web/student/details", {
-      attributes: byId("accAttributes").value.trim(),
-      conversation_style: nullIfEmpty(byId("accConversation").value),
-      response_style: nullIfEmpty(byId("accResponse").value),
-      level_sample: byId("accSample").value.trim(),
-      free_text: byId("accFree").value.trim(),
-    });
-    if (!byId("accLevelSpeakingWriting").disabled) {
-      await request("PUT", "/v1/web/student/skill-levels", {
-        speaking_writing: byId("accLevelSpeakingWriting").value,
-      });
     }
   }
 
@@ -613,7 +544,7 @@ const Z = (() => {
 
   function setupAccountForms(onSaved) {
     setupTeacherForm();
-    document.querySelectorAll("#accInfoDialog [data-close], #accLearningDialog [data-close], #accPasswordDialog [data-close], #accSignOutDialog [data-close], #accTeacherDialog [data-close]").forEach((button) => {
+    document.querySelectorAll("#accInfoDialog [data-close], #accPasswordDialog [data-close], #accSignOutDialog [data-close], #accTeacherDialog [data-close]").forEach((button) => {
       button.addEventListener("click", () => button.closest("dialog").close());
     });
     // A click on the grey area outside a dialog closes it. Clicks inside the box have another target.
@@ -673,19 +604,6 @@ const Z = (() => {
         show(byId("accInfoOk"), true);
       } catch (err) {
         showError(byId("accInfoError"), err.message);
-      }
-    });
-    byId("accLearningForm").addEventListener("submit", async (event) => {
-      event.preventDefault();
-      showError(byId("accLearningError"), "");
-      show(byId("accLearningOk"), false);
-      try {
-        await request("PUT", "/v1/web/user/profile", { goal: byId("accGoal").value || null });
-        if (learnerReady) await saveLearner();
-        byId("accLearningOk").textContent = isEnglish() ? "Saved." : "ذخیره شد.";
-        show(byId("accLearningOk"), true);
-      } catch (err) {
-        showError(byId("accLearningError"), err.message);
       }
     });
     byId("accPasswordForm").addEventListener("submit", async (event) => {
@@ -863,14 +781,15 @@ const Z = (() => {
     const onLearnerPage = path === "/student";
     const learnerSignedIn = signedIn.length > 0;
     const items = [];
-    items.push({ href: "/student", fa: "آموزش من", en: "My learning", active: onLearnerPage && tool !== "payments" && tool !== "help", startOwn: !learnerSignedIn, learning: true });
+    // Only one item is current at a time: free talk, help and the lesson page each have their own item.
+    const onFreeTalk = onLearnerPage && new URLSearchParams(location.search).get("free") === "1";
+    items.push({ href: "/student", fa: "آموزش من", en: "My learning", active: onLearnerPage && !onFreeTalk && tool !== "payments" && tool !== "help", startOwn: !learnerSignedIn, learning: true });
     items.push({ href: "/plan", fa: "پلن و اعتبار", en: "Plan and credit", active: path === "/plan" });
-    // Opens the learning details dialog, not a page.
-    items.push({ action: openLearningInfo, fa: "اطلاعات آموزشی", en: "Learning details" });
+    items.push({ href: "/learning-info", fa: "اطلاعات آموزشی", en: "Learning details", active: path === "/learning-info" });
     items.push({ href: "/level", fa: "تعیین سطح", en: "Set level", active: path === "/level" });
     items.push({ href: "/student?tab=help", fa: "کمک‌آموزشی", en: "Help", active: onLearnerPage && tool === "help" });
     // Free conversation (section 4.1) opens on the learner page, in the same chat, without a time limit.
-    items.push({ href: "/student?free=1", fa: "گفتگوی آزاد", en: "Free talk", active: onLearnerPage && new URLSearchParams(location.search).get("free") === "1" });
+    items.push({ href: "/student?free=1", fa: "گفتگوی آزاد", en: "Free talk", active: onFreeTalk });
     // "My students" appears once at least one adult has chosen this account as their teacher.
     if (teaches > 0) {
       items.push({ href: "/students", fa: "دانش‌آموزان من", en: "My students", active: path === "/students" });
@@ -883,10 +802,7 @@ const Z = (() => {
       nav.replaceChildren();
       items.forEach((item) => {
         const group = el("div", "side-group");
-        const link = item.action
-          ? labelled("button", "side-item", null, item.fa, item.en)
-          : labelled("a", "side-item", item.href, item.fa, item.en);
-        if (item.action) link.addEventListener("click", item.action);
+        const link = labelled("a", "side-item", item.href, item.fa, item.en);
         if (item.active) link.setAttribute("aria-current", "page");
         if (item.startOwn) link.addEventListener("click", startOwnLearning);
         group.appendChild(link);
@@ -946,11 +862,19 @@ const Z = (() => {
     const tabs = live ? document.querySelector("#appView .tabs") : null;
     if (tabs) {
       const entries = [];
+      // On the free talk page the lesson tabs are not shown, so an entry opens the tab's own address instead.
+      const onFreeTalk = new URLSearchParams(location.search).get("free") === "1";
       // Payments and help have their own main items, so they are left out of this list.
       tabs.querySelectorAll('.tab:not([data-tab="payments"]):not([data-tab="help"])').forEach((tab) => {
         const entry = el("button", "side-sub-item", tab.textContent.trim());
         entry.type = "button";
-        entry.addEventListener("click", () => tab.click());
+        entry.addEventListener("click", () => {
+          if (!onFreeTalk) {
+            tab.click();
+            return;
+          }
+          location.href = tab.dataset.tab === "lesson" ? "/student" : `/student?tab=${tab.dataset.tab}`;
+        });
         entries.push([tab, entry]);
         list.appendChild(entry);
       });

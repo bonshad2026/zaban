@@ -137,17 +137,20 @@
     // Lessons need the plan of the adult who owns this profile. Without it, the learner is told why and cannot start.
     if (me.has_active_plan === false) {
       $("startBtn").disabled = true;
+      $("freeStartBtn").disabled = true;
       Z.showError($("startError"), Z.tr("پلن شما فعال نیست، بنابراین جلسه فعلاً شروع نمی‌شود. لطفاً پلن خود را فعال کنید."));
     }
     selectTab("lesson");
     const { session } = await Z.request("GET", `/v1/students/${me.id}/sessions/active`);
     if (session) {
-      showLesson(true);
+      lastKind = session.session_kind === "free" ? "free" : "lesson";
+      showSetup("running");
       Lesson.resume(session);
     } else if (new URLSearchParams(location.search).get("free") === "1") {
-      await startFree();
+      // The free talk waits for its start button. Nothing starts by itself.
+      showSetup("free");
     } else {
-      showLesson(false);
+      showSetup("lesson");
     }
     // A header link can open a tool directly, for example ?tab=progress or ?tab=payments.
     const wanted = new URLSearchParams(location.search).get("tab");
@@ -155,31 +158,43 @@
     if (tool) tool.click();
   }
 
-  function showLesson(on) {
-    Z.show($("setupBox"), !on);
-    Z.show($("lessonBox"), on);
+  // Which card is shown: "lesson" (choose a lesson), "free" (choose a free talk) or "running" (the chat).
+  let lastKind = "lesson";
+  function showSetup(kind) {
+    Z.show($("setupBox"), kind === "lesson");
+    Z.show($("freeSetupBox"), kind === "free");
+    Z.show($("lessonBox"), kind === "running");
   }
 
-  // Free conversation (section 4.1): the same chat, without a time limit and without a rhythm.
+  // Free conversation (section 4.1): the same chat, without a rhythm. The length is the one chosen in the list;
+  // "no time limit" (0) sends no length, so the talk ends when the learner ends it.
   async function startFree() {
-    Z.showError($("startError"), "");
+    Z.showError($("freeStartError"), "");
+    const minutes = Number($("freeMinutes").value);
+    $("freeStartBtn").disabled = true;
     try {
-      const session = await Z.request("POST", `/v1/students/${me.id}/free-conversation`);
-      showLesson(true);
+      const session = await Z.request("POST", `/v1/students/${me.id}/free-conversation`, minutes ? { duration_minutes: minutes } : undefined);
+      lastKind = "free";
+      showSetup("running");
       Lesson.start(session);
     } catch (err) {
-      Z.showError($("startError"), err.message);
+      Z.showError($("freeStartError"), err.message);
+    } finally {
+      $("freeStartBtn").disabled = false;
     }
   }
 
   async function startLesson() {
     Z.showError($("startError"), "");
     $("startBtn").disabled = true;
+    const minutes = Number($("duration").value);
     try {
-      const session = await Z.request("POST", `/v1/students/${me.id}/sessions`, {
-        duration_minutes: Number($("duration").value),
-      });
-      showLesson(true);
+      // "No time limit" starts a free talk: a lesson has a rhythm and a set length, a free talk has neither.
+      const session = minutes
+        ? await Z.request("POST", `/v1/students/${me.id}/sessions`, { duration_minutes: minutes })
+        : await Z.request("POST", `/v1/students/${me.id}/free-conversation`);
+      lastKind = minutes ? "lesson" : "free";
+      showSetup("running");
       Lesson.start(session);
     } catch (err) {
       Z.showError($("startError"), err.message);
@@ -296,9 +311,9 @@
 
   async function boot() {
     Z.initLang();
-    Lesson.init({ onEnded: () => { showLesson(false); } });
+    Lesson.init({ onEnded: () => { showSetup(lastKind); } });
     $("startBtn").addEventListener("click", startLesson);
-    $("freeBtn").addEventListener("click", startFree);
+    $("freeStartBtn").addEventListener("click", startFree);
     document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => selectTab(tab.dataset.tab)));
 
     try {

@@ -14,6 +14,7 @@ from zaban.schemas import (
     PasswordSet,
     PlacementCreate,
     PlanCreate,
+    FreeConversationCreate,
     SessionCreate,
     StudentCreate,
     StudentTokenRequest,
@@ -563,10 +564,13 @@ def _rhythm_out(state: dict) -> dict:
 @router.post("/students/{student_id}/free-conversation", status_code=201)
 def start_free_conversation(
     student_id: str,
+    body: FreeConversationCreate | None = None,
     auth: Auth = Depends(get_auth),
     db: DBSession = Depends(get_db),
 ) -> dict:
-    # Free conversation (section 4.1): no time, no rhythm and no step in the curriculum. It always uses the conversation partner.
+    # Free conversation (section 4.1): no rhythm and no step in the curriculum. It always uses the conversation partner.
+    # The learner sets its length, or none: without a length the talk has no time limit and ends when the learner ends it.
+    minutes = body.duration_minutes if body else None
     student = get_student_for_auth(db, auth, student_id)
     _require_consent(db, student)
     _require_student_plan(db, student)
@@ -581,16 +585,16 @@ def start_free_conversation(
     session = TutorSession(
         student_id=student.id,
         plan_id=plan.id if plan else None,
-        duration_minutes=0,
+        duration_minutes=minutes or 0,
         started_at=now,
-        ends_at=now + timedelta(hours=24),
+        ends_at=now + timedelta(minutes=minutes) if minutes else now + timedelta(hours=24),
         session_kind="free",
         engine="new",
     )
     db.add(session)
     db.commit()
     db.refresh(session)
-    session.start_prompt = build_prompt(db, student)
+    session.start_prompt = build_prompt(db, student, free_minutes=minutes)
     db.commit()
     return _session_out(session, now)
 

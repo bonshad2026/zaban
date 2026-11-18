@@ -15,7 +15,7 @@ const Lesson = (() => {
     idle: ["", "turn-ended"],
   };
   const HINT = {
-    your_turn: Z.tr("Enter یعنی ارسال. برای خط جدید Shift+Enter را بزن."),
+    your_turn: Z.tr("برای ارسال، روی دکمه‌ی «ارسال» بزن. Enter فقط خط جدید می‌سازد."),
     recording: Z.tr("حرف بزن. هر وقت تمام شد، روی «ارسال» بزن."),
     waiting: Z.tr("منتظر جواب معلم باش."),
     speaking: Z.tr("وقت معلم است. بعد از تمام شدن جواب، نوبت تو می‌شود."),
@@ -507,10 +507,10 @@ const Lesson = (() => {
     ask(OPENING, false);
   }
 
-  // A free conversation has no time limit, so the clock is not shown or counted (section 4.1).
+  // A lesson and a free talk with a length show the clock. A free talk with no time limit shows no clock; it ends when the learner ends it.
   function showClock(session) {
     S.free = Boolean(session.free);
-    if (S.free) {
+    if (S.free && !session.duration_minutes) {
       clearInterval(S.tickTimer);
       $("timeLeft").textContent = Z.pick("بدون محدودیت زمان", "No time limit");
       return;
@@ -544,12 +544,7 @@ const Lesson = (() => {
       if (S.phase === "your_turn") ask("I did not understand. Please explain it again, more simply.", true);
     });
     $("msgInput").addEventListener("input", render);
-    $("msgInput").addEventListener("keydown", (event) => {
-      if (event.key === "Enter" && !event.shiftKey) {
-        event.preventDefault();
-        send();
-      }
-    });
+    // Enter only makes a new line. A message is sent only by the send button.
     render();
   }
 

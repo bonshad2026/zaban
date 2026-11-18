@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
-LessonMinutes = Literal[5, 10, 15, 20, 30, 45, 60]
+LessonMinutes = Literal[5, 10, 15, 20, 30, 45, 60, 90]
 AgeBand = Literal["adult"]
 USERNAME_PATTERN = r"^[a-z0-9_.-]{3,30}$"
 
@@ -51,6 +51,11 @@ class PlanCreate(BaseModel):
     months: int = Field(ge=1, le=12)
     sessions_per_week: int = Field(ge=1, le=7)
     minutes_per_session: LessonMinutes
+
+
+class FreeConversationCreate(BaseModel):
+    # The learner chooses how long the free talk lasts. None means no time limit: it ends when the learner ends it.
+    duration_minutes: LessonMinutes | None = None
 
 
 class SessionCreate(BaseModel):

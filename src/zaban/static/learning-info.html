@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>اطلاعات آموزشی | گفتاریار</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body data-bilingual>
+  <!--site-header-->
+  <main class="page-main">
+    <div class="page-wrap">
+      <div class="page-stack">
+        <h1 class="page-title accent-title" data-fa="اطلاعات آموزشی" data-en="Learning details">اطلاعات آموزشی</h1>
+        <p class="error" id="infoError" hidden></p>
+
+        <section class="page-card" id="signedOutBox" hidden>
+          <p data-fa="برای دیدن اطلاعات آموزشی ابتدا وارد شوید." data-en="Sign in to see your learning details.">برای دیدن اطلاعات آموزشی ابتدا وارد شوید.</p>
+          <p><a class="pill gold" href="/login" data-fa="ورود" data-en="Sign in">ورود</a></p>
+        </section>
+
+        <form id="infoForm" class="page-card" novalidate hidden>
+          <h2 data-fa="هدف از یادگیری" data-en="Your learning goal">هدف از یادگیری</h2>
+          <label for="goal" data-fa="هدف از یادگیری" data-en="Your learning goal">هدف از یادگیری</label>
+          <select id="goal">
+            <option value="" data-fa="انتخاب کنید" data-en="Choose">انتخاب کنید</option>
+            <option value="مکالمه‌ی روزمره" data-fa="مکالمه‌ی روزمره" data-en="Everyday conversation">مکالمه‌ی روزمره</option>
+            <option value="سفر" data-fa="سفر" data-en="Travel">سفر</option>
+            <option value="کار و شغل" data-fa="کار و شغل" data-en="Work">کار و شغل</option>
+            <option value="آزمون" data-fa="آزمون" data-en="Exams">آزمون</option>
+            <option value="مدرسه" data-fa="مدرسه" data-en="School">مدرسه</option>
+          </select>
+
+          <div id="learnerBox" hidden>
+            <h2 data-fa="سطح‌ها" data-en="Levels">سطح‌ها</h2>
+            <p class="muted" data-fa="سطح‌ها از آزمون تعیین سطح می‌آیند و اینجا فقط نمایش داده می‌شوند." data-en="Levels come from the level test and are only shown here.">سطح‌ها از آزمون تعیین سطح می‌آیند و اینجا فقط نمایش داده می‌شوند.</p>
+            <label for="levelListening" data-fa="سطح شنیداری" data-en="Listening level">سطح شنیداری</label>
+            <select id="levelListening" disabled><option value="A1">A1</option><option value="A2">A2</option><option value="B1">B1</option><option value="B2">B2</option><option value="C1">C1</option></select>
+            <label for="levelReading" data-fa="سطح خواندن" data-en="Reading level">سطح خواندن</label>
+            <select id="levelReading" disabled><option value="A1">A1</option><option value="A2">A2</option><option value="B1">B1</option><option value="B2">B2</option><option value="C1">C1</option></select>
+            <label for="levelGrammar" data-fa="سطح دستور و واژگان" data-en="Grammar and vocabulary level">سطح دستور و واژگان</label>
+            <select id="levelGrammar" disabled><option value="A1">A1</option><option value="A2">A2</option><option value="B1">B1</option><option value="B2">B2</option><option value="C1">C1</option></select>
+            <label for="levelSpeakingWriting" data-fa="سطح گفتار و نوشتار" data-en="Speaking and writing level">سطح گفتار و نوشتار</label>
+            <select id="levelSpeakingWriting"><option value="A1">A1</option><option value="A2">A2</option><option value="B1">B1</option><option value="B2">B2</option><option value="C1">C1</option></select>
+            <p class="muted" id="speakingLocked" hidden data-fa="سطح گفتار و نوشتار بعد از اولین جلسه قابل تغییر نیست." data-en="The speaking and writing level cannot be changed after the first lesson.">سطح گفتار و نوشتار بعد از اولین جلسه قابل تغییر نیست.</p>
+            <p class="muted"><a href="/level" data-fa="تعیین سطح با آزمون" data-en="Take the level test">تعیین سطح با آزمون</a></p>
+
+            <h2 data-fa="معلم و گفتگو" data-en="Teacher and conversation">معلم و گفتگو</h2>
+            <label for="attributes" data-fa="دوست دارم معلمم چطور باشد" data-en="How I want my teacher to be">دوست دارم معلمم چطور باشد</label>
+            <textarea id="attributes" rows="2" maxlength="1000" placeholder="مثلاً مهربان، با شوخی، صبور"></textarea>
+            <label for="conversation" data-fa="دوست دارم چطور حرف بزنیم" data-en="How I like to talk">دوست دارم چطور حرف بزنیم</label>
+            <select id="conversation">
+              <option value="" data-fa="انتخاب نشده" data-en="Not chosen">انتخاب نشده</option>
+              <option value="chat" data-fa="گفتگوی آزاد" data-en="Free chat">گفتگوی آزاد</option>
+              <option value="story" data-fa="داستان ساختن با هم" data-en="Building stories together">داستان ساختن با هم</option>
+              <option value="role_play" data-fa="نقش‌بازی" data-en="Role play">نقش‌بازی</option>
+              <option value="quiz" data-fa="سؤال و جواب" data-en="Questions and answers">سؤال و جواب</option>
+              <option value="mixed" data-fa="ترکیبی" data-en="Mixed">ترکیبی</option>
+            </select>
+            <label for="response" data-fa="سبک پاسخ معلم" data-en="Teacher's style">سبک پاسخ معلم</label>
+            <select id="response">
+              <option value="" data-fa="انتخاب نشده" data-en="Not chosen">انتخاب نشده</option>
+              <option value="gentle" data-fa="ملایم" data-en="Gentle">ملایم</option>
+              <option value="direct" data-fa="مستقیم" data-en="Direct">مستقیم</option>
+              <option value="playful" data-fa="بازیگوش" data-en="Playful">بازیگوش</option>
+              <option value="strict" data-fa="سخت‌گیر" data-en="Strict">سخت‌گیر</option>
+            </select>
+            <label for="sample" data-fa="یک جمله‌ی انگلیسی خودتان (اختیاری)" data-en="One English sentence from you (optional)">یک جمله‌ی انگلیسی خودتان (اختیاری)</label>
+            <textarea id="sample" rows="2" maxlength="1000" class="ltr-field"></textarea>
+            <label for="free" data-fa="هر چیز دیگری که معلم باید بداند" data-en="Anything else the teacher should know">هر چیز دیگری که معلم باید بداند</label>
+            <textarea id="free" rows="3" maxlength="1000"></textarea>
+          </div>
+
+          <p class="muted" id="noLearner" hidden data-fa="برای دیدن سطح‌ها و تنظیمات معلم، ابتدا یادگیری خود را شروع کنید." data-en="Start your learning to see your levels and teacher settings.">برای دیدن سطح‌ها و تنظیمات معلم، ابتدا یادگیری خود را شروع کنید.</p>
+          <p class="ok-msg" id="infoOk" hidden></p>
+          <p><button type="submit" data-fa="ذخیره" data-en="Save">ذخیره</button></p>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/learning-info.js"></script>
+</body>
+</html>
