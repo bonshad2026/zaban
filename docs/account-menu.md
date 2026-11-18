@@ -11,7 +11,7 @@ This note is for any developer or AI coding agent working on the website. It des
   - «پلن و اعتبار» opens `/plan`. Its «خرید یا تمدید پلن» button does nothing yet; what it should do is still to be decided.
 - **Third header row (learner page only):** the learning tabs (جلسه, لهجه, گزارش من, پیشرفت, اطلاعات من, کمک‌آموزشی, خودت رو محک بزن). The payments tab is hidden here, because payments has its own main-row item. `initSiteHeader` moves the `.tabs` nav from `student.html` into `#memberSub`, and shows it only on `/student`. The tab buttons keep their click handlers because they are the same nodes.
 - **Profile menu** (opens from the round button; closes on outside click or Escape):
-  - اطلاعات شخصی / Personal details: opens the personal details dialog.
+  - اطلاعات شخصی / Personal details: opens the profile dialog (`accInfoDialog`): photo, name, mobile (read-only, used to sign in), email, age and gender. Age and gender are also copied to the learner profile when it exists.
   - تغییر رمز عبور / Change password: opens the password dialog.
   - خروج / Sign out: asks for confirmation first (a thank-you line, then the question). Then it ends the sign-in on this browser (every role cookie).
   - خروج از همه‌ی دستگاه‌ها / Sign out of all devices: only for an adult (the one website cookie). Asks for confirmation first, then ends every sign-in for the adult and their own learner profile.
@@ -87,7 +87,7 @@ The dialog controls use the `acc` prefix (`accName`, `accEmail`, `accAge`, `accG
 - Adults only. There are no child accounts. Learning is for the adult, through `POST /v1/web/user/self`.
 - Guests see one «ورود» link to `/login`. The header has no sign-in menu.
 - Signed in, the public links are hidden and the header is one row: logo, greeting and the profile button.
-- The side menu (`nav#memberNav`, `app-side`, built by `initSiteHeader`) holds one level: آموزش من, درخواست‌ها, پلن و اعتبار, پرداخت‌ها. On the learner page, «آموزش من» has a collapsible list of the learning tabs. Each entry clicks the page's own tab, and the list follows the active tab.
+- The side menu (`nav#memberNav`, `app-side`, built by `initSiteHeader`) holds one level: آموزش من, درخواست‌ها, پلن و اعتبار, اطلاعات آموزشی, پرداخت‌ها. «اطلاعات آموزشی» is a button, not a page: it opens `accLearningDialog` (goal, levels, how the teacher should talk, the teacher's style, one sample sentence, anything else). The goal is saved on the adult's profile, the rest on the learner profile. On the learner page, «آموزش من» has a collapsible list of the learning tabs. Each entry clicks the page's own tab, and the list follows the active tab.
 - On desktop the side menu is a column beside the content. On a phone (up to 760 px) it is a bar at the bottom, and the learning list opens above it.
 - Tenant API keys manage students through `/v1/students` (`require_manager` accepts only API keys). The admin students list shows every learner, with `kind` set to `self` for an adult learning for themself and `tenant` for a learner from a customer's API.
 

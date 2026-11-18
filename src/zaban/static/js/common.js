@@ -383,7 +383,7 @@ const Z = (() => {
     });
   }
 
-  // Opens the personal-details form with the values the server has right now.
+  // Opens the profile form (personal details) with the values the server has right now.
   async function openPersonalDetails() {
     const dialog = byId("accInfoDialog");
     showError(byId("accInfoError"), "");
@@ -395,21 +395,44 @@ const Z = (() => {
       byId("accEmail").value = me.email;
       byId("accAge").value = me.age == null ? "" : me.age;
       byId("accGender").value = me.gender;
-      byId("accGoal").value = me.goal || "";
       setPhoto(me.avatar);
     } catch (err) {
       showError(byId("accInfoError"), err.message);
     }
-    learnerReady = false;
+    learnerReady = await hasLearnerProfile();
+    dialog.showModal();
+  }
+
+  // Opens the learning details (goal, levels, how the teacher should talk) from the side menu.
+  async function openLearningInfo() {
+    const dialog = byId("accLearningDialog");
+    showError(byId("accLearningError"), "");
+    show(byId("accLearningOk"), false);
+    try {
+      const me = await request("GET", "/v1/web/user/profile");
+      byId("accGoal").value = me.goal || "";
+    } catch (err) {
+      showError(byId("accLearningError"), err.message);
+    }
     const learner = await learnerDetails();
     learnerReady = Boolean(learner);
     fillLearner(learner);
     dialog.showModal();
   }
 
-  // The learner part of the dialog (level, how the teacher should talk, and so on) needs the learner sign-in.
-  // The adult gets it by starting their own learning, which needs a plan. Without one, this part stays hidden.
+  // Whether this adult already has a learner profile. It only checks; it never starts learning.
   let learnerReady = false;
+  async function hasLearnerProfile() {
+    try {
+      await request("GET", "/v1/web/student/details");
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // The learning details need the learner sign-in. The adult gets it by starting their own learning, which needs a plan.
+  // Without one, the levels and teacher settings stay hidden.
   async function learnerDetails() {
     try {
       return await request("GET", "/v1/web/student/details");
@@ -424,6 +447,7 @@ const Z = (() => {
 
   function fillLearner(data) {
     byId("accLearnerBox").hidden = !data;
+    show(byId("accLearningNone"), !data);
     if (!data) return;
     const d = data.details;
     const levels = data.skill_levels || {};
@@ -438,11 +462,10 @@ const Z = (() => {
     byId("accFree").value = d.free_text || "";
   }
 
+  // Saves the learning fields and the levels. Age and gender are saved from the profile form.
   async function saveLearner() {
     const nullIfEmpty = (value) => value || null;
     await request("PUT", "/v1/web/student/details", {
-      age: byId("accAge").value ? Number(byId("accAge").value) : null,
-      gender: nullIfEmpty(byId("accGender").value),
       attributes: byId("accAttributes").value.trim(),
       conversation_style: nullIfEmpty(byId("accConversation").value),
       response_style: nullIfEmpty(byId("accResponse").value),
@@ -540,7 +563,7 @@ const Z = (() => {
 
   function setupAccountForms(onSaved) {
     setupTeacherForm();
-    document.querySelectorAll("#accInfoDialog [data-close], #accPasswordDialog [data-close], #accSignOutDialog [data-close], #accTeacherDialog [data-close]").forEach((button) => {
+    document.querySelectorAll("#accInfoDialog [data-close], #accLearningDialog [data-close], #accPasswordDialog [data-close], #accSignOutDialog [data-close], #accTeacherDialog [data-close]").forEach((button) => {
       button.addEventListener("click", () => button.closest("dialog").close());
     });
     // A click on the grey area outside a dialog closes it. Clicks inside the box have another target.
@@ -586,18 +609,33 @@ const Z = (() => {
         email: byId("accEmail").value.trim(),
         age: byId("accAge").value ? Number(byId("accAge").value) : null,
         gender: byId("accGender").value || null,
-        goal: byId("accGoal").value || null,
       };
       if (photoChanged) body.avatar = photoDraft;
       try {
         const saved = await request("PUT", "/v1/web/user/profile", body);
-        if (learnerReady) await saveLearner();
+        // The learner profile keeps its own copy of age and gender, so it follows the profile when it exists.
+        if (learnerReady) {
+          await request("PUT", "/v1/web/student/details", { age: body.age, gender: body.gender });
+        }
         onSaved(saved);
         setPhoto(saved.avatar);
         byId("accInfoOk").textContent = isEnglish() ? "Saved." : "ذخیره شد.";
         show(byId("accInfoOk"), true);
       } catch (err) {
         showError(byId("accInfoError"), err.message);
+      }
+    });
+    byId("accLearningForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      showError(byId("accLearningError"), "");
+      show(byId("accLearningOk"), false);
+      try {
+        await request("PUT", "/v1/web/user/profile", { goal: byId("accGoal").value || null });
+        if (learnerReady) await saveLearner();
+        byId("accLearningOk").textContent = isEnglish() ? "Saved." : "ذخیره شد.";
+        show(byId("accLearningOk"), true);
+      } catch (err) {
+        showError(byId("accLearningError"), err.message);
       }
     });
     byId("accPasswordForm").addEventListener("submit", async (event) => {
@@ -777,6 +815,8 @@ const Z = (() => {
     const items = [];
     items.push({ href: "/student", fa: "آموزش من", en: "My learning", active: onLearnerPage && tool !== "payments" && tool !== "help", startOwn: !learnerSignedIn, learning: true });
     items.push({ href: "/plan", fa: "پلن و اعتبار", en: "Plan and credit", active: path === "/plan" });
+    // Opens the learning details dialog, not a page.
+    items.push({ action: openLearningInfo, fa: "اطلاعات آموزشی", en: "Learning details" });
     items.push({ href: "/level", fa: "تعیین سطح", en: "Set level", active: path === "/level" });
     items.push({ href: "/student?tab=help", fa: "کمک‌آموزشی", en: "Help", active: onLearnerPage && tool === "help" });
     // Free conversation (section 4.1) opens on the learner page, in the same chat, without a time limit.
@@ -793,7 +833,10 @@ const Z = (() => {
       nav.replaceChildren();
       items.forEach((item) => {
         const group = el("div", "side-group");
-        const link = labelled("a", "side-item", item.href, item.fa, item.en);
+        const link = item.action
+          ? labelled("button", "side-item", null, item.fa, item.en)
+          : labelled("a", "side-item", item.href, item.fa, item.en);
+        if (item.action) link.addEventListener("click", item.action);
         if (item.active) link.setAttribute("aria-current", "page");
         if (item.startOwn) link.addEventListener("click", startOwnLearning);
         group.appendChild(link);
