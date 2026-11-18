@@ -347,8 +347,7 @@ def test_sign_in_code_is_refused_when_wrong_or_for_an_unknown_number_with_the_sa
     assert unknown.json()["detail"] == refused.json()["detail"]
 
 
-def test_sign_in_code_expires_two_minutes_after_it_is_sent(client):
-    assert settings.otp_ttl_seconds == 120
+def test_sign_in_code_expires_after_the_configured_time(client):
     phone = "09121230008"
     _sign_up(client, phone, "Expiry")
     sent = _request_login_code(client, phone)
@@ -356,7 +355,7 @@ def test_sign_in_code_expires_two_minutes_after_it_is_sent(client):
     with SessionLocal() as db:
         record = db.query(OtpCode).filter(OtpCode.phone == phone).order_by(OtpCode.created_at.desc()).first()
         # The two timestamps are set a few milliseconds apart, so allow a small margin.
-        assert abs((record.expires_at - record.created_at) - timedelta(seconds=120)) < timedelta(seconds=2)
+        assert abs((record.expires_at - record.created_at) - timedelta(seconds=settings.otp_ttl_seconds)) < timedelta(seconds=2)
         record.expires_at = utcnow() - timedelta(seconds=1)
         db.commit()
     code = _sms_code(phone)

@@ -29,9 +29,11 @@
               <label for="loginCode" data-fa="کد پیامکی" data-en="SMS code">کد پیامکی</label>
               <input id="loginCode" name="code" inputmode="numeric" class="ltr-field" autocomplete="one-time-code" maxlength="8">
             </div>
-            <button type="button" id="loginSendBtn" class="secondary" data-fa="ارسال کد پیامکی" data-en="Send SMS code">ارسال کد پیامکی</button>
+            <div class="send-slot">
+              <button type="button" id="loginSendBtn" class="secondary" data-fa="ارسال کد پیامکی" data-en="Send SMS code">ارسال کد پیامکی</button>
+              <span class="resend-wait muted" id="loginResendWait" hidden></span>
+            </div>
           </div>
-          <p class="muted" id="loginTimer" hidden></p>
         </div>
 
         <button type="submit" class="wide" id="loginSubmit" data-fa="ورود" data-en="Sign in">ورود</button>
@@ -48,7 +50,10 @@
             <label for="resetPhone" data-fa="شماره‌ی موبایل" data-en="Mobile number">شماره‌ی موبایل</label>
             <input id="resetPhone" name="phone" type="tel" inputmode="tel" class="ltr-field" placeholder="09121234567" required>
           </div>
-          <button type="button" id="resetSendBtn" class="secondary" data-fa="ارسال کد" data-en="Send code">ارسال کد</button>
+          <div class="send-slot">
+            <button type="button" id="resetSendBtn" class="secondary" data-fa="ارسال کد" data-en="Send code">ارسال کد</button>
+            <span class="resend-wait muted" id="resetResendWait" hidden></span>
+          </div>
         </div>
         <div id="resetStep" hidden>
           <p class="notice" id="resetDevHint" hidden></p>

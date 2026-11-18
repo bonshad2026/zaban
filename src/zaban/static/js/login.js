@@ -63,7 +63,6 @@
   // ----- Sign-in: with the password, or with a one-time code sent by SMS to the mobile -----
 
   let codeMode = false;
-  let stopLoginTimer = () => {};
   const t = (fa, en) => (document.documentElement.lang === "en" ? en : fa);
 
   function setBilingual(node, fa, en) {
@@ -80,27 +79,16 @@
     if (useCode) {
       setBilingual($("codeModeLink"), "ورود با رمز عبور", "Sign in with a password");
     } else {
-      stopLoginTimer();
-      Z.show($("loginTimer"), false);
       Z.show($("loginDevHint"), false);
       setBilingual($("codeModeLink"), "ورود با کد پیامکی", "Sign in with an SMS code");
     }
   }
 
-  // The code is valid for the time the server gives (2 minutes by default). When it runs out, the form says so.
-  function startLoginClock(seconds) {
-    stopLoginTimer();
-    stopLoginTimer = Z.codeTimer(
-      $("loginTimer"),
-      seconds,
-      {
-        running: (time) => t(`کد تا ${time} دیگر معتبر است.`, `The code is valid for ${time}.`),
-        done: t("کد منقضی شد. دوباره کد پیامکی بگیرید.", "The code has expired. Request a new SMS code."),
-      },
-    );
-  }
+  // After a code is sent, the send button is replaced by a countdown until a new code can be asked for.
+  let stopLoginResendWait = () => {};
 
   async function sendLoginCode() {
+    if ($("loginSendBtn").hidden) return;
     Z.showError($("loginError"), "");
     const phone = $("loginPhone").value.trim();
     if (!phone) {
@@ -111,9 +99,16 @@
     try {
       const sent = await Z.request("POST", "/v1/web/user/otp/request", { phone, purpose: "login" });
       Z.showDevCode($("loginDevHint"), $("loginCode"), sent.dev_code);
-      startLoginClock(sent.expires_in_seconds);
+      stopLoginResendWait();
+      stopLoginResendWait = Z.startResendWait($("loginSendBtn"), $("loginResendWait"), "zaban.resend.login", sent.resend_in_seconds);
       $("loginCode").focus();
     } catch (err) {
+      // The server still counts a code asked for a moment ago: show the same countdown instead of an error.
+      if (err.status === 429 && err.retryAfter) {
+        stopLoginResendWait();
+        stopLoginResendWait = Z.startResendWait($("loginSendBtn"), $("loginResendWait"), "zaban.resend.login", err.retryAfter);
+        return;
+      }
       Z.showError($("loginError"), err.message);
     }
   }
@@ -135,7 +130,6 @@
       }
       try {
         await Z.request("POST", "/v1/web/user/otp/login", { phone, code });
-        stopLoginTimer();
         location.href = "/";
       } catch (err) {
         Z.showError($("loginError"), err.message);
@@ -167,14 +161,24 @@
     if (on) $("resetPhone").value = $("loginPhone").value.trim();
   }
 
+  let stopResetResendWait = () => {};
+
   async function sendResetCode() {
+    if ($("resetSendBtn").hidden) return;
     Z.showError($("resetError"), "");
     try {
       const sent = await Z.request("POST", "/v1/web/user/otp/request", { phone: $("resetPhone").value.trim(), purpose: "reset" });
       Z.show($("resetStep"), true);
       Z.showDevCode($("resetDevHint"), $("resetCode"), sent.dev_code);
+      stopResetResendWait();
+      stopResetResendWait = Z.startResendWait($("resetSendBtn"), $("resetResendWait"), "zaban.resend.reset", sent.resend_in_seconds);
       $("resetCode").focus();
     } catch (err) {
+      if (err.status === 429 && err.retryAfter) {
+        stopResetResendWait();
+        stopResetResendWait = Z.startResendWait($("resetSendBtn"), $("resetResendWait"), "zaban.resend.reset", err.retryAfter);
+        return;
+      }
       Z.showError($("resetError"), err.message);
     }
   }
@@ -210,6 +214,8 @@
     $("backToLogin").addEventListener("click", (event) => { event.preventDefault(); showReset(false); });
     $("resetSendBtn").addEventListener("click", sendResetCode);
     $("resetForm").addEventListener("submit", saveNewPassword);
+    stopLoginResendWait = Z.resumeResendWait($("loginSendBtn"), $("loginResendWait"), "zaban.resend.login");
+    stopResetResendWait = Z.resumeResendWait($("resetSendBtn"), $("resetResendWait"), "zaban.resend.reset");
 
     let me = null;
     try {

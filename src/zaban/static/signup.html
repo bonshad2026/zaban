@@ -47,9 +47,11 @@
               <label for="signupCode" data-fa="کد پیامکی" data-en="SMS code">کد پیامکی</label>
               <input id="signupCode" name="code" inputmode="numeric" class="ltr-field" autocomplete="one-time-code" maxlength="8">
             </div>
-            <button type="button" id="sendCodeBtn" class="secondary" data-fa="ارسال کد پیامکی" data-en="Send SMS code">ارسال کد پیامکی</button>
+            <div class="send-slot">
+              <button type="button" id="sendCodeBtn" class="secondary" data-fa="ارسال کد پیامکی" data-en="Send SMS code">ارسال کد پیامکی</button>
+              <span class="resend-wait muted" id="signupResendWait" hidden></span>
+            </div>
           </div>
-          <p class="muted full" id="signupTimer" hidden></p>
 
           <div class="full">
             <label class="inline"><input type="checkbox" name="consent" required> <span data-fa="قوانین استفاده و حریم خصوصی را می‌پذیرم." data-en="I accept the terms of use and privacy policy.">قوانین استفاده و حریم خصوصی را می‌پذیرم.</span></label>

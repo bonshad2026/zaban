@@ -151,6 +151,7 @@ const Z = (() => {
     if (!res.ok) {
       const error = new Error(friendly(data.detail, res.status));
       error.status = res.status;
+      error.retryAfter = Number(res.headers.get("Retry-After")) || 0;
       throw error;
     }
     return data;
@@ -230,6 +231,50 @@ const Z = (() => {
     node.hidden = false;
     tick();
     return () => clearInterval(timerId);
+  }
+
+  // Hides the send button and counts down the wait before a new SMS code can be asked for. Then the button comes back.
+  // The end time is kept in sessionStorage, so a reload in the same tab does not bring the button back too early.
+  function runResendWait(button, node, key, end) {
+    try {
+      sessionStorage.setItem(key, String(end));
+    } catch (_) {
+      // Storage can be blocked. The countdown still runs on this page.
+    }
+    show(button, false);
+    return codeTimer(
+      node,
+      Math.ceil((end - Date.now()) / 1000),
+      {
+        running: (time) => (isEnglish() ? `Please wait 1 minute: ${time}` : `لطفاً ۱ دقیقه صبر کنید: ${time}`),
+        done: "",
+      },
+      () => {
+        try {
+          sessionStorage.removeItem(key);
+        } catch (_) {
+          // Nothing to clean up when storage is blocked.
+        }
+        show(node, false);
+        show(button, true);
+      },
+    );
+  }
+
+  function startResendWait(button, node, key, seconds) {
+    return runResendWait(button, node, key, Date.now() + seconds * 1000);
+  }
+
+  // Picks up a countdown started earlier in this tab, if it has not run out yet.
+  function resumeResendWait(button, node, key) {
+    let end = 0;
+    try {
+      end = Number(sessionStorage.getItem(key)) || 0;
+    } catch (_) {
+      end = 0;
+    }
+    if (end <= Date.now()) return () => {};
+    return runResendWait(button, node, key, end);
   }
 
   const STATUS_FA = {
@@ -943,7 +988,7 @@ const Z = (() => {
   }
 
   return {
-    request, friendly, parseUtc, locale, currentLang, fmtDate, fmtDateTime, el, show, showError, showDevCode, codeTimer, initLang, initTheme, initReveal,
+    request, friendly, parseUtc, locale, currentLang, fmtDate, fmtDateTime, el, show, showError, showDevCode, codeTimer, startResendWait, resumeResendWait, initLang, initTheme, initReveal,
     initSiteHeader, STATUS_FA, SUGGESTION_FA, LEVEL_FA, SESSION_FA,
   };
 })();

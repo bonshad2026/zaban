@@ -42,7 +42,13 @@ def request_code(db: DBSession, phone: str, ip: str | None) -> str:
     now = utcnow()
     last = db.query(OtpCode).filter(OtpCode.phone == phone).order_by(OtpCode.created_at.desc()).first()
     if last and (now - last.created_at).total_seconds() < RESEND_SECONDS:
-        raise HTTPException(status_code=429, detail="Please wait a minute before asking for another code")
+        # Retry-After tells the page how long to wait, so it can show the same countdown as after a send.
+        wait = RESEND_SECONDS - int((now - last.created_at).total_seconds())
+        raise HTTPException(
+            status_code=429,
+            detail="Please wait a minute before asking for another code",
+            headers={"Retry-After": str(wait)},
+        )
 
     hour_ago = now - timedelta(hours=1)
     phone_count = db.query(OtpCode).filter(OtpCode.phone == phone, OtpCode.created_at >= hour_ago).count()

@@ -190,6 +190,9 @@ input:-moz-autofill, textarea:-moz-autofill, select:-moz-autofill { background-c
 /* A field with a button beside it: the button sits on the same line as the input, with room around it */
 .field-action { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: end; margin-top: 4px; }
 .field-action button { white-space: nowrap; padding: 12px 22px; }
+/* The send button's place while a new code cannot be asked for yet: a countdown instead of the button */
+.send-slot { display: flex; }
+.resend-wait { align-self: center; padding: 12px 22px; }
 button.secondary { background: var(--accent-soft); color: var(--accent); }
 button.secondary:hover:not(:disabled) { background: var(--accent); color: var(--on-accent); }
 /* Two columns on wide screens, one on phones */

@@ -3,22 +3,11 @@
   const isEnglish = () => document.documentElement.lang === "en";
   const t = (fa, en) => (isEnglish() ? en : fa);
 
-  let stopTimer = () => {};
-
-  // The code is valid for the time the server gives (2 minutes by default). When it runs out, the form says so.
-  function startCodeClock(seconds) {
-    stopTimer();
-    stopTimer = Z.codeTimer(
-      $("signupTimer"),
-      seconds,
-      {
-        running: (time) => t(`کد تا ${time} دیگر معتبر است.`, `The code is valid for ${time}.`),
-        done: t("کد منقضی شد. دوباره کد پیامکی بگیرید.", "The code has expired. Request a new SMS code."),
-      },
-    );
-  }
+  // After a code is sent, the send button is replaced by a countdown until a new code can be asked for.
+  let stopResendWait = () => {};
 
   async function sendCode() {
+    if ($("sendCodeBtn").hidden) return;
     Z.showError($("signupError"), "");
     const phone = $("signupPhone").value.trim();
     if (!phone) {
@@ -29,9 +18,15 @@
     try {
       const sent = await Z.request("POST", "/v1/web/user/otp/request", { phone, purpose: "signup" });
       Z.showDevCode($("signupDevHint"), $("signupCode"), sent.dev_code);
-      startCodeClock(sent.expires_in_seconds);
+      stopResendWait();
+      stopResendWait = Z.startResendWait($("sendCodeBtn"), $("signupResendWait"), "zaban.resend.signup", sent.resend_in_seconds);
       $("signupCode").focus();
     } catch (err) {
+      if (err.status === 429 && err.retryAfter) {
+        stopResendWait();
+        stopResendWait = Z.startResendWait($("sendCodeBtn"), $("signupResendWait"), "zaban.resend.signup", err.retryAfter);
+        return;
+      }
       Z.showError($("signupError"), err.message);
     }
   }
@@ -66,7 +61,6 @@
         password: form.password.value,
         referral_code: form.referral_code.value.trim() || null,
       });
-      stopTimer();
       // The account exists and the browser holds its sign-in. The plan page comes next.
       location.href = "/student";
     } catch (err) {
@@ -78,5 +72,6 @@
     Z.initLang();
     $("sendCodeBtn").addEventListener("click", sendCode);
     $("signupForm").addEventListener("submit", signUp);
+    stopResendWait = Z.resumeResendWait($("sendCodeBtn"), $("signupResendWait"), "zaban.resend.signup");
   });
 })();
