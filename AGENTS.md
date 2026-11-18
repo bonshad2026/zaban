@@ -31,7 +31,7 @@ This file is for any coding agent (Claude, Codex, or others). It states the proj
 | Sign-in and accounts | `README.md` (Accounts, Website sign-in), `src/zaban/web.py`, `src/zaban/account.py`, sign-in page `static/login.html` (`/login`) |
 | Website header and profile menu | `docs/account-menu.md` |
 | Curriculum and learning programs | `docs/curriculum.md`, `src/zaban/curriculum_data.py`, `src/zaban/program_data.py` |
-| Conversation partner (modes, learner profile, level policy, output contract, teacher notebook, build plan) | `docs/conversation-partner.md` v0.6 (design ready, not yet implemented; build phases in section 15), sample prompts in `docs/prompt-example.html` |
+| Conversation partner (modes, learner profile, level policy, output contract, teacher notebook, build plan) | `docs/conversation-partner.md` v0.7 (design v0.7, built in phases 0 to 7; status per phase in section 15, open checks in section 15.11), sample prompts in `docs/prompt-example.html`. Test plan for a tester: `docs/po-test-plan.md` |
 | Database columns added after first release | `ADDED_COLUMNS` in `src/zaban/db.py` |
 | Port usage on this computer | `docs/ports.md` |
 | Pages, admin menu, data and open items | `docs/site-map.md` |

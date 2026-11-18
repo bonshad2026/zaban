@@ -14,6 +14,7 @@ from zaban.models import Guardian, Student, Tenant
 from zaban.security import Auth, get_student_for_auth, require_tenant, require_manager
 from zaban.services.ai_gateway import stream_complete
 from zaban.services.metering import ensure_quota, record_usage
+from zaban.services.partner_output import shown_text
 from zaban.services.payments import charge_plan_tokens, has_active_plan, require_plan
 
 # A separate module: the server builds the instruction, the caller gets a token, and the conversation runs on that token.
@@ -140,7 +141,11 @@ def read_messages(
 ) -> list[dict]:
     # Lets the page show the conversation again after a reload, while it is still kept.
     conversation = service.conversation_for_token(db, conversation_id, _bearer(authorization))
-    return service.history(db, conversation)
+    # The stored answers are JSON; the learner sees only the reply part.
+    return [
+        {"role": m["role"], "content": shown_text(m["content"]) if m["role"] == "assistant" else m["content"]}
+        for m in service.history(db, conversation)
+    ]
 
 
 @router.post("/conversations/{conversation_id}/end")

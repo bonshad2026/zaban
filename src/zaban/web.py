@@ -13,6 +13,7 @@ from zaban.services.learner import get_accent, set_accent, set_learner_profile
 from zaban.services.otp import check_code, development_code, normalize_phone, request_code
 from zaban.services.passwords import hash_password, verify_password
 from zaban.services.referrals import new_code, referral_summary
+from zaban.services.partner_budget import remaining_percent, warnings as budget_warnings
 from zaban.services.payments import has_active_plan, require_plan
 
 # Sign-in endpoints for the website. They set an HttpOnly cookie, so the browser never holds an API key.
@@ -307,6 +308,34 @@ def choose_accent(
     set_accent(db, student.id, body.accent)
     db.commit()
     return {"accent": body.accent}
+
+
+@router.get("/student/plan-status")
+def plan_status(
+    zaban_student: str | None = Cookie(default=None),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    # What the learner sees at the top of the learner page: no plan, a plan that ended, tokens used up,
+    # tokens left below an administrator's threshold, or a plan close to its end date.
+    guardian = _guardian_from_cookie(db, zaban_student)
+    now = utcnow()
+    active = has_active_plan(guardian)
+    alerts = []
+    if not active:
+        if guardian.plan_expires_at is not None and guardian.plan_expires_at <= now:
+            alerts.append({"kind": "expired"})
+        elif guardian.plan_token_allowance > 0 and guardian.plan_tokens_used >= guardian.plan_token_allowance:
+            alerts.append({"kind": "tokens_used"})
+        else:
+            alerts.append({"kind": "no_plan"})
+    else:
+        alerts = budget_warnings(db, guardian, now)
+    return {
+        "has_active_plan": active,
+        "tokens_remaining_percent": remaining_percent(guardian) if guardian.plan_token_allowance > 0 else None,
+        "expires_at": guardian.plan_expires_at.isoformat() if guardian.plan_expires_at else None,
+        "alerts": alerts,
+    }
 
 
 @router.get("/me")

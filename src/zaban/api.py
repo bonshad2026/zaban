@@ -21,7 +21,7 @@ from zaban.schemas import (
 )
 from zaban.security import Auth, get_auth, get_student_for_auth, issue_student_token, require_manager
 from zaban.services.ai import tutor_reply
-from zaban.services.partner_output import parse_output
+from zaban.services.partner_output import parse_output, shown_text
 from zaban.services.partner_shadowing import compare
 from zaban.services.partner_prompt import build_prompt, mode_part, sentence_seconds, turn_block
 from zaban.services.partner_rhythm import move as move_rhythm, segment_state, set_rhythm, start_rhythm
@@ -119,7 +119,7 @@ def _session_out(session: TutorSession, now) -> dict:
         "block": current_block(session.started_at, session.ends_at, now) if is_active else "closed",
         "score": session.score,
         "free": session.session_kind == "free",
-        "messages": [{"role": m.role, "content": m.content} for m in session.messages],
+        "messages": [{"role": m.role, "content": shown_text(m.content) if m.role == "assistant" else m.content} for m in session.messages],
     }
 
 

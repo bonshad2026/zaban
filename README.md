@@ -1,6 +1,6 @@
 # zaban
 
-A one-to-one AI English tutoring service. Each lesson is one student and one AI tutor ("Niko"). The lesson runs by turns: the student speaks or types and presses Send, then Niko answers by voice and text, then the student's turn again.
+A one-to-one AI English tutoring service (گفتاریار). Each lesson is one student and one AI tutor. The lesson runs by turns: the student speaks or types and presses Send, then the tutor answers in text (and by voice, when the browser supports speech synthesis), then the student's turn again.
 
 This project is independent and lives in its own git repository.
 
@@ -25,9 +25,9 @@ docker compose up --build
 
 Then open:
 
-- http://localhost:8000 — landing page (Persian / English)
-- http://localhost:8000/student — student sign-in
-- http://localhost:8000/login — sign-in (mobile number and password, or an SMS code)
+- http://127.0.0.1:8020 — landing page (Persian / English)
+- http://127.0.0.1:8020/student — student sign-in
+- http://127.0.0.1:8020/login — sign-in (mobile number and password, or an SMS code)
 
 To use real Claude replies, set `ANTHROPIC_API_KEY` in `.env`. Without it the app runs in offline mode, which costs nothing.
 
@@ -66,7 +66,7 @@ docker compose exec app python -m zaban.cli tenant "Customer Name" --quota 10000
 
 ## Conversation partner (گفتاریار)
 
-Lessons and free conversation use the conversation partner, described in `docs/conversation-partner.md`.
+Lessons and free conversation use the conversation partner, described in `docs/conversation-partner.md` (built in phases 0 to 7; status in section 15.11). Free conversation is in the header menu (`/student?free=1`).
 
 - The partner answers in JSON. A valid answer is shown and logged; an invalid one is shown as plain text and logs nothing.
 - Speech is turned into text in the browser. The server never receives audio, and no outside pronunciation service is used.
@@ -78,8 +78,8 @@ Lessons and free conversation use the conversation partner, described in `docs/c
 
 - Consent is required before a lesson can start. A website adult accepts the terms at sign-up, and that is stored as their consent when their learner profile is created. Customer sites record consent with `POST /students/{id}/consent`.
 - Only one lesson can run per student at a time.
-- The server keeps the timer. When time runs out, the lesson closes.
-- The student cannot speak while Niko is answering. Send is the only way to submit a turn.
+- The server keeps the timer. When time runs out, the learner chooses to go on without a time limit or to end the lesson.
+- The student cannot speak while the tutor is answering. Send is the only way to submit a turn.
 - Links, email addresses, long numbers, and private or technical words are blocked before they reach the model.
 
 ## Website sign-in
@@ -149,13 +149,13 @@ This deletes local data. Do not do it on a production database. Use proper migra
 ## Current limits (MVP)
 
 - **Placement** takes a score from the customer's own test (0 to 100) and maps it to CEFR.
-- **Lesson score** and **progress percent** are placeholder formulas (`services/sessions.py`, `services/progress.py`). Replace them with a real model before selling.
+- **Lesson score** is the five-criteria summary (range, accuracy, fluency, interaction, coherence) written at the end of each lesson (`services/partner_end.py`). The level rules are in `services/partner_levels.py`. Check them against real learners before selling.
 - **Topic guard** is rule-based, not a full classifier.
 - **Quota** is checked before each call and updated after it, without reserving tokens in advance.
 - **Prices** in the config are placeholders.
 - **Login limits** are stored in the database: SMS codes allow 1 request per minute, 5 per phone and 20 per IP per hour, and 5 tries per code. Passwords lock for 15 minutes after 3 wrong tries. Under several server instances these still work, because the counts are in the database.
 - **Not built yet**: a backup code or a way to change a lost mobile number, and a sharing option that lets an adult give someone else access to their own reports.
-- **Voice** uses the browser's speech recognition and speech synthesis (Chrome or Edge). Chrome sends the audio to Google. Before real users rely on it, move speech to a server-side provider with clear data terms. Use headphones so Niko's voice is not picked up by the microphone.
+- **Voice** uses the browser's speech recognition and speech synthesis (Chrome or Edge). Chrome sends the audio to Google. Before real users rely on it, move speech to a server-side provider with clear data terms. Use headphones so the tutor's voice is not picked up by the microphone.
 - **Background image** is a built-in SVG under a dark overlay. Replace it with a photo only after confirming its license.
 - **Passwords and codes**: passwords are hashed with PBKDF2. SMS codes are stored only as HMAC hashes, expire after 5 minutes, and allow 5 tries. A learner's password can be changed by the tenant (customer) that created the learner.
 - **Adult accounts** are created by the first sign-in with a name. Tenant selection uses the first active tenant, so one tenant per site is assumed.

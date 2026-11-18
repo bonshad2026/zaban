@@ -96,10 +96,44 @@
     }
   }
 
+  // The plan and token warnings the learner sees at the top of every tab (no plan, plan ending, tokens running low).
+  function planAlertText(alert) {
+    if (alert.kind === "no_plan") return Z.pick("شما پلن فعال ندارید. برای شروع جلسه ابتدا یک پلن انتخاب و پرداخت کنید.", "You do not have an active plan. Choose and pay for a plan before you start a lesson.");
+    if (alert.kind === "expired") return Z.pick("اعتبار پلن شما تمام شده است. برای ادامه‌ی جلسه‌ها پلن تازه بخرید.", "Your plan has expired. Buy a new plan to keep learning.");
+    if (alert.kind === "tokens_used") return Z.pick("توکن‌های پلن شما تمام شده است. برای جلسه‌ی بعدی پلن تازه بخرید.", "Your plan tokens are used up. Buy a new plan for the next lesson.");
+    if (alert.kind === "tokens") return Z.pick(`فقط ${alert.remaining_percent}٪ از توکن‌های پلن شما باقی مانده است.`, `Only ${alert.remaining_percent}% of your plan tokens are left.`);
+    if (alert.kind === "expiry") {
+      if (alert.days_left <= 0) return Z.pick("پلن شما امروز اعتبارش را از دست می‌دهد.", "Your plan expires today.");
+      return Z.pick(`پلن شما ${alert.days_left} روز دیگر اعتبارش را از دست می‌دهد.`, `Your plan expires in ${alert.days_left} days.`);
+    }
+    return "";
+  }
+
+  async function loadPlanAlert() {
+    const box = $("planAlert");
+    try {
+      const status = await Z.request("GET", "/v1/web/student/plan-status");
+      box.replaceChildren();
+      const texts = (status.alerts || []).map(planAlertText).filter(Boolean);
+      if (!texts.length) {
+        box.hidden = true;
+        return;
+      }
+      texts.forEach((text) => box.appendChild(Z.el("p", "", text)));
+      const link = Z.el("a", "pill", Z.pick("دیدن پلن و اعتبار", "View plan and tokens"));
+      link.href = "/plan";
+      box.appendChild(link);
+      box.hidden = false;
+    } catch (_) {
+      box.hidden = true;
+    }
+  }
+
   async function enterApp() {
     showView();
     showLevel();
     loadAccent();
+    await loadPlanAlert();
     // Lessons need the plan of the adult who owns this profile. Without it, the learner is told why and cannot start.
     if (me.has_active_plan === false) {
       $("startBtn").disabled = true;

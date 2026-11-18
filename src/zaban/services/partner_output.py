@@ -74,3 +74,9 @@ def parse_output(raw: str) -> PartnerTurn:
         next_action=next_action,
         raw=text,
     )
+
+
+def shown_text(raw: str) -> str:
+    # What the learner sees for a stored answer: the reply of a valid answer, otherwise the text as it was.
+    turn = parse_output(raw)
+    return turn.reply if turn.valid else raw

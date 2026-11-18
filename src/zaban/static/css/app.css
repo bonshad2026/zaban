@@ -99,6 +99,15 @@ input, select, textarea {
   border-radius: 10px;
 }
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+/* Browser autofill paints fields with its own colour (yellow or olive in Firefox). Keep the normal field colours in every browser. */
+input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus, textarea:-webkit-autofill, select:-webkit-autofill {
+  -webkit-text-fill-color: var(--text);
+  box-shadow: 0 0 0 1000px var(--bg) inset;
+  caret-color: var(--text);
+  transition: background-color 9999s ease-out 0s;
+}
+input:autofill, textarea:autofill, select:autofill { background-color: var(--bg) !important; color: var(--text) !important; }
+input:-moz-autofill, textarea:-moz-autofill, select:-moz-autofill { background-color: var(--bg) !important; color: var(--text) !important; }
 .ltr-field { direction: ltr; text-align: left; }
 .inline { display: inline-flex; align-items: center; gap: 8px; margin: 0; color: var(--text); font-size: 15px; }
 .inline input { width: auto; margin: 0; }
@@ -176,6 +185,8 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent-soft
 .auth-card h1 { margin-bottom: 10px; }
 .auth-card label:not(.inline) { margin-top: 18px; }
 .auth-card .links { margin-top: 24px; }
+/* The submit button sits below the last field, with the same room as the gap between fields */
+.auth-card > button[type="submit"] { margin-top: 24px; }
 /* A field with a button beside it: the button sits on the same line as the input, with room around it */
 .field-action { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: end; margin-top: 4px; }
 .field-action button { white-space: nowrap; padding: 12px 22px; }
@@ -852,3 +863,9 @@ dialog.account-dialog { overflow-y: auto; }
 .student-tabs button { padding: 8px 16px; font-size: 14px; margin: 0; }
 .student-tabs button.is-current { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 .student-sessions { display: grid; gap: 10px; }
+
+/* The plan alert at the top of the learner page: it must not be missed, so it is a clear box and not a small line. */
+.plan-alert { max-width: 1100px; margin: 16px auto 0; padding: 14px 18px; border: 2px solid var(--warn); border-radius: 14px; background: var(--warn-soft); color: var(--text); display: grid; gap: 8px; }
+.plan-alert[hidden] { display: none; }
+.plan-alert p { margin: 0; font-weight: 600; }
+.plan-alert a.pill { justify-self: start; }

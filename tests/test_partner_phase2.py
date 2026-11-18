@@ -28,7 +28,7 @@ def _restore_settings(client):
     with SessionLocal() as db:
         for key in (
             "partner_engine", "partner_token_reserve", "partner_min_messages_eval", "partner_level_up_sessions",
-            "partner_level_down_sessions", "partner_memory_max_words", "partner_token_warn_percents", "partner_expiry_warn_days",
+            "partner_level_down_sessions", "partner_memory_max_words", "partner_token_warn_remaining", "partner_expiry_warn_days",
         ):
             set_setting(db, key, "")
         db.commit()
@@ -220,8 +220,8 @@ def _owner(**fields):
 def test_token_warning_at_the_highest_threshold_reached(client):
     now = utcnow()
     with SessionLocal() as db:
-        assert warnings(db, _owner(plan_tokens_used=850), now) == [{"kind": "tokens", "percent": 80}]
-        assert warnings(db, _owner(plan_tokens_used=950), now) == [{"kind": "tokens", "percent": 90}]
+        assert warnings(db, _owner(plan_tokens_used=850), now) == [{"kind": "tokens", "remaining_percent": 15, "threshold": 20}]
+        assert warnings(db, _owner(plan_tokens_used=950), now) == [{"kind": "tokens", "remaining_percent": 5, "threshold": 10}]
         assert warnings(db, _owner(plan_tokens_used=100), now) == []
 
 
