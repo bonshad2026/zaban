@@ -11,6 +11,7 @@ const Z = (() => {
     ["This plan is not available", "این پلن در حال حاضر در دسترس نیست."],
     ["Enter a valid mobile number", "شماره‌ی موبایل معتبر نیست. مثلاً 09121234567 را وارد کنید."],
     ["Your name is needed", "برای ساخت حساب، نام و نام خانوادگی لازم است."],
+    ["can only be chosen before the first lesson", "سطح گفتار و نوشتار فقط قبل از اولین جلسه قابل انتخاب است."],
     ["SMS could not be sent", "پیامک ارسال نشد. لطفاً دوباره تلاش کنید."],
     ["Adults must create", "بزرگسالان باید حساب خودشان را بسازند."],
     ["not ready yet", "سرویس هنوز آماده نیست. کمی بعد دوباره تلاش کنید."],
@@ -61,6 +62,7 @@ const Z = (() => {
     ["This plan is not available", "This plan is not available right now."],
     ["Enter a valid mobile number", "Please enter a valid mobile number, for example 09121234567."],
     ["Your name is needed", "Please enter your full name."],
+    ["can only be chosen before the first lesson", "The speaking level can only be chosen before the first lesson."],
     ["SMS could not be sent", "The SMS could not be sent. Please try again."],
     ["Adults must create", "Adults must create their own account."],
     ["not ready yet", "The service is not ready yet. Please try again later."],
@@ -500,6 +502,9 @@ const Z = (() => {
     byId("accLevelReading").value = levels.reading || "A1";
     byId("accLevelGrammar").value = levels.grammar || "A1";
     byId("accLevelSpeakingWriting").value = levels.speaking_writing || "A1";
+    // The speaking level is chosen once, before the first lesson. After that it only shows.
+    byId("accLevelSpeakingWriting").disabled = Boolean(data.speaking_locked);
+    show(byId("accSpeakingLocked"), Boolean(data.speaking_locked));
     byId("accAttributes").value = d.attributes || "";
     byId("accConversation").value = d.conversation_style || "";
     byId("accResponse").value = d.response_style || "";
@@ -507,7 +512,8 @@ const Z = (() => {
     byId("accFree").value = d.free_text || "";
   }
 
-  // Saves the learning fields and the levels. Age and gender are saved from the profile form.
+  // Saves the learning text fields. Levels are not sent: they come from the level test (and the level page).
+  // The speaking level is sent only while it can still be chosen.
   async function saveLearner() {
     const nullIfEmpty = (value) => value || null;
     await request("PUT", "/v1/web/student/details", {
@@ -517,12 +523,11 @@ const Z = (() => {
       level_sample: byId("accSample").value.trim(),
       free_text: byId("accFree").value.trim(),
     });
-    await request("PUT", "/v1/web/student/skill-levels", {
-      listening: byId("accLevelListening").value,
-      reading: byId("accLevelReading").value,
-      grammar: byId("accLevelGrammar").value,
-      speaking_writing: byId("accLevelSpeakingWriting").value,
-    });
+    if (!byId("accLevelSpeakingWriting").disabled) {
+      await request("PUT", "/v1/web/student/skill-levels", {
+        speaking_writing: byId("accLevelSpeakingWriting").value,
+      });
+    }
   }
 
   // The photo shown in the personal-details form. Only a change is sent when the form is saved.

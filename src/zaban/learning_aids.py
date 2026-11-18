@@ -346,7 +346,13 @@ def read_details(zaban_student: str | None = Cookie(default=None), db: DBSession
     student = _student_from_cookie(db, zaban_student)
     from zaban.services.placement_test import skill_levels
 
-    return {"details": details_out(db.get(LearnerDetails, student.id)), "skill_levels": skill_levels(student)}
+    # The speaking level stays as it is once the first lesson has happened (see set_skill_levels).
+    has_lesson = db.query(TutorSession.id).filter(TutorSession.student_id == student.id).first() is not None
+    return {
+        "details": details_out(db.get(LearnerDetails, student.id)),
+        "skill_levels": skill_levels(student),
+        "speaking_locked": has_lesson,
+    }
 
 
 class SkillLevelsUpdate(BaseModel):
