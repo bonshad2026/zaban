@@ -775,21 +775,34 @@ const Z = (() => {
       });
     }
 
-    // The side menu of the signed-in area. One level only; the learning tabs sit under «آموزش من».
+    // The side menu of the signed-in area. Every learning tab is an entry of its own, next to the account pages.
     const path = location.pathname;
     const tool = new URLSearchParams(location.search).get("tab");
     const onLearnerPage = path === "/student";
     const learnerSignedIn = signedIn.length > 0;
     const items = [];
-    // Only one item is current at a time: free talk, help and the lesson page each have their own item.
+    // Only one item is current at a time: free talk is its own entry, and the learning tabs follow the page's active tab.
     const onFreeTalk = onLearnerPage && new URLSearchParams(location.search).get("free") === "1";
-    items.push({ href: "/student", fa: "آموزش من", en: "My learning", active: onLearnerPage && !onFreeTalk && tool !== "payments" && tool !== "help", startOwn: !learnerSignedIn, learning: true });
+    const learnerItem = (tab, fa, en) => ({
+      href: tab === "lesson" ? "/student" : `/student?tab=${tab}`,
+      fa,
+      en,
+      tab,
+      active: onLearnerPage && !onFreeTalk && (tool || "lesson") === tab,
+      startOwn: !learnerSignedIn,
+    });
+    items.push(learnerItem("lesson", "جلسه", "Lesson"));
+    // Free conversation (section 4.1) opens on the learner page, in the same chat, without a time limit.
+    items.push({ href: "/student?free=1", fa: "گفتگوی آزاد", en: "Free talk", active: onFreeTalk });
+    items.push(learnerItem("accent", "لهجه", "Accent"));
+    items.push(learnerItem("test", "خودت رو محک بزن", "Test yourself"));
+    items.push(learnerItem("report", "گزارش‌ها", "Reports"));
+    items.push(learnerItem("progress", "پیشرفت", "Progress"));
+    items.push(learnerItem("help", "کمک‌آموزشی", "Help"));
+    items.push(learnerItem("profile", "اطلاعات من", "My details"));
     items.push({ href: "/plan", fa: "پلن و اعتبار", en: "Plan and credit", active: path === "/plan" });
     items.push({ href: "/learning-info", fa: "اطلاعات آموزشی", en: "Learning details", active: path === "/learning-info" });
     items.push({ href: "/level", fa: "تعیین سطح", en: "Set level", active: path === "/level" });
-    items.push({ href: "/student?tab=help", fa: "کمک‌آموزشی", en: "Help", active: onLearnerPage && tool === "help" });
-    // Free conversation (section 4.1) opens on the learner page, in the same chat, without a time limit.
-    items.push({ href: "/student?free=1", fa: "گفتگوی آزاد", en: "Free talk", active: onFreeTalk });
     // "My students" appears once at least one adult has chosen this account as their teacher.
     if (teaches > 0) {
       items.push({ href: "/students", fa: "دانش‌آموزان من", en: "My students", active: path === "/students" });
@@ -800,102 +813,46 @@ const Z = (() => {
     if (header) header.dataset.member = String(signedIn.length > 0);
     if (nav) {
       nav.replaceChildren();
+      sideTabLinks = [];
       items.forEach((item) => {
         const group = el("div", "side-group");
         const link = labelled("a", "side-item", item.href, item.fa, item.en);
         if (item.active) link.setAttribute("aria-current", "page");
         if (item.startOwn) link.addEventListener("click", startOwnLearning);
-        group.appendChild(link);
-        if (item.learning) {
-          const collapse = learningMenu(onLearnerPage && learnerSignedIn);
-          const chevron = el("span", "side-chevron");
-          link.appendChild(chevron);
-          const isOpen = () => !collapse.classList.contains("is-closed");
-          link.setAttribute("aria-expanded", String(isOpen()));
-          // The chevron always opens and closes the list. On the learner page the label does too, without a reload.
+        if (item.tab && onLearnerPage && !onFreeTalk) {
+          // On the learner page the entry opens the page's own tab without a reload, and the address follows it.
           link.addEventListener("click", (event) => {
-            const onChevron = event.target.closest(".side-chevron");
-            if (!onChevron && !onLearnerPage) return;
+            const button = document.querySelector(`#appView .tab[data-tab="${item.tab}"]`);
+            if (!button) return;
             event.preventDefault();
-            collapse.classList.toggle("is-closed", isOpen());
-            link.setAttribute("aria-expanded", String(isOpen()));
-            rememberLearningOpen(isOpen());
+            button.click();
+            history.replaceState(null, "", item.href);
           });
-          group.appendChild(collapse);
+          sideTabLinks.push([item.tab, link]);
         }
+        group.appendChild(link);
         nav.appendChild(group);
       });
       nav.hidden = !items.length;
     }
-  }
-
-  // The learning tabs, shown under «آموزش من» on the learner page. Each entry clicks the page's own tab,
-  // so the lesson, report and progress sections stay where they are. The entries follow the page's active tab.
-  let learnObserver = null;
-  // The visitor's own choice of open or closed is remembered in this browser. Without a choice, the list is open on a computer and closed on a phone.
-  const LEARNING_OPEN_KEY = "zaban-learning-open";
-  function learningListOpen() {
-    try {
-      const saved = localStorage.getItem(LEARNING_OPEN_KEY);
-      if (saved !== null) return saved === "open";
-    } catch (_) { /* storage can be blocked; the default applies */ }
-    return !window.matchMedia("(max-width: 760px)").matches;
-  }
-  function rememberLearningOpen(open) {
-    try {
-      localStorage.setItem(LEARNING_OPEN_KEY, open ? "open" : "closed");
-    } catch (_) { /* the choice lasts only for this page then */ }
-  }
-  const LEARNING_TABS = [
-    ["lesson", "جلسه"], ["accent", "لهجه"], ["report", "گزارش من"], ["progress", "پیشرفت"],
-    ["profile", "اطلاعات من"], ["test", "خودت رو محک بزن"],
-  ];
-
-  // The learning list under «آموزش من». On the learner page its entries click the page's own tabs and follow the active tab.
-  // Elsewhere each entry opens the learner page on that tab. It starts open on the learner page of a desktop, and closed otherwise.
-  function learningMenu(live) {
-    const collapse = el("div", "side-collapse");
-    const box = el("div", "side-sub");
-    const list = el("div", "side-list");
-    box.appendChild(list);
-    collapse.appendChild(box);
-    const tabs = live ? document.querySelector("#appView .tabs") : null;
+    const tabs = onLearnerPage && !onFreeTalk ? document.querySelector("#appView .tabs") : null;
     if (tabs) {
-      const entries = [];
-      // On the free talk page the lesson tabs are not shown, so an entry opens the tab's own address instead.
-      const onFreeTalk = new URLSearchParams(location.search).get("free") === "1";
-      // Payments and help have their own main items, so they are left out of this list.
-      tabs.querySelectorAll('.tab:not([data-tab="payments"]):not([data-tab="help"])').forEach((tab) => {
-        const entry = el("button", "side-sub-item", tab.textContent.trim());
-        entry.type = "button";
-        entry.addEventListener("click", () => {
-          if (!onFreeTalk) {
-            tab.click();
-            return;
-          }
-          location.href = tab.dataset.tab === "lesson" ? "/student" : `/student?tab=${tab.dataset.tab}`;
-        });
-        entries.push([tab, entry]);
-        list.appendChild(entry);
-      });
-      const sync = () => entries.forEach(([tab, entry]) => {
-        entry.textContent = tab.textContent.trim();
-        entry.classList.toggle("is-active", tab.classList.contains("is-active"));
-      });
-      sync();
       if (learnObserver) learnObserver.disconnect();
+      const sync = () => markSideTab(tabs.querySelector(".tab.is-active")?.dataset.tab || tool || "lesson");
       learnObserver = new MutationObserver(sync);
-      learnObserver.observe(tabs, { subtree: true, attributes: true, childList: true, characterData: true });
-    } else {
-      const current = new URLSearchParams(location.search).get("tab") || "lesson";
-      LEARNING_TABS.forEach(([key, fa]) => {
-        const entry = labelled("a", "side-sub-item", key === "lesson" ? "/student" : `/student?tab=${key}`, fa, fa);
-        entry.classList.toggle("is-active", location.pathname === "/student" && current === key);
-        list.appendChild(entry);
-      });
+      learnObserver.observe(tabs, { subtree: true, attributes: true, childList: true });
+      sync();
     }
-    collapse.classList.toggle("is-closed", !learningListOpen());
-    return collapse;
+  }
+
+  // The learner page's tabs are the side menu's entries. Each entry opens the page's own tab; the marked entry follows the active tab.
+  let learnObserver = null;
+  let sideTabLinks = [];
+  function markSideTab(current) {
+    sideTabLinks.forEach(([tab, link]) => {
+      if (tab === current) link.setAttribute("aria-current", "page");
+      else link.removeAttribute("aria-current");
+    });
   }
 
   // Blocks marked .reveal rise in once they reach the screen. Each one animates only once.

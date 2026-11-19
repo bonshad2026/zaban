@@ -387,6 +387,19 @@ dialog.account-dialog form { display: block; }
 dialog.account-dialog h2 { margin-bottom: 4px; }
 .dialog-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-top: 20px; }
 .dialog-actions button { margin: 0; }
+
+/* The reports list: a filter row, then one row per report. A row opens its details in the dialog. */
+.report-filter { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+.report-filter button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.report-rows { display: flex; flex-direction: column; gap: 8px; }
+.report-row { box-sizing: border-box; padding: 12px 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); }
+.report-open { margin-top: 8px; }
+.evaluation { display: flex; flex-direction: column; gap: 6px; }
+.evaluation p { margin: 0; }
+.evaluation-heading { margin: 14px 0 2px; font-size: 16px; color: var(--accent-dark); }
+.evaluation-list { margin: 0; padding-inline-start: 20px; display: flex; flex-direction: column; gap: 4px; }
+.report-row-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.report-type { flex: 0 0 auto; padding: 2px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-dark); font-size: 12px; }
 .avatar-edit { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 12px; }
 .avatar-edit-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .avatar-edit-actions button { margin: 0; padding: 8px 14px; }
@@ -619,42 +632,18 @@ select option:hover, select option:focus, select option:checked { background: va
 .side-item:hover, .side-item:hover:not(:disabled) { background: var(--accent-soft); color: var(--text); }
 .side-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .side-item[aria-current="page"], .side-item[aria-current="page"]:hover { background: var(--accent); color: var(--on-accent); font-weight: 700; }
-/* The chevron of «آموزش من»: a small round chip with a mask-drawn arrow, so it follows the text colour. */
-.side-chevron { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-dark); transition: transform .35s ease, background-color .2s ease; }
-.side-chevron::before { content: ""; width: 12px; height: 12px; background-color: currentColor; -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M6 9l6 6 6-6' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/></svg>") center / contain no-repeat; mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M6 9l6 6 6-6' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/></svg>") center / contain no-repeat; }
-.side-chevron.is-closed { transform: rotate(-90deg); }
-.side-item[aria-current="page"] .side-chevron { background: rgba(0, 0, 0, .14); color: var(--on-accent); }
-/* The list opens and closes smoothly: the grid row grows from 0 to its full height. */
-.side-collapse { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .35s ease, opacity .3s ease; }
-.side-collapse.is-closed { grid-template-rows: 0fr; opacity: 0; }
-.side-sub { min-height: 0; overflow: hidden; }
-/* The sub-list is indented with a guide line, so it reads as part of «آموزش من». */
-.side-list { display: flex; flex-direction: column; gap: 2px; margin-inline-start: 14px; padding: 4px 0 8px 12px; border-inline-start: 2px solid var(--border); max-height: 360px; overflow-y: auto; scrollbar-width: none; }
-.side-list::-webkit-scrollbar { display: none; }
-.side-sub-item { display: block; width: 100%; box-sizing: border-box; margin: 0; text-align: start; text-decoration: none; background: transparent; border: 0; border-radius: 10px; padding: 8px 12px; font: inherit; font-size: 14px; color: var(--muted); cursor: pointer; }
-.side-sub-item:hover { background: var(--accent-soft); color: var(--text); }
-.side-sub-item.is-active { color: var(--text); font-weight: 700; background: var(--accent-soft); }
-.side-sub-item.is-active::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); margin-inline-end: 8px; vertical-align: 2px; }
 #appView > .tabs { display: none; }
 
 @media (max-width: 760px) {
   :root { --header-h: 0px; }
   .app-layout { display: block; }
-  /* Phone: the side menu is a bar at the bottom; the learning list opens above it. */
+  /* Phone: the side menu is a bar at the bottom. */
   .app-side { position: fixed; inset: auto 0 0 0; flex: none; align-self: auto; flex-direction: row; justify-content: space-around; gap: 0; padding: 6px 6px calc(6px + env(safe-area-inset-bottom)); background: var(--card); border-inline-start: 0; border-top: 0.5px solid var(--border); z-index: 15; }
   .side-group { flex: 1 1 0; min-width: 0; gap: 0; position: static; }
   .side-item { justify-content: center; text-align: center; min-width: 0; padding: 8px 2px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .side-chevron { display: none; }
-  .side-collapse { display: block; position: absolute; bottom: calc(100% + 10px); inset-inline: 10px; transition: opacity .3s ease, transform .3s ease, visibility .3s; }
-  .side-collapse.is-closed { display: block; opacity: 0; transform: translateY(14px); visibility: hidden; }
-  .side-sub { border: 0.5px solid var(--border); border-radius: 16px; background: var(--card); padding: 8px; box-shadow: var(--shadow); }
-  .side-list { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; max-height: 55vh; margin: 0; padding: 4px; border: 0; }
-  .side-sub-item { padding: 10px 10px; }
-  .side-sub-item.is-active::before { display: none; }
   .site-main { padding-bottom: 84px; }
   .site-footer { display: none; }
 }
-@media (prefers-reduced-motion: reduce) { .side-collapse, .side-chevron { transition: none; } }
 
 @media (max-width: 760px) {
   /* Header on a phone: [profile and name] [logo] [language and theme] [☰ for guests]. */
@@ -729,7 +718,6 @@ select option:hover, select option:focus, select option:checked { background: va
 .meter { height: 10px; border-radius: 999px; background: var(--border); overflow: hidden; }
 .meter > span { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 999px; transition: width .4s ease; }
 
-@media (prefers-reduced-motion: reduce) { .side-collapse, .side-chevron { transition: none; } }
 
 /* ---- The personal details dialog also holds the learning details ---- */
 dialog.account-dialog { overflow-y: auto; }

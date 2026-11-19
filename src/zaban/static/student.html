@@ -14,7 +14,7 @@
     <nav class="tabs">
       <button class="tab is-active" type="button" data-tab="lesson">جلسه</button>
       <button class="tab" type="button" data-tab="accent">لهجه</button>
-      <button class="tab" type="button" data-tab="report">گزارش من</button>
+      <button class="tab" type="button" data-tab="report">گزارش‌ها</button>
       <button class="tab" type="button" data-tab="progress">پیشرفت</button>
       <button class="tab" type="button" data-tab="help">کمک‌آموزشی</button>
       <button class="tab" type="button" data-tab="test">خودت رو محک بزن</button>
@@ -102,6 +102,13 @@
 
       <section id="tab-report" hidden>
         <div class="card" id="reportBox"></div>
+        <dialog id="reportDialog" class="account-dialog account-dialog-wide" aria-labelledby="reportDialogTitle">
+          <h2 id="reportDialogTitle"></h2>
+          <div id="reportDialogBody"></div>
+          <div class="dialog-actions">
+            <button type="button" class="ghost" id="reportDialogClose" data-fa="بستن" data-en="Close">بستن</button>
+          </div>
+        </dialog>
       </section>
 
       <section id="tab-progress" class="tool-section" hidden>

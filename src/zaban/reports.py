@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session as DBSession
 
 from zaban.services.skill_levels import levels_out
 from zaban.db import get_db
-from zaban.models import Plan, Student, Tenant, TutorSession, Usage, utcnow
+from zaban.models import Plan, SelfTest, Student, Tenant, TutorSession, Usage, utcnow
 from zaban.security import Auth, get_auth, get_student_for_auth, require_manager, require_tenant
 from zaban.services.curriculum import session_topic
 from zaban.services.progress import actual_percent, planned_percent, progress_status
@@ -80,6 +80,77 @@ def _session_rows(db: DBSession, student: Student) -> list[dict]:
             }
         )
     return rows
+
+
+SKILL_FA = {"writing": "نوشتن", "listening": "شنیدن", "speaking": "گفتن", "mixed": "ترکیبی"}
+
+
+def _levels(row: TutorSession | SelfTest) -> dict:
+    return {
+        "range": row.eval_range,
+        "accuracy": row.eval_accuracy,
+        "fluency": row.eval_fluency,
+        "interaction": row.eval_interaction,
+        "coherence": row.eval_coherence,
+    }
+
+
+def _session_item(db: DBSession, s: TutorSession) -> dict:
+    # A free talk has no curriculum topic, so it is listed under its own type and title.
+    if s.session_kind == "lesson":
+        found = session_topic(db, s.id)
+        kind, title = "lesson", found[0].title if found else "جلسه"
+    else:
+        kind, title = "talk", "گفتگوی آزاد"
+    return {
+        "type": kind,
+        "id": s.id,
+        "title": title,
+        "date": s.started_at.isoformat(),
+        "duration_minutes": s.duration_minutes,
+        "status": s.status,
+        "score": s.score,
+        "levels": _levels(s),
+        "text": s.evaluation,
+    }
+
+
+def _test_item(t: SelfTest) -> dict:
+    return {
+        "type": "test",
+        "id": t.id,
+        "title": f"خودت رو محک بزن: {SKILL_FA.get(t.skill, t.skill)}",
+        "date": t.created_at.isoformat(),
+        "duration_minutes": t.minutes,
+        "status": t.status,
+        "score": t.score,
+        "levels": _levels(t),
+        "text": t.result,
+    }
+
+
+@router.get("/students/{student_id}/reports/items")
+def report_items(student_id: str, auth: Auth = Depends(get_auth), db: DBSession = Depends(get_db)) -> dict:
+    # One list for every kind of report: lessons, free talks and self-tests, newest first.
+    student = get_student_for_auth(db, auth, student_id)
+    sessions = (
+        db.query(TutorSession)
+        .filter(TutorSession.student_id == student.id)
+        .order_by(TutorSession.started_at.desc())
+        .limit(50)
+        .all()
+    )
+    tests = (
+        db.query(SelfTest)
+        .filter(SelfTest.student_id == student.id)
+        .order_by(SelfTest.created_at.desc())
+        .limit(50)
+        .all()
+    )
+    items = [_session_item(db, s) for s in sessions] + [_test_item(t) for t in tests]
+    items.sort(key=lambda item: item["date"], reverse=True)
+    db.commit()
+    return {"items": items[:50]}
 
 
 @router.get("/students/{student_id}/reports/progress")
