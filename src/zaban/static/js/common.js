@@ -791,21 +791,26 @@ const Z = (() => {
       active: onLearnerPage && !onFreeTalk && (tool || "lesson") === tab,
       startOwn: !learnerSignedIn,
     });
+    // The side menu, in this order. A divider line separates the groups, and the teachers' group sits between two lines.
+    const divider = { divider: true };
     items.push(learnerItem("lesson", "جلسه", "Lesson"));
     // Free conversation (section 4.1) opens on the learner page, in the same chat, without a time limit.
     items.push({ href: "/student?free=1", fa: "گفتگوی آزاد", en: "Free talk", active: onFreeTalk });
-    items.push(learnerItem("accent", "لهجه", "Accent"));
     items.push(learnerItem("test", "خودت رو محک بزن", "Test yourself"));
     items.push(learnerItem("report", "گزارش‌ها", "Reports"));
     items.push(learnerItem("progress", "پیشرفت", "Progress"));
-    items.push(learnerItem("help", "کمک‌آموزشی", "Help"));
-    items.push(learnerItem("profile", "اطلاعات من", "My details"));
-    items.push({ href: "/plan", fa: "پلن و اعتبار", en: "Plan and credit", active: path === "/plan" });
+    items.push(learnerItem("accent", "لهجه", "Accent"));
     items.push({ href: "/learning-info", fa: "اطلاعات آموزشی", en: "Learning details", active: path === "/learning-info" });
+    items.push(divider);
+    items.push(learnerItem("help", "کمک‌آموزشی", "Help"));
     items.push({ href: "/level", fa: "تعیین سطح", en: "Set level", active: path === "/level" });
+    items.push({ href: "/plan", fa: "پلن و اعتبار", en: "Plan and credit", active: path === "/plan" });
+    items.push(learnerItem("profile", "اطلاعات من", "My details"));
     // "My students" appears once at least one adult has chosen this account as their teacher.
     if (teaches > 0) {
+      items.push(divider);
       items.push({ href: "/students", fa: "دانش‌آموزان من", en: "My students", active: path === "/students" });
+      items.push(divider);
     }
 
     const nav = document.getElementById("memberNav");
@@ -815,6 +820,10 @@ const Z = (() => {
       nav.replaceChildren();
       sideTabLinks = [];
       items.forEach((item) => {
+        if (item.divider) {
+          nav.appendChild(el("div", "side-divider"));
+          return;
+        }
         const group = el("div", "side-group");
         const link = labelled("a", "side-item", item.href, item.fa, item.en);
         if (item.active) link.setAttribute("aria-current", "page");

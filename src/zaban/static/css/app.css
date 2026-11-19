@@ -632,6 +632,8 @@ select option:hover, select option:focus, select option:checked { background: va
 .side-item:hover, .side-item:hover:not(:disabled) { background: var(--accent-soft); color: var(--text); }
 .side-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .side-item[aria-current="page"], .side-item[aria-current="page"]:hover { background: var(--accent); color: var(--on-accent); font-weight: 700; }
+/* A line between the groups of the side menu, with room above and below. */
+.side-divider { height: 1px; margin: 12px 14px; background: var(--border); }
 #appView > .tabs { display: none; }
 
 @media (max-width: 760px) {
@@ -640,6 +642,7 @@ select option:hover, select option:focus, select option:checked { background: va
   /* Phone: the side menu is a bar at the bottom. */
   .app-side { position: fixed; inset: auto 0 0 0; flex: none; align-self: auto; flex-direction: row; justify-content: space-around; gap: 0; padding: 6px 6px calc(6px + env(safe-area-inset-bottom)); background: var(--card); border-inline-start: 0; border-top: 0.5px solid var(--border); z-index: 15; }
   .side-group { flex: 1 1 0; min-width: 0; gap: 0; position: static; }
+  .side-divider { width: 1px; height: auto; align-self: stretch; margin: 8px 4px; }
   .side-item { justify-content: center; text-align: center; min-width: 0; padding: 8px 2px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .site-main { padding-bottom: 84px; }
   .site-footer { display: none; }
