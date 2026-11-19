@@ -738,13 +738,7 @@ const Z = (() => {
     const greeting = me.name;
     const teaches = me.students || 0;
 
-    // A signed-in visitor starts on the lesson page, not on the public home page. The logo and the home link go there too.
-    const memberHome = "/student";
-    if (location.pathname === "/") {
-      location.replace(memberHome);
-      return;
-    }
-    document.querySelectorAll('.site-brand, .site-nav a[href="/"]').forEach((link) => link.setAttribute("href", memberHome));
+    // The logo and the home link go to the public home page for everyone, signed in or not.
 
     let profile = { avatar: "" };
     try {
@@ -804,7 +798,6 @@ const Z = (() => {
     items.push(learnerItem("help", "کمک‌آموزشی", "Help"));
     items.push({ href: "/level", fa: "تعیین سطح", en: "Set level", active: path === "/level" });
     items.push({ href: "/plan", fa: "پلن و اعتبار", en: "Plan and credit", active: path === "/plan" });
-    items.push(learnerItem("profile", "اطلاعات من", "My details"));
     // "My students" appears once at least one adult has chosen this account as their teacher.
     if (teaches > 0) {
       items.push(divider);

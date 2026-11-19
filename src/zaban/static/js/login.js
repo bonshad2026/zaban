@@ -130,7 +130,7 @@
       }
       try {
         await Z.request("POST", "/v1/web/user/otp/login", { phone, code });
-        location.href = "/";
+        location.href = "/student";
       } catch (err) {
         Z.showError($("loginError"), err.message);
       }
@@ -146,8 +146,8 @@
         password: form.password.value,
       });
       form.password.value = "";
-      // After sign-in the visitor lands on the home page, with no menu item selected.
-      location.href = "/";
+      // After sign-in the visitor lands on the lesson page.
+      location.href = "/student";
     } catch (err) {
       Z.showError($("loginError"), err.message);
     }
