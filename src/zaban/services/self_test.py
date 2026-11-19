@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session as DBSession
 from zaban.models import SelfTest, SelfTestMessage, Student, Tenant, utcnow
 from zaban.services.ai_gateway import complete
 from zaban.services.curriculum import DEFAULT_LEVEL, band_code
+from zaban.services.skill_levels import level_for_skill
 from zaban.services.metering import ensure_quota, record_usage
 from zaban.services.partner_selftest import finish_partner_test
 from zaban.services.self_test_prompt import build_prompt
@@ -41,7 +42,7 @@ def _ask(db: DBSession, student: Student, test: SelfTest, system: str, messages:
 
 
 def start_test(db: DBSession, student: Student, kind: str, skill: str, minutes: int) -> SelfTest:
-    level = student.cefr_level or DEFAULT_LEVEL
+    level = level_for_skill(student, skill)
     test = SelfTest(
         student_id=student.id,
         kind=kind,

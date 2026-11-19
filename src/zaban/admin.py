@@ -7,6 +7,7 @@ from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session as DBSession
 
+from zaban.services.skill_levels import levels_out
 from zaban.config import settings
 from zaban.db import get_db
 from zaban.models import (
@@ -304,7 +305,7 @@ def list_students(db: DBSession = Depends(get_db)) -> list[dict]:
             "kind": "self" if s.self_owner_id else "tenant",
             "username": s.username,
             "age_band": s.age_band,
-            "cefr_level": s.cefr_level,
+            "levels": levels_out(s),
             "interests": profiles[s.id].interests if s.id in profiles else "",
             "motivation": profiles[s.id].motivation if s.id in profiles else "",
             "instructions": profiles[s.id].instructions if s.id in profiles else "",
@@ -745,10 +746,10 @@ def preview_self_test_prompt(body: SelfTestPreview, db: DBSession = Depends(get_
     student = db.get(Student, body.student_id)
     if student is None:
         raise HTTPException(status_code=404, detail="Not found")
-    from zaban.services.curriculum import DEFAULT_LEVEL
     from zaban.services.self_test import choose_kind
+    from zaban.services.skill_levels import speaking_level
 
-    level = student.cefr_level or DEFAULT_LEVEL
+    level = speaking_level(student)
     text, unknown = build_prompt(db, student, body.kind, choose_kind(body.kind, level), body.skill, body.minutes, level)
     return {"prompt": text, "unknown_placeholders": unknown}
 

@@ -90,7 +90,7 @@
     const completed = report.sessions.filter((s) => s.status === "completed").length;
     const stats = el("div", "stats");
     stats.append(
-      stat(label("سطح", "Level"), report.cefr_level ? `${report.cefr_level} (${Z.LEVEL_FA[report.cefr_level]})` : label("هنوز تعیین نشده", "Not set yet")),
+      stat(label("سطح گفتاری", "Speaking level"), report.levels?.speaking ? `${report.levels.speaking} (${Z.LEVEL_FA[report.levels.speaking]})` : label("هنوز تعیین نشده", "Not set yet")),
       stat(label("وضعیت", "Status"), Z.STATUS_FA[report.status] || report.status),
       stat(label("جلسه‌های کامل", "Completed lessons"), String(completed)),
     );

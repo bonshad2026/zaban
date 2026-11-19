@@ -139,7 +139,9 @@ def text_for(db: DBSession, student: Student, topic_id: str) -> CurriculumVarian
     band = band_code(student.age_band)
     if band is None:
         return None
-    return variant_for(db, topic_id, band, student.cefr_level or DEFAULT_LEVEL)
+    from zaban.services.skill_levels import speaking_level
+
+    return variant_for(db, topic_id, band, speaking_level(student))
 
 
 def choose_topic(

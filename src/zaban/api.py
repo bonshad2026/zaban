@@ -13,7 +13,6 @@ from zaban.schemas import (
     ConsentCreate,
     MessageCreate,
     PasswordSet,
-    PlacementCreate,
     PlanCreate,
     FreeConversationCreate,
     SessionCreate,
@@ -38,7 +37,8 @@ from zaban.services.metering import ensure_quota, record_usage
 from zaban.services.payments import charge_plan_tokens, has_active_plan, require_plan
 from zaban.services.sessions import finish_session
 from zaban.services.passwords import hash_password
-from zaban.services.progress import build_milestones, cefr_from_score
+from zaban.services.progress import build_milestones
+from zaban.services.skill_levels import levels_out
 from zaban.services.sessions import current_block, finish_if_due, finish_session, guard_message
 
 # Shown to the learner when the adult's plan has no tokens left. The lesson closes after it.
@@ -74,9 +74,8 @@ def _require_complete_profile(db: DBSession, student: Student) -> None:
         if values:
             details = save_details(db, student.id, values)
             db.commit()
+    # Every learner starts with the beginner level in each skill, so no level has to be chosen before a lesson.
     missing = []
-    if not student.cefr_level:
-        missing.append("level")
     if details is None or not details.age:
         missing.append("age")
     if details is None or not details.gender:
@@ -92,7 +91,7 @@ def _student_out(student: Student) -> dict:
         "display_name": student.display_name,
         "username": student.username,
         "age_band": student.age_band,
-        "cefr_level": student.cefr_level,
+        "levels": levels_out(student),
         "has_login": student.password_hash is not None,
     }
 
@@ -294,19 +293,6 @@ def give_consent(
     db.add(consent)
     db.commit()
     return {"id": consent.id, "accepted_at": consent.accepted_at.isoformat()}
-
-
-@router.post("/students/{student_id}/placement")
-def set_placement(
-    student_id: str,
-    body: PlacementCreate,
-    auth: Auth = Depends(require_manager),
-    db: DBSession = Depends(get_db),
-) -> dict:
-    student = get_student_for_auth(db, auth, student_id)
-    student.cefr_level = body.level if body.level else cefr_from_score(body.score)
-    db.commit()
-    return _student_out(student)
 
 
 @router.post("/students/{student_id}/plans", status_code=201)

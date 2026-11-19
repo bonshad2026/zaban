@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session as DBSession
 
 from zaban.models import LearnerEvaluation, Student
 from zaban.services.partner_levels import next_level
+from zaban.services.partner_policy import LEVEL_CODES
 from zaban.services.partner_settings import partner_value
 from zaban.services.progress import cefr_from_score
 
@@ -43,3 +44,40 @@ def apply_scored_skill(db: DBSession, student: Student, skill: str, score: float
         return {}
     setattr(student, column, new)
     return {skill: (current, new)}
+
+
+# ----- Stage 3: one level for each skill. There is no overall level. -----
+
+CRITERION_COLUMNS = {
+    "range": "level_range",
+    "accuracy": "level_accuracy",
+    "fluency": "level_fluency",
+    "interaction": "level_interaction",
+    "coherence": "level_coherence",
+}
+
+
+def speaking_level(student: Student) -> str:
+    # The speaking level is the lowest of the five criteria, so one weak criterion is not hidden by strong ones.
+    levels = [getattr(student, column) or "A1" for column in CRITERION_COLUMNS.values()]
+    return min(levels, key=LEVEL_CODES.index)
+
+
+def level_for_skill(student: Student, skill: str) -> str:
+    # The level of a skill for a test of that skill. Speaking, mixed and unknown skills use the speaking level.
+    column = SCORED_SKILL_COLUMNS.get(skill)
+    if column is None:
+        return speaking_level(student)
+    return getattr(student, column) or "A1"
+
+
+def levels_out(student: Student) -> dict:
+    # The levels the learner and the administrator see: one level per skill, with the five speaking criteria.
+    return {
+        "listening": student.level_listening or "A1",
+        "reading": student.level_reading or "A1",
+        "grammar": student.level_grammar or "A1",
+        "writing": student.level_writing or "A1",
+        "speaking": speaking_level(student),
+        "criteria": {key: getattr(student, column) or "A1" for key, column in CRITERION_COLUMNS.items()},
+    }

@@ -383,7 +383,7 @@
         factCard("نام", d.display_name || "—"),
         factCard("سن", details.age ? `${fa(details.age)} سال` : "—"),
         factCard("جنسیت", GENDER_LABELS[details.gender] || "—"),
-        factCard("سطح", d.cefr_level || "تعیین نشده"),
+        factCard("سطح گفتاری", d.levels?.speaking || "تعیین نشده"),
         factCard("سبک گفتگو", CONVERSATION_LABELS[details.conversation_style] || "—"),
         factCard("سبک پاسخ", RESPONSE_LABELS[details.response_style] || "—"),
         factCard("برنامه", program ? `${program.name} — ${fa(d.progress.percent)}٪` : "بدون برنامه"),

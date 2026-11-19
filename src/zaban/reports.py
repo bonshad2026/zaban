@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import func
 from sqlalchemy.orm import Session as DBSession
 
+from zaban.services.skill_levels import levels_out
 from zaban.db import get_db
 from zaban.models import Plan, Student, Tenant, TutorSession, Usage, utcnow
 from zaban.security import Auth, get_auth, get_student_for_auth, require_manager, require_tenant
@@ -88,7 +89,7 @@ def student_progress(student_id: str, auth: Auth = Depends(get_auth), db: DBSess
     db.commit()
     return {
         "student_id": student.id,
-        "cefr_level": student.cefr_level,
+        "levels": levels_out(student),
         "plan": None if plan is None else {"goal": plan.goal, "end_date": plan.end_date.isoformat()},
         **snapshot,
         "milestones": plan.milestones if plan else [],
@@ -108,7 +109,7 @@ def summary_report(
     db.commit()
     return {
         "student_id": student.id,
-        "cefr_level": student.cefr_level,
+        "levels": levels_out(student),
         **snapshot,
         "milestones": plan.milestones if plan else [],
         "summary_fa": SUMMARIES_FA[snapshot["status"]],

@@ -241,7 +241,7 @@
   function renderReport(report, detail) {
     const box = $("reportBox");
     box.innerHTML = "";
-    const level = detail.cefr_level;
+    const level = detail.levels?.speaking;
     const levelText = level ? `${level} (${Z.LEVEL_FA[level]})` : Z.tr("هنوز تعیین نشده");
     const completed = report.sessions.filter((s) => s.status === "completed").length;
 
@@ -296,8 +296,9 @@
     try {
       const student = await Z.request("GET", `/v1/students/${me.id}`);
       const notice = $("levelNotice");
-      if (student.cefr_level) {
-        notice.textContent = Z.pick(`سطح شما: ${student.cefr_level} (${Z.LEVEL_FA[student.cefr_level]})`, `Your level: ${student.cefr_level} (${Z.LEVEL_FA[student.cefr_level]})`);
+      const speaking = student.levels?.speaking;
+      if (speaking) {
+        notice.textContent = Z.pick(`سطح گفتاری شما: ${speaking} (${Z.LEVEL_FA[speaking]})`, `Your speaking level: ${speaking} (${Z.LEVEL_FA[speaking]})`);
         Z.show($("levelTestBox"), false);
       } else {
         notice.textContent = Z.tr("سطح شما هنوز تعیین نشده است. از صفحه‌ی تعیین سطح آزمون بدهید یا سطحتان را انتخاب کنید. تا آن زمان معلم از سطح مقدماتی شروع می‌کند.");

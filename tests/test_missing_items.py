@@ -6,6 +6,7 @@ from pathlib import Path
 from zaban.db import SessionLocal
 from zaban.models import ConsultRequest, HelpContent, SelfTest, Student
 from zaban.services.curriculum import band_code
+from zaban.services.skill_levels import speaking_level
 from helpers_learner import learner_login, self_student
 
 ADMIN_PASSWORD = os.environ["ADMIN_PASSWORD"]
@@ -31,7 +32,7 @@ def _content_for_demo_student(**overrides) -> dict:
         "title": "Ten-minute story",
         "category": "story",
         "age_band": band_code(student.age_band),
-        "level": student.cefr_level or "A2",
+        "level": speaking_level(student),
         "interests": "animals",
         "url": "https://example.com/story",
     }

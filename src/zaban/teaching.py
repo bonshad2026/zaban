@@ -6,6 +6,7 @@ from zaban.db import get_db
 from zaban.learning_aids import _progress_out
 from zaban.models import Guardian, Student
 from zaban.reports import _session_rows, _snapshot
+from zaban.services.skill_levels import levels_out, speaking_level
 from zaban.web import _guardian_from_cookie, _self_profile
 
 # An adult can choose one teacher, using the teacher's referral code. The same code is the teacher's own code.
@@ -107,7 +108,7 @@ def my_students(
     out = []
     for student in students:
         profile = _self_profile(db, student)
-        out.append({"id": student.id, "name": student.full_name, "level": profile.cefr_level if profile else None})
+        out.append({"id": student.id, "name": student.full_name, "level": speaking_level(profile) if profile else None})
     return out
 
 
@@ -142,7 +143,7 @@ def student_report(
         "name": student.full_name,
         "started": True,
         "student_id": profile.id,
-        "cefr_level": profile.cefr_level,
+        "levels": levels_out(profile),
         "plan": None if plan is None else {"goal": plan.goal, "end_date": plan.end_date.isoformat()},
         **snapshot,
         "sessions": _session_rows(db, profile),

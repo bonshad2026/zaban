@@ -34,16 +34,6 @@ class ConsentCreate(BaseModel):
     text_version: str = Field(default="v1", max_length=20)
 
 
-class PlacementCreate(BaseModel):
-    # Either a level picked by the learner (A1 to C2), or a 0 to 100 score from a test.
-    level: Literal["A1", "A2", "B1", "B2", "C1", "C2"] | None = None
-    score: int | None = Field(default=None, ge=0, le=100)
-
-    @model_validator(mode="after")
-    def one_of_level_or_score(self) -> "PlacementCreate":
-        if (self.level is None) == (self.score is None):
-            raise ValueError("Send either a level or a score")
-        return self
 
 
 class PlanCreate(BaseModel):
@@ -177,5 +167,3 @@ class DetailsUpdate(BaseModel):
     free_text: str | None = Field(default=None, max_length=1000)
 
 
-class LevelUpdate(BaseModel):
-    cefr_level: CefrLevel

@@ -14,7 +14,8 @@ from zaban.models import (
     Student,
     TutorSession,
 )
-from zaban.schemas import DetailsUpdate, LevelUpdate, SelfTestAnswer, SelfTestCreate
+from zaban.schemas import DetailsUpdate, SelfTestAnswer, SelfTestCreate
+from zaban.services.skill_levels import levels_out, speaking_level
 from zaban.services.learner_details import details_out, save_details
 from zaban.services.curriculum import band_code
 from zaban.services.help_content import GENDERS, LEVELS, facet_tree, tags_by_content
@@ -31,14 +32,13 @@ def _matches(item: HelpContent, student: Student) -> bool:
     # Same rule as the list: the age band must match, and the level too once the learner has one.
     if item.age_band != band_code(student.age_band):
         return False
-    return student.cefr_level is None or item.level == student.cefr_level
+    return item.level == speaking_level(student)
 
 
 def _visible_query(db: DBSession, student: Student, category: str | None):
     # What the learner may see: their age band, their level once they have one, and the chosen category.
     query = db.query(HelpContent).filter(HelpContent.age_band == band_code(student.age_band))
-    if student.cefr_level:
-        query = query.filter(HelpContent.level == student.cefr_level)
+    query = query.filter(HelpContent.level == speaking_level(student))
     if category:
         query = query.filter(HelpContent.category == category)
     return query
@@ -405,19 +405,6 @@ def save_my_details(
     save_details(db, student.id, body.model_dump(exclude_unset=True))
     db.commit()
     return {"details": details_out(db.get(LearnerDetails, student.id))}
-
-
-@router.put("/level")
-def set_my_level(
-    body: LevelUpdate,
-    zaban_student: str | None = Cookie(default=None),
-    db: DBSession = Depends(get_db),
-) -> dict:
-    # The learner can enter the level directly, or take the short test. Either way it is saved in the database.
-    student = _student_from_cookie(db, zaban_student)
-    student.cefr_level = body.cefr_level
-    db.commit()
-    return {"cefr_level": student.cefr_level}
 
 
 @router.get("/partner")

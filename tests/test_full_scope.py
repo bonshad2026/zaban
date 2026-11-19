@@ -83,10 +83,11 @@ def test_details_reject_unknown_style(client):
     assert client.put("/v1/web/student/details", json={"age": 150}).status_code == 422
 
 
-def test_learner_sets_their_own_level(client):
+def test_learner_sets_a_skill_level(client):
+    # Each skill has its own level. The learner sets a starting level; an unknown level is refused.
     _student(client)
-    assert client.put("/v1/web/student/level", json={"cefr_level": "B1"}).json()["cefr_level"] == "B1"
-    assert client.put("/v1/web/student/level", json={"cefr_level": "Z9"}).status_code == 422
+    assert client.put("/v1/web/student/skill-levels", json={"listening": "B1"}).json()["skill_levels"]["listening"] == "B1"
+    assert client.put("/v1/web/student/skill-levels", json={"listening": "Z9"}).status_code == 422
 
 
 def test_admin_reads_a_learner_detail(client):

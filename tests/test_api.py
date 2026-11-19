@@ -39,9 +39,6 @@ def test_full_lesson_flow_and_reports(client):
     _give_consent(client, student_id)
     _complete_profile(student_id)
 
-    placement = client.post(f"/v1/students/{student_id}/placement", json={"score": 45}, headers=DEMO)
-    assert placement.json()["cefr_level"] == "B1"
-
     plan = client.post(
         f"/v1/students/{student_id}/plans",
         json={"goal": "Talk about school", "months": 5, "sessions_per_week": 3, "minutes_per_session": 10},

@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session as DBSession
 
+from zaban.services.skill_levels import levels_out
 from zaban.admin import require_admin
 from zaban.config import settings
 from zaban.conversation.service import prompt_ttl_seconds
@@ -482,7 +483,7 @@ def learner_detail(student_id: str, db: DBSession = Depends(get_db)) -> dict:
         "display_name": student.display_name,
         "username": student.username,
         "age_band": student.age_band,
-        "cefr_level": student.cefr_level,
+        "levels": levels_out(student),
         "details": details_out(db.get(LearnerDetails, student.id)),
         "progress": _progress_out(db, student),
         "evaluations": past_evaluations(db, student.id, limit=10),
