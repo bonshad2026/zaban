@@ -208,12 +208,18 @@
     box.innerHTML = "";
     box.appendChild(Z.el("p", "muted", Z.tr("در حال بارگذاری گزارش…")));
     try {
-      const [report, detail, items] = await Promise.all([
-        Z.request("GET", `/v1/students/${me.id}/reports/progress`),
-        Z.request("GET", `/v1/students/${me.id}`),
+      const [progress, partner, items] = await Promise.all([
+        Z.request("GET", "/v1/web/student/progress"),
+        Z.request("GET", "/v1/web/student/partner"),
         Z.request("GET", `/v1/students/${me.id}/reports/items`),
       ]);
-      ReportView.render($("reportBox"), report, detail, items.items);
+      ReportView.render($("reportBox"), {
+        progress,
+        partner,
+        items: items.items,
+        // The full progress view is the progress tab, which stays as it is for now.
+        onShowProgress: () => document.querySelector('.tab[data-tab="progress"]').click(),
+      });
     } catch (err) {
       box.innerHTML = "";
       box.appendChild(Z.el("p", "error", err.message));

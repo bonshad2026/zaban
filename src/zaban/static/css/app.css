@@ -394,6 +394,10 @@ dialog.account-dialog h2 { margin-bottom: 4px; }
 .report-rows { display: flex; flex-direction: column; gap: 8px; }
 .report-row { box-sizing: border-box; padding: 12px 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); }
 .report-open { margin-top: 8px; }
+.report-block { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+.report-block > h2 { margin: 0; }
+.report-status-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.report-block .skill-rows { margin-top: 0; }
 .evaluation { display: flex; flex-direction: column; gap: 6px; }
 .evaluation p { margin: 0; }
 .evaluation-heading { margin: 14px 0 2px; font-size: 16px; color: var(--accent-dark); }

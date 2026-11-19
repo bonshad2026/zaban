@@ -798,7 +798,6 @@ const Z = (() => {
     items.push({ href: "/student?free=1", fa: "گفتگوی آزاد", en: "Free talk", active: onFreeTalk });
     items.push(learnerItem("test", "خودت رو محک بزن", "Test yourself"));
     items.push(learnerItem("report", "گزارش‌ها", "Reports"));
-    items.push(learnerItem("progress", "پیشرفت", "Progress"));
     items.push(learnerItem("accent", "لهجه", "Accent"));
     items.push({ href: "/learning-info", fa: "اطلاعات آموزشی", en: "Learning details", active: path === "/learning-info" });
     items.push(divider);

@@ -63,15 +63,17 @@
     try {
       if (view === "report") {
         // The same report view as the learner's own «گزارش‌ها» page.
-        const [report, items] = await Promise.all([
+        const [report, progress, partner, items] = await Promise.all([
           Z.request("GET", `/v1/web/user/students/${current.id}/report`),
+          Z.request("GET", `/v1/web/user/students/${current.id}/progress`),
+          Z.request("GET", `/v1/web/user/students/${current.id}/partner`),
           Z.request("GET", `/v1/web/user/students/${current.id}/items`),
         ]);
         if (!report.started) {
           body.replaceChildren(el("p", "muted", label("این دانش‌آموز هنوز یادگیری را شروع نکرده است.", "This student has not started learning yet.")));
           return;
         }
-        ReportView.render(body, report, report, items.items);
+        ReportView.render(body, { progress, partner, items: items.items, onShowProgress: () => pickView("progress") });
       } else {
         const [progress, partner] = await Promise.all([
           Z.request("GET", `/v1/web/user/students/${current.id}/progress`),
