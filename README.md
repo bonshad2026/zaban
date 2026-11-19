@@ -29,7 +29,7 @@ Then open:
 - http://127.0.0.1:8020/student — student sign-in
 - http://127.0.0.1:8020/login — sign-in (mobile number and password, or an SMS code)
 
-To use real Claude replies, set `ANTHROPIC_API_KEY` in `.env`. Without it the app runs in offline mode, which costs nothing.
+To use real Claude replies, enter the API key in the admin panel (AI section). Without a key the app runs in offline mode, which costs nothing.
 
 Docker reads `.env` only when the container is created. After you change a value in `.env` (for example `ADMIN_PASSWORD`), recreate the app container:
 
@@ -51,7 +51,7 @@ Without a key the app runs in **offline mode**, so the whole flow can be tested 
 
 - **Adults** are the only website users. They sign in with a mobile number and a password (SMS codes are used to sign up and to reset the password). An adult learns for themself, and only they can see their own reports.
 - **Learners created through a customer's API key** sign in with a username and a password. After 3 wrong passwords the login pauses for 15 minutes.
-- **SMS**: set `KAVENEGAR_API_KEY` and an approved `KAVENEGAR_OTP_TEMPLATE` (one token for the code). Without a key, development uses an in-memory sender and nothing is sent. Production refuses to start without a key.
+- **SMS**: enter the Kavenegar key and an approved template name (one token for the code) in the admin panel (SMS section). Without a key, development uses an in-memory sender and nothing is sent. In production, codes cannot be sent until the key is entered.
 - An adult can also be created from the command line. Replace the placeholders with real values:
 
 ```bash
@@ -134,7 +134,7 @@ pytest
 - Set `ENVIRONMENT=production` and a real `SECRET_KEY`. The app refuses to start without it.
 - Leave every `ZABAN_DEMO_*` value empty.
 - Use HTTPS, so cookies are sent only over secure connections.
-- Fill `ADMIN_PASSWORD`, `BASE_URL` (the https address, with the path if the site is not at the root of its domain), `KAVENEGAR_API_KEY` with its approved template, `PAYMENT_GATEWAY=zarinpal` and `ZARINPAL_MERCHANT_ID`. The full list with comments is in `.env.example`.
+- Fill `ADMIN_PASSWORD` and `BASE_URL` (the https address, with the path if the site is not at the root of its domain) in `.env`. Then enter the SMS key, the payment gateway (zarinpal) with its merchant ID, and the AI key in the admin panel. The full list is in `.env.example`.
 - Save `.env` as UTF-8 without a BOM. The tests set their own values, so the demo lines are needed only for local demo accounts.
 
 ## Running under a path on a shared domain

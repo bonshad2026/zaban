@@ -269,14 +269,15 @@
 
       <section class="card" id="tab-settings" hidden>
         <h2>تنظیمات سامانه</h2>
-        <p class="muted">مدت اعتبار توکن گفتگو و وضعیت کلیدهای سرویس. درگاه پرداخت و پیامک در بخش خودشان هستند.</p>
+        <p class="muted">مدت اعتبار توکن گفتگو و اطلاعات تماسی که در صفحه‌ی تماس نمایش داده می‌شود. درگاه پرداخت، پیامک و هوش مصنوعی در بخش خودشان هستند.</p>
         <p class="notice" id="settingsNotice" hidden></p>
         <label for="setPromptTtl">مدت اعتبار توکن پرامپت (ثانیه، بین ۶۰ و ۸۶۴۰۰)</label>
         <input id="setPromptTtl" type="number" min="60" max="86400" step="60" class="ltr-field">
+        <label for="setContactPhone">شماره‌ی تماس (خالی بگذارید تا پنهان شود)</label>
+        <input id="setContactPhone" class="ltr-field" maxlength="40">
+        <label for="setContactEmail">ایمیل تماس (خالی بگذارید تا پنهان شود)</label>
+        <input id="setContactEmail" class="ltr-field" maxlength="120">
         <p><button type="button" id="setSave">ذخیره‌ی تنظیمات</button></p>
-        <h3>وضعیت کلید هوش مصنوعی</h3>
-        <p class="muted">کلیدهای محرمانه در متغیرهای محیطی سرور نگهداری می‌شوند و در این پنل نمایش داده نمی‌شوند.</p>
-        <ul id="secretsList"></ul>
       </section>
 
       <section class="card" id="tab-payment" hidden>
@@ -291,9 +292,9 @@
         <label for="connMerchant">کد پذیرنده‌ی زرین‌پال</label>
         <p class="muted" id="connMerchantHint"></p>
         <input id="connMerchant" type="password" class="ltr-field" autocomplete="off" placeholder="برای تغییر، کد تازه را وارد کنید">
-        <label for="connBaseUrl">آدرس سایت (از بیرون دیده می‌شود)</label>
-        <p class="muted">این آدرس را یک بار وارد کنید، مثلاً <span class="ltr-field">https://zaban.example.com</span>. با به‌روزرسانی برنامه یا ریستارت تغییر نمی‌کند. خالی بگذارید تا مقدار تنظیم‌شده در سرور استفاده شود.</p>
-        <input id="connBaseUrl" class="ltr-field" autocomplete="off" placeholder="https://zaban.example.com">
+        <label>آدرس سایت</label>
+        <p class="ltr-field" id="connSiteAddress"></p>
+        <p class="muted">این آدرس از متغیر BASE_URL در فایل تنظیمات سرور خوانده می‌شود. برای تغییر آن، فایل را ویرایش و سرویس را دوباره اجرا کنید.</p>
         <label>آدرس بازگشت برای ثبت در زرین‌پال</label>
         <p class="ltr-field" id="connCallback"></p>
         <p><button type="button" id="paySave">ذخیره‌ی درگاه پرداخت</button></p>
@@ -319,7 +320,7 @@
 
       <section class="card" id="tab-ai" hidden>
         <h2>مدل هوش مصنوعی</h2>
-        <p class="muted">مدلی که پاسخ معلم را می‌سازد. می‌توانید Claude را مستقیم استفاده کنید، یا هر سرویسی که با API مربوط به OpenAI سازگار است (مثلاً یک واسطه). اگر یک بخش خالی بماند، مقدار تنظیم‌شده در سرور استفاده می‌شود.</p>
+        <p class="muted">مدلی که پاسخ معلم را می‌سازد. می‌توانید Claude را مستقیم استفاده کنید، یا هر سرویسی که با API مربوط به OpenAI سازگار است (مثلاً یک واسطه). بدون کلید API، پاسخ‌ها به‌صورت آفلاین ساخته می‌شوند.</p>
         <p class="notice" id="aiNotice" hidden></p>
         <label for="aiProvider">نوع سرویس</label>
         <select id="aiProvider">
@@ -336,6 +337,10 @@
         <label for="aiKey">کلید API</label>
         <p class="muted" id="aiKeyHint"></p>
         <input id="aiKey" type="password" class="ltr-field" autocomplete="off" placeholder="برای تغییر، کلید تازه را وارد کنید">
+        <label for="aiPriceInput">قیمت ورودی هر یک میلیون توکن (دلار، فقط برای مدل‌های خارج از فهرست)</label>
+        <input id="aiPriceInput" type="number" min="0" step="0.01" class="ltr-field">
+        <label for="aiPriceOutput">قیمت خروجی هر یک میلیون توکن (دلار، فقط برای مدل‌های خارج از فهرست)</label>
+        <input id="aiPriceOutput" type="number" min="0" step="0.01" class="ltr-field">
         <p><button type="button" id="aiSave">ذخیره‌ی مدل هوش مصنوعی</button></p>
       </section>
 

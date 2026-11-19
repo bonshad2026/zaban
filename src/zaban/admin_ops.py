@@ -43,13 +43,23 @@ from zaban.services.partner_prompt import build_parts
 from zaban.services.evaluation import past_evaluations
 from zaban.services.learner_details import details_out
 from zaban.services.settings_store import (
-    PAYMENT_PROVIDER_KEY,
-    PUBLIC_BASE_URL_KEY,
-    PROMPT_TOKEN_TTL_KEY,
     AI_API_KEY_KEY,
     AI_BASE_URL_KEY,
     AI_MODEL_KEY,
     AI_PROVIDER_KEY,
+    CONTACT_EMAIL_KEY,
+    CONTACT_PHONE_KEY,
+    DEFAULT_AI_BASE_URL,
+    DEFAULT_AI_MODEL,
+    DEFAULT_AI_PROVIDER,
+    DEFAULT_PAYMENT_PROVIDER,
+    DEFAULT_PRICE_INPUT,
+    DEFAULT_PRICE_OUTPUT,
+    DEFAULT_SMS_TEMPLATE,
+    PAYMENT_PROVIDER_KEY,
+    PRICE_INPUT_KEY,
+    PRICE_OUTPUT_KEY,
+    PROMPT_TOKEN_TTL_KEY,
     SMS_API_KEY_KEY,
     SMS_PROVIDER_KEY,
     SMS_TEMPLATE_KEY,
@@ -97,30 +107,28 @@ def overview(db: DBSession = Depends(get_db)) -> dict:
 
 @router.get("/settings")
 def read_settings(db: DBSession = Depends(get_db)) -> dict:
-    # Secret values are never returned. The panel only shows whether each one is set in the environment.
     return {
         "conversation_prompt_ttl_seconds": prompt_ttl_seconds(db),
-        "payment_provider": get_setting(db, PAYMENT_PROVIDER_KEY, settings.payment_gateway),
-        "secrets": {
-            "kavenegar_api_key_set": bool(settings.kavenegar_api_key),
-            "zarinpal_merchant_id_set": bool(settings.zarinpal_merchant_id),
-            "anthropic_api_key_set": bool(settings.anthropic_api_key),
-            "sms_otp_template": settings.kavenegar_otp_template,
-        },
+        "contact_phone": get_setting(db, CONTACT_PHONE_KEY),
+        "contact_email": get_setting(db, CONTACT_EMAIL_KEY),
     }
 
 
 class SettingsUpdate(BaseModel):
-    payment_provider: str | None = Field(default=None, pattern=r"^(fake|zarinpal)$")
     conversation_prompt_ttl_seconds: int | None = Field(default=None, ge=60, le=86400)
+    # None means "leave as it is". An empty string clears the value, so the details are hidden.
+    contact_phone: str | None = Field(default=None, max_length=40)
+    contact_email: str | None = Field(default=None, max_length=120)
 
 
 @router.post("/settings")
 def save_settings(body: SettingsUpdate, db: DBSession = Depends(get_db)) -> dict:
-    if body.payment_provider is not None:
-        set_setting(db, PAYMENT_PROVIDER_KEY, body.payment_provider)
     if body.conversation_prompt_ttl_seconds is not None:
         set_setting(db, PROMPT_TOKEN_TTL_KEY, str(body.conversation_prompt_ttl_seconds))
+    if body.contact_phone is not None:
+        set_setting(db, CONTACT_PHONE_KEY, body.contact_phone.strip())
+    if body.contact_email is not None:
+        set_setting(db, CONTACT_EMAIL_KEY, body.contact_email.strip())
     db.commit()
     return {"ok": True}
 
@@ -133,41 +141,46 @@ def _mask(value: str) -> str:
 @router.get("/connections")
 def read_connections(db: DBSession = Depends(get_db)) -> dict:
     # Keys are returned masked. The panel never sends a full key back to the browser.
-    sms_key = get_setting(db, SMS_API_KEY_KEY) or settings.kavenegar_api_key or ""
-    merchant = get_setting(db, ZARINPAL_MERCHANT_KEY) or settings.zarinpal_merchant_id or ""
-    # The address is saved in the database, so a new release or a restart does not change it. The environment is only the default.
-    site = (get_setting(db, PUBLIC_BASE_URL_KEY) or settings.public_base_url).rstrip("/")
+    sms_key = get_setting(db, SMS_API_KEY_KEY)
+    merchant = get_setting(db, ZARINPAL_MERCHANT_KEY)
+    ai_key = get_setting(db, AI_API_KEY_KEY)
+    provider = get_setting(db, AI_PROVIDER_KEY, DEFAULT_AI_PROVIDER)
+    # The site address is not editable here. It comes from BASE_URL in the environment, so every link and the payment return agree.
+    site = settings.public_base_url
     return {
         "sms_provider": sms_provider_for(db),
         "sms_api_key_masked": _mask(sms_key),
         "sms_api_key_set": bool(sms_key),
-        "sms_otp_template": get_setting(db, SMS_TEMPLATE_KEY, settings.kavenegar_otp_template or ""),
-        "payment_provider": get_setting(db, PAYMENT_PROVIDER_KEY, settings.payment_gateway),
+        "sms_otp_template": get_setting(db, SMS_TEMPLATE_KEY, DEFAULT_SMS_TEMPLATE),
+        "payment_provider": get_setting(db, PAYMENT_PROVIDER_KEY, DEFAULT_PAYMENT_PROVIDER),
         "zarinpal_merchant_masked": _mask(merchant),
         "zarinpal_merchant_set": bool(merchant),
-        "public_base_url": site,
+        "site_address": site,
         "callback_url": f"{site}/v1/web/billing/zarinpal/callback",
-        "ai_provider": get_setting(db, AI_PROVIDER_KEY, settings.ai_provider),
-        "ai_base_url": get_setting(db, AI_BASE_URL_KEY, settings.openai_base_url),
-        "ai_model": get_setting(db, AI_MODEL_KEY, settings.model if settings.ai_provider != "openai" else settings.openai_model),
+        "ai_provider": provider,
+        "ai_base_url": get_setting(db, AI_BASE_URL_KEY, DEFAULT_AI_BASE_URL),
+        "ai_model": get_setting(db, AI_MODEL_KEY, DEFAULT_AI_MODEL if provider != "openai" else ""),
         "ai_model_catalog": CHAT_MODELS,
-        "ai_api_key_set": bool(get_setting(db, AI_API_KEY_KEY, settings.anthropic_api_key or settings.openai_api_key or "")),
-        "ai_api_key_masked": _mask(get_setting(db, AI_API_KEY_KEY, settings.anthropic_api_key or settings.openai_api_key or "")),
+        "ai_api_key_set": bool(ai_key),
+        "ai_api_key_masked": _mask(ai_key),
+        "price_input_per_mtok": get_setting(db, PRICE_INPUT_KEY, DEFAULT_PRICE_INPUT),
+        "price_output_per_mtok": get_setting(db, PRICE_OUTPUT_KEY, DEFAULT_PRICE_OUTPUT),
     }
 
 
 class ConnectionsUpdate(BaseModel):
-    # None means "leave as it is". An empty string clears a value, so the environment value applies again.
+    # None means "leave as it is". An empty string clears a text value.
     sms_provider: str | None = Field(default=None, pattern=r"^(kavenegar|dev)$")
     sms_api_key: str | None = Field(default=None, max_length=200)
     sms_otp_template: str | None = Field(default=None, max_length=60)
     payment_provider: str | None = Field(default=None, pattern=r"^(fake|zarinpal)$")
     zarinpal_merchant_id: str | None = Field(default=None, max_length=100)
-    public_base_url: str | None = Field(default=None, max_length=200)
     ai_provider: str | None = Field(default=None, pattern=r"^(anthropic|openai)$")
     ai_base_url: str | None = Field(default=None, max_length=200)
     ai_model: str | None = Field(default=None, max_length=120)
     ai_api_key: str | None = Field(default=None, max_length=300)
+    price_input_per_mtok: float | None = Field(default=None, ge=0, le=1000)
+    price_output_per_mtok: float | None = Field(default=None, ge=0, le=1000)
 
 
 @router.post("/connections")
@@ -195,11 +208,10 @@ def save_connections(body: ConnectionsUpdate, db: DBSession = Depends(get_db)) -
         set_setting(db, AI_MODEL_KEY, body.ai_model.strip())
     if body.ai_api_key is not None and body.ai_api_key.strip():
         set_setting(db, AI_API_KEY_KEY, body.ai_api_key.strip())
-    if body.public_base_url is not None:
-        address = body.public_base_url.strip().rstrip("/")
-        if address and not re.fullmatch(r"https?://[^\s/]+(/[^\s]*)?", address):
-            raise HTTPException(status_code=400, detail="The site address must start with http:// or https://")
-        set_setting(db, PUBLIC_BASE_URL_KEY, address)
+    if body.price_input_per_mtok is not None:
+        set_setting(db, PRICE_INPUT_KEY, str(body.price_input_per_mtok))
+    if body.price_output_per_mtok is not None:
+        set_setting(db, PRICE_OUTPUT_KEY, str(body.price_output_per_mtok))
     db.commit()
     return {"ok": True}
 

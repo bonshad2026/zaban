@@ -5,19 +5,21 @@ from dataclasses import dataclass
 import anthropic
 import httpx
 
-from zaban.config import settings
 from zaban.db import SessionLocal
 from zaban.services.settings_store import (
     AI_API_KEY_KEY,
     AI_BASE_URL_KEY,
     AI_MODEL_KEY,
     AI_PROVIDER_KEY,
+    DEFAULT_AI_BASE_URL,
+    DEFAULT_AI_MODEL,
+    DEFAULT_AI_PROVIDER,
     get_setting,
 )
 
 # The one place that talks to the language model. Tutor lessons, self-tests and any future feature call this,
 # so the provider, model and key are set in one spot. Nothing here knows about students or sessions.
-# The provider, key, address and model come from the admin panel first, and from the environment when a setting is empty.
+# The provider, key, address and model come from the admin panel. A missing key means offline mode.
 @dataclass(frozen=True)
 class AIResult:
     text: str
@@ -41,16 +43,16 @@ class AIConfig:
 
 def current_config() -> AIConfig:
     with SessionLocal() as db:
-        provider = (get_setting(db, AI_PROVIDER_KEY, settings.ai_provider) or "anthropic").strip().lower()
+        provider = (get_setting(db, AI_PROVIDER_KEY, DEFAULT_AI_PROVIDER) or DEFAULT_AI_PROVIDER).strip().lower()
         if provider == "openai":
-            api_key = get_setting(db, AI_API_KEY_KEY, settings.openai_api_key or "")
-            model = get_setting(db, AI_MODEL_KEY, settings.openai_model or "")
-            base_url = get_setting(db, AI_BASE_URL_KEY, settings.openai_base_url)
+            api_key = get_setting(db, AI_API_KEY_KEY)
+            model = get_setting(db, AI_MODEL_KEY)
+            base_url = get_setting(db, AI_BASE_URL_KEY, DEFAULT_AI_BASE_URL)
         else:
             provider = "anthropic"
-            api_key = get_setting(db, AI_API_KEY_KEY, settings.anthropic_api_key or "")
-            model = get_setting(db, AI_MODEL_KEY, settings.model)
-            base_url = settings.openai_base_url
+            api_key = get_setting(db, AI_API_KEY_KEY)
+            model = get_setting(db, AI_MODEL_KEY, DEFAULT_AI_MODEL)
+            base_url = get_setting(db, AI_BASE_URL_KEY, DEFAULT_AI_BASE_URL)
     return AIConfig(provider=provider, api_key=api_key or None, base_url=base_url.rstrip("/"), model=model)
 
 

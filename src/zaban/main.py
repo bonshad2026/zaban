@@ -34,6 +34,7 @@ from zaban.learning_aids import router as learning_aids_router
 from zaban.account import router as account_router
 from zaban.web import router as web_router
 from zaban.teaching import router as teaching_router
+from zaban.services.settings_store import CONTACT_EMAIL_KEY, CONTACT_PHONE_KEY, get_setting
 
 STATIC_DIR = Path(__file__).parent / "static"
 PARTIALS_DIR = STATIC_DIR / "partials"
@@ -116,13 +117,16 @@ def health() -> dict[str, str]:
 
 
 def _contact_block() -> str:
-    # Only the details that are set in .env are shown, so an empty value never leaves a blank row.
+    # Only the details that are set in the admin panel are shown, so an empty value never leaves a blank row.
+    with SessionLocal() as db:
+        contact_phone = get_setting(db, CONTACT_PHONE_KEY)
+        contact_email = get_setting(db, CONTACT_EMAIL_KEY)
     rows = []
-    if settings.contact_phone:
-        phone = escape(settings.contact_phone)
+    if contact_phone:
+        phone = escape(contact_phone)
         rows.append(f'<p class="contact-row"><span data-fa="شماره‌ی تماس" data-en="Phone">شماره‌ی تماس</span><a href="tel:{phone}">{phone}</a></p>')
-    if settings.contact_email:
-        email = escape(settings.contact_email)
+    if contact_email:
+        email = escape(contact_email)
         rows.append(f'<p class="contact-row"><span data-fa="ایمیل" data-en="Email">ایمیل</span><a href="mailto:{email}">{email}</a></p>')
     return f'<div class="contact-details reveal">{"".join(rows)}</div>' if rows else ""
 

@@ -6,6 +6,7 @@ from zaban.models import Tenant, Usage
 from zaban.services.ai import estimate_cost
 from zaban.services.ai_gateway import current_config
 from zaban.services.ai_models import prices_for
+from zaban.services.settings_store import default_prices
 
 
 def ensure_quota(tenant: Tenant) -> None:
@@ -16,7 +17,7 @@ def ensure_quota(tenant: Tenant) -> None:
 def record_usage(db: Session, tenant: Tenant, session_id: str, input_tokens: int, output_tokens: int) -> None:
     # The cost uses the price of the model that is set in the admin panel. An offline reply costs nothing.
     config = current_config()
-    cost = estimate_cost(input_tokens, output_tokens, prices_for(config.model)) if config.ready else 0.0
+    cost = estimate_cost(input_tokens, output_tokens, prices_for(config.model) or default_prices(db)) if config.ready else 0.0
     tenant.used_tokens += input_tokens + output_tokens
     db.add(
         Usage(

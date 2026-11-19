@@ -5,7 +5,7 @@ import httpx
 from sqlalchemy.orm import Session as DBSession
 
 from zaban.config import settings
-from zaban.services.settings_store import SMS_API_KEY_KEY, SMS_PROVIDER_KEY, SMS_TEMPLATE_KEY, get_setting
+from zaban.services.settings_store import DEFAULT_SMS_TEMPLATE, SMS_API_KEY_KEY, SMS_PROVIDER_KEY, SMS_TEMPLATE_KEY, get_setting
 
 
 class SmsSender(Protocol):
@@ -44,25 +44,25 @@ _dev_sms = DevSms()
 
 
 def get_sms_sender(db: DBSession | None = None) -> SmsSender:
-    # The administrator's panel settings win; empty ones fall back to the environment.
+    # Every value comes from the administrator's panel.
     provider = get_setting(db, SMS_PROVIDER_KEY) if db is not None else ""
     if provider == "dev" and settings.environment != "production":
         return _dev_sms
-    api_key = (get_setting(db, SMS_API_KEY_KEY) if db is not None else "") or settings.kavenegar_api_key
-    template = (get_setting(db, SMS_TEMPLATE_KEY) if db is not None else "") or settings.kavenegar_otp_template
+    api_key = get_setting(db, SMS_API_KEY_KEY) if db is not None else ""
+    template = (get_setting(db, SMS_TEMPLATE_KEY) if db is not None else "") or DEFAULT_SMS_TEMPLATE
     if api_key and provider != "dev":
         return KavenegarSms(api_key, template)
     if settings.environment == "production":
-        raise RuntimeError("KAVENEGAR_API_KEY is required in production")
+        raise RuntimeError("The SMS key is not set in the admin panel")
     return _dev_sms
 
 
 def sms_provider_for(db: DBSession) -> str:
-    # The provider the panel is set to, or the one the environment implies.
+    # The provider the panel is set to. Until the panel is set, the development sender is used outside production.
     chosen = get_setting(db, SMS_PROVIDER_KEY)
     if chosen:
         return chosen
-    return "kavenegar" if settings.kavenegar_api_key else "dev"
+    return "kavenegar" if get_setting(db, SMS_API_KEY_KEY) else "dev"
 
 
 def dev_outbox() -> list[tuple[str, str]]:

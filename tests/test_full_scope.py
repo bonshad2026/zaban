@@ -212,8 +212,19 @@ class _FakeResponse:
         return self._body
 
 
+def _reset_zarinpal_panel() -> None:
+    # Puts the provider and the merchant ID back to their defaults, so other tests use the development gateway.
+    from zaban.services.settings_store import PAYMENT_PROVIDER_KEY, ZARINPAL_MERCHANT_KEY, set_setting
+
+    with SessionLocal() as db:
+        set_setting(db, PAYMENT_PROVIDER_KEY, "")
+        set_setting(db, ZARINPAL_MERCHANT_KEY, "")
+        db.commit()
+
+
 def _parent_payment(client, monkeypatch, sent: list):
     from zaban.services import payments as payments_module
+    from zaban.services.settings_store import PAYMENT_PROVIDER_KEY, ZARINPAL_MERCHANT_KEY, set_setting
 
     # The demo adult already has an active plan, so it has to use up its tokens before it can buy again.
     # The tokens are restored once the purchase has been requested, so the other tests keep their demo plan.
@@ -225,8 +236,8 @@ def _parent_payment(client, monkeypatch, sent: list):
 
     import dataclasses
 
-    test_settings = dataclasses.replace(payments_module.settings, zarinpal_merchant_id="merchant-test-id",
-                                        public_base_url="http://site.test")
+    # The provider and the merchant ID are set in the admin panel (the database). The site address comes from BASE_URL.
+    test_settings = dataclasses.replace(payments_module.settings, public_base_url="http://site.test")
     monkeypatch.setattr(payments_module, "settings", test_settings)
     from zaban import billing as billing_module
     monkeypatch.setattr(billing_module, "settings", test_settings)
@@ -238,13 +249,19 @@ def _parent_payment(client, monkeypatch, sent: list):
         return _FakeResponse(200, {"data": {"code": 100}})
 
     monkeypatch.setattr(payments_module.httpx, "post", fake_post)
-    _parent(client)
-    plan_id = client.get("/v1/web/billing/plans").json()[0]["id"]
-    response = client.post("/v1/web/billing/checkout", json={"plan_id": plan_id})
     with SessionLocal() as db:
-        guardian = db.query(Guardian).filter(Guardian.phone == PARENT_PHONE).one()
-        guardian.plan_tokens_used = spent_before
+        set_setting(db, PAYMENT_PROVIDER_KEY, "zarinpal")
+        set_setting(db, ZARINPAL_MERCHANT_KEY, "merchant-test-id")
         db.commit()
+    try:
+        _parent(client)
+        plan_id = client.get("/v1/web/billing/plans").json()[0]["id"]
+        response = client.post("/v1/web/billing/checkout", json={"plan_id": plan_id})
+    finally:
+        with SessionLocal() as db:
+            guardian = db.query(Guardian).filter(Guardian.phone == PARENT_PHONE).one()
+            guardian.plan_tokens_used = spent_before
+            db.commit()
     return response
 
 
@@ -253,7 +270,6 @@ def test_zarinpal_checkout_sends_the_amount_in_rials_and_a_callback(client, monk
 
     sent: list = []
     _admin(client)
-    client.post("/v1/admin/api/settings", json={"payment_provider": "zarinpal"})
     try:
         response = _parent_payment(client, monkeypatch, sent)
         assert response.status_code == 201, response.text
@@ -264,17 +280,21 @@ def test_zarinpal_checkout_sends_the_amount_in_rials_and_a_callback(client, monk
         assert body["callback_url"].startswith("http://site.test/v1/web/billing/zarinpal/callback?payment_id=")
     finally:
         _admin(client)
-        client.post("/v1/admin/api/settings", json={"payment_provider": "fake"})
+        _reset_zarinpal_panel()
 
 
 def test_zarinpal_callback_marks_paid_only_after_verification(client, monkeypatch):
     from zaban.services import payments as payments_module
     from zaban.db import SessionLocal
     from zaban.models import Payment
+    from zaban.services.settings_store import PAYMENT_PROVIDER_KEY, ZARINPAL_MERCHANT_KEY, set_setting
 
     sent: list = []
     _admin(client)
-    client.post("/v1/admin/api/settings", json={"payment_provider": "zarinpal"})
+    # The callback verifies with the merchant ID from the panel, so it stays set for the whole test.
+    with SessionLocal() as db:
+        set_setting(db, ZARINPAL_MERCHANT_KEY, "merchant-test-id")
+        db.commit()
     try:
         payment_id = _parent_payment(client, monkeypatch, sent).json()["payment_id"]
         ok = client.get(f"/v1/web/billing/zarinpal/callback?payment_id={payment_id}&Authority=A0000000001&Status=OK",
@@ -288,7 +308,7 @@ def test_zarinpal_callback_marks_paid_only_after_verification(client, monkeypatc
         assert "payment=failed" in bad.headers["location"]
     finally:
         _admin(client)
-        client.post("/v1/admin/api/settings", json={"payment_provider": "fake"})
+        _reset_zarinpal_panel()
 
 
 def test_zarinpal_refuses_when_the_verification_fails(client, monkeypatch):
@@ -298,7 +318,6 @@ def test_zarinpal_refuses_when_the_verification_fails(client, monkeypatch):
 
     sent: list = []
     _admin(client)
-    client.post("/v1/admin/api/settings", json={"payment_provider": "zarinpal"})
     try:
         payment_id = _parent_payment(client, monkeypatch, sent).json()["payment_id"]
         monkeypatch.setattr(payments_module.httpx, "post", lambda url, json, timeout: _FakeResponse(200, {"data": {"code": -54}}))
@@ -309,4 +328,4 @@ def test_zarinpal_refuses_when_the_verification_fails(client, monkeypatch):
             assert db.get(Payment, payment_id).status == "failed"
     finally:
         _admin(client)
-        client.post("/v1/admin/api/settings", json={"payment_provider": "fake"})
+        _reset_zarinpal_panel()

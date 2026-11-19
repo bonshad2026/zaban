@@ -648,18 +648,16 @@
   async function loadSettings() {
     const data = await Z.request("GET", `${API}/settings`);
     $("setPromptTtl").value = data.conversation_prompt_ttl_seconds;
-    // Only the AI key belongs to the prompt settings. The SMS and payment keys are shown in their own sections.
-    $("secretsList").replaceChildren(
-      ...Object.entries(data.secrets)
-        .filter(([k]) => k.startsWith("anthropic"))
-        .map(([k, v]) => Z.el("li", "", `${k}: ${v === true ? "تنظیم شده" : "تنظیم نشده"}`)),
-    );
+    $("setContactPhone").value = data.contact_phone || "";
+    $("setContactEmail").value = data.contact_email || "";
   }
 
   function saveSettings() {
     return run(async () => {
       await Z.request("POST", `${API}/settings`, {
         conversation_prompt_ttl_seconds: Number($("setPromptTtl").value),
+        contact_phone: $("setContactPhone").value.trim(),
+        contact_email: $("setContactEmail").value.trim(),
       });
       $("settingsNotice").hidden = false;
       $("settingsNotice").textContent = "تنظیمات ذخیره شد.";
@@ -1691,7 +1689,7 @@
     $("connPayProvider").value = data.payment_provider;
     $("connMerchantHint").textContent = data.zarinpal_merchant_set ? `کد فعلی: ${data.zarinpal_merchant_masked}` : "کدی ثبت نشده است.";
     $("connCallback").textContent = data.callback_url;
-    $("connBaseUrl").value = data.public_base_url || "";
+    $("connSiteAddress").textContent = data.site_address || "";
     $("connMerchant").value = "";
   }
 
@@ -1732,6 +1730,8 @@
     $("aiProvider").value = data.ai_provider;
     $("aiBaseUrl").value = data.ai_base_url || "";
     $("aiModel").value = data.ai_model || "";
+    $("aiPriceInput").value = data.price_input_per_mtok;
+    $("aiPriceOutput").value = data.price_output_per_mtok;
     $("aiModelSelect").replaceChildren(
       option("", "— انتخاب از فهرست —"),
       ...aiCatalog.map((m) => option(m.id, `${m.id} (${m.provider})`)),
@@ -1749,6 +1749,8 @@
         ai_base_url: $("aiBaseUrl").value.trim(),
         ai_model: $("aiModel").value.trim(),
       };
+      if ($("aiPriceInput").value !== "") body.price_input_per_mtok = Number($("aiPriceInput").value);
+      if ($("aiPriceOutput").value !== "") body.price_output_per_mtok = Number($("aiPriceOutput").value);
       if ($("aiKey").value.trim()) body.ai_api_key = $("aiKey").value.trim();
       await Z.request("POST", `${API}/connections`, body);
       $("aiNotice").hidden = false;
@@ -1759,7 +1761,7 @@
 
   function savePayment() {
     return run(async () => {
-      const body = { payment_provider: $("connPayProvider").value, public_base_url: $("connBaseUrl").value.trim() };
+      const body = { payment_provider: $("connPayProvider").value };
       if ($("connMerchant").value.trim()) body.zarinpal_merchant_id = $("connMerchant").value.trim();
       await Z.request("POST", `${API}/connections`, body);
       $("payNotice").hidden = false;

@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 
-from zaban.config import settings
 from zaban.services.ai_gateway import complete
 
 
@@ -13,9 +12,9 @@ class TutorReply:
     stop_reason: str | None = None
 
 
-def estimate_cost(input_tokens: int, output_tokens: int, prices: tuple[float, float] | None = None) -> float:
-    # prices are (input, output) per million tokens of the model that answered. Without them the environment prices are used.
-    input_price, output_price = prices or (settings.input_price_per_mtok, settings.output_price_per_mtok)
+def estimate_cost(input_tokens: int, output_tokens: int, prices: tuple[float, float]) -> float:
+    # prices are (input, output) per million tokens of the model that answered.
+    input_price, output_price = prices
     return (input_tokens * input_price + output_tokens * output_price) / 1_000_000
 
 
