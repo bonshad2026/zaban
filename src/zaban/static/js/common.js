@@ -767,8 +767,8 @@ const Z = (() => {
       ), "danger");
     }
 
-    avatar.addEventListener("click", (event) => {
-      event.stopPropagation();
+    // The click is not stopped here, so the other menus (the phone menu, the language list, a drop-down) see it and close.
+    avatar.addEventListener("click", () => {
       const open = !list.classList.contains("is-open");
       // The menu opens from the side of the button it belongs to: a button on the left opens to the right, and the reverse.
       const box = avatar.getBoundingClientRect();
@@ -1007,8 +1007,69 @@ const Z = (() => {
     });
   }
 
+  // Level bars for a microphone: while it listens, the bars in `box` move with the sound it hears.
+  // Without the bars the recording still works, because the blue microphone already shows that it is on.
+  function levelMeter(box) {
+    let run = 0;
+    let stopper = null;
+    return {
+      async start() {
+        const current = ++run;
+        const bars = box.querySelectorAll("span");
+        box.hidden = false;
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          if (current !== run) {
+            stream.getTracks().forEach((t) => t.stop());
+            return;
+          }
+          const context = new (window.AudioContext || window.webkitAudioContext)();
+          // A new audio context can start suspended; without resuming it the bars would stay flat.
+          if (context.state === "suspended") await context.resume();
+          const analyser = context.createAnalyser();
+          analyser.fftSize = 256;
+          analyser.smoothingTimeConstant = 0.4;
+          context.createMediaStreamSource(stream).connect(analyser);
+          const data = new Uint8Array(analyser.fftSize);
+          // Each bar has its own height in the wave, so the row looks like a voice, not a flat block.
+          const shape = Array.from(bars, (_, i) => 0.55 + 0.45 * Math.abs(Math.sin(i * 1.7)));
+          // The tallest bar: 30px in a row under the lesson's microphone, less in a small box beside a microphone (data-max).
+          const top = Number(box.dataset.max) || 30;
+          // A timer, not an animation frame: the bars keep moving even when the browser pauses frames.
+          let timer = null;
+          const draw = () => {
+            analyser.getByteTimeDomainData(data);
+            let sum = 0;
+            data.forEach((v) => { const x = (v - 128) / 128; sum += x * x; });
+            // Speech is quiet: the gain makes ordinary talking fill the bars.
+            const level = Math.min(1, Math.sqrt(sum / data.length) * 5);
+            bars.forEach((bar, i) => {
+              bar.style.height = `${Math.max(4, Math.round(level * shape[i] * top))}px`;
+            });
+          };
+          draw();
+          timer = setInterval(draw, 60);
+          stopper = () => {
+            clearInterval(timer);
+            stream.getTracks().forEach((t) => t.stop());
+            context.close();
+          };
+        } catch (err) {
+          // The recording still works without the bars; the reason is kept for a developer.
+          console.warn("Level bars are off:", err);
+        }
+      },
+      stop() {
+        run++;
+        if (stopper) stopper();
+        stopper = null;
+        box.hidden = true;
+      },
+    };
+  }
+
   return {
-    url, go, pagePath, isMemberPath, confirmDialog, openPersonalDetails, request, refreshMenu: initSiteHeader, closeSideMore, friendly, parseUtc, locale, currentLang, fmtDate, fmtDateTime, el, show, showError, showDevCode, codeTimer, startResendWait, resumeResendWait, initLang, initTheme, initReveal,
+    url, go, pagePath, isMemberPath, confirmDialog, openPersonalDetails, request, refreshMenu: initSiteHeader, closeSideMore, friendly, parseUtc, locale, currentLang, fmtDate, fmtDateTime, el, show, showError, showDevCode, codeTimer, startResendWait, resumeResendWait, levelMeter, initLang, initTheme, initReveal,
     initSiteHeader, STATUS_FA, SUGGESTION_FA, LEVEL_FA, SESSION_FA,
   };
 })();

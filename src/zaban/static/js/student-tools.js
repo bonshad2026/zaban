@@ -427,6 +427,7 @@
   const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
   let testRecognizer = null;
   let testTyped = "";
+  const testMeter = Z.levelMeter($("testVoiceMeter"));
 
   // The microphone is blue while it records, the same as in the lesson.
   function setTestMicOn(on) {
@@ -537,14 +538,17 @@
     rec.onend = () => {
       testRecognizer = null;
       setTestMicOn(false);
+      testMeter.stop();
     };
     testRecognizer = rec;
     setTestMicOn(true);
+    testMeter.start();
     try {
       rec.start();
     } catch (_) {
       testRecognizer = null;
       setTestMicOn(false);
+      testMeter.stop();
     }
   }
 

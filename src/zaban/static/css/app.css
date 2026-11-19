@@ -221,6 +221,15 @@ button.secondary:hover:not(:disabled) { background: var(--accent); color: var(--
 .lesson { display: grid; gap: 12px; }
 .lesson-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .lesson-top .chip { flex: 1; min-width: 220px; }
+/* The three buttons form one group: on a computer they sit in the top row as before. */
+.lesson-actions { display: contents; }
+/* On a phone: the status and the timer are the top row, and end, cancel and "did not understand" share the row below. */
+@media (max-width: 767.98px) {
+  .lesson-top { gap: 6px; }
+  .lesson-top .chip { flex: 1 1 auto; min-width: 0; }
+  .lesson-actions { display: flex; flex: 1 1 100%; gap: 6px; }
+  .lesson-actions .ghost { flex: 1 1 0; min-width: 0; padding: 6px 8px; font-size: 12.5px; white-space: nowrap; }
+}
 .timer { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--muted); }
 .chip {
   display: inline-flex;
@@ -284,6 +293,16 @@ button.secondary:hover:not(:disabled) { background: var(--accent); color: var(--
 .composer { display: flex; align-items: flex-end; gap: 10px; }
 .composer textarea { margin: 0; flex: 1; min-height: 52px; max-height: 160px; resize: vertical; }
 .composer .send { padding: 12px 22px; height: 52px; }
+/* The message box holds the microphone inside it, on the right, like the free talk topic box. */
+.msg-field { position: relative; flex: 1; display: flex; min-width: 0; }
+.msg-field textarea { flex: 1; width: 100%; margin: 0; padding-inline-end: 42px; min-height: 58px; }
+/* The microphone sits on the right of the box in Persian and on the left in English. The text keeps clear of it. */
+html[dir="rtl"] .topic-voice { inset-inline: auto; right: 4px; left: auto; }
+html[dir="ltr"] .topic-voice { inset-inline: auto; left: 4px; right: auto; }
+html[dir="rtl"] .topic-field input, html[dir="rtl"] .msg-field textarea { padding-left: 12px; padding-right: 42px; }
+html[dir="ltr"] .topic-field input, html[dir="ltr"] .msg-field textarea { padding-right: 12px; padding-left: 42px; }
+.topic-voice .mic { width: 32px; height: 32px; }
+.topic-voice .mic svg { width: 18px; height: 18px; }
 .mic {
   flex: 0 0 auto;
   width: 60px;
@@ -296,9 +315,15 @@ button.secondary:hover:not(:disabled) { background: var(--accent); color: var(--
   background: var(--accent);
 }
 .mic svg { width: 26px; height: 26px; fill: currentColor; }
-.mic.is-recording { background: var(--accent); color: var(--on-accent); animation: pulse-accent 1.2s infinite; }
-@keyframes pulse-accent {
-  0% { box-shadow: 0 0 0 0 var(--accent-soft); }
+/* The microphone is blue while it listens, on every page that takes speech (free talk, lesson, self-test). */
+:root { --listen: #2f6fdb; }
+.mic.is-recording, .topic-mic.is-recording { background: var(--listen); color: #fff; animation: pulse-listen 1.2s infinite; }
+/* The lesson and self-test microphone is only the icon, like the free talk one: no circle, and the site's hover does not paint it. */
+.mic:not(.is-recording), .mic:not(.is-recording):hover, .mic:not(.is-recording):focus { background: transparent !important; box-shadow: none !important; color: var(--accent); }
+.mic:not(.is-recording):hover { color: var(--accent-dark); }
+.topic-mic.is-recording { border-radius: 50%; }
+@keyframes pulse-listen {
+  0% { box-shadow: 0 0 0 0 rgba(47, 111, 219, 0.45); }
   70% { box-shadow: 0 0 0 14px transparent; }
   100% { box-shadow: 0 0 0 0 transparent; }
 }
@@ -308,7 +333,7 @@ button.secondary:hover:not(:disabled) { background: var(--accent); color: var(--
 .lesson-row.lesson-upcoming { opacity: 0.6; }
 /* Live level bars shown while the microphone is listening. */
 .voice-meter { display: flex; align-items: center; justify-content: center; gap: 4px; height: 34px; margin: 6px 0; }
-.voice-meter span { display: block; width: 5px; height: 6px; border-radius: 3px; background: var(--accent); transition: height 0.06s linear; }
+.voice-meter span { display: block; width: 5px; height: 6px; border-radius: 3px; background: var(--listen); transition: height 0.06s linear; }
 @keyframes pulse {
   0% { box-shadow: 0 0 0 0 rgba(180, 35, 24, 0.45); }
   70% { box-shadow: 0 0 0 16px rgba(180, 35, 24, 0); }
@@ -908,9 +933,23 @@ dialog.account-dialog { overflow-y: auto; }
 .topic-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .topic-row input { flex: 1 1 220px; min-width: 0; }
 .topic-field { position: relative; flex: 1 1 220px; min-width: 0; display: flex; }
-.topic-field input { width: 100%; padding-inline-end: 42px; }
-.topic-mic { position: absolute; inset-inline-end: 4px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; }
-.topic-mic:hover { background: var(--accent-soft); color: var(--accent-dark); }
+.topic-field input { width: 100%; padding-inline-end: 42px; min-height: 58px; }
+/* The microphone and its level bars stand one above the other, centred in the box. */
+.topic-voice { position: absolute; inset-inline-end: 4px; top: 0; bottom: 0; width: 32px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.topic-mic { position: relative; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; }
+/* Only the microphone icon shows: no box behind it or around it, except the blue circle while it records. */
+.topic-mic, .topic-mic:hover, .topic-mic:focus, .topic-mic:active { background: transparent; border: 0; outline: none; box-shadow: none; }
+.topic-mic:hover { color: var(--accent-dark); }
+.topic-mic.is-recording, .topic-mic.is-recording:hover, .topic-mic.is-recording:focus { background: var(--listen); color: #fff; }
+/* The site's button hover paints a gold square; the microphone keeps its own look, so these win over it. */
+.topic-field .topic-mic:not(.is-recording) { background: transparent !important; box-shadow: none !important; }
+.topic-field .topic-mic.is-recording { background: var(--listen) !important; color: #fff !important; }
+/* Small level bars under the microphone, inside the box: they only show that the microphone is recording. */
+.topic-meter { display: flex; align-items: flex-end; gap: 1px; height: 12px; pointer-events: none; }
+/* Hidden keeps its place, so the microphone does not move when the bars appear. */
+.topic-meter[hidden] { display: flex !important; visibility: hidden; }
+.topic-meter span { display: block; width: 2px; height: 3px; border-radius: 1px; background: var(--listen); transition: height 0.06s linear; }
+.topic-mic.is-recording:hover { background: var(--listen); color: #fff; }
 .topic-mic svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
 /* The shell: the header and the side menu stay in place, and each member page opens in the frame below them. */
@@ -1101,7 +1140,9 @@ html[dir="ltr"] .account-menu-list button.account-item { text-align: left; }
 .lang-switch .form-check-input:checked { background-color: var(--accent); border-color: var(--accent); }
 .lang-switch .form-check-input:focus { box-shadow: 0 0 0 0.2rem var(--accent-soft); }
 /* Drop-down button: the site's surface and text, and the accent only as a soft background when it is open or focused. */
-.dropdown > .btn-outline-secondary { background: var(--card) !important; color: var(--text) !important; border-color: var(--border) !important; }
+.dropdown > .btn-outline-secondary { background: var(--bg) !important; color: var(--text) !important; border-color: var(--muted) !important; border-radius: 10px; padding: 10px 12px; text-align: start; }
+/* The arrow on the right of a drop-down: the accent colour, so the box reads as a combo box like the text fields. */
+.dropdown > .btn-outline-secondary > span:last-child { color: var(--accent); font-size: 13px; margin-inline-start: 10px; }
 .dropdown > .btn-outline-secondary:hover, .dropdown > .btn-outline-secondary:focus, .dropdown > .btn-outline-secondary[aria-expanded="true"] { background: var(--accent-soft) !important; border-color: var(--accent) !important; color: var(--text) !important; }
 /* Drop-down items: the item under the pointer or the keyboard, and the chosen item, get a soft background; the chosen one is bold. */
 .select-menu .dropdown-item:hover, .select-menu .dropdown-item:focus { background: var(--accent-soft); color: var(--text); }

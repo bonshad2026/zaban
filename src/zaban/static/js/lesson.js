@@ -15,7 +15,6 @@ const Lesson = (() => {
     idle: ["", "turn-ended"],
   };
   const HINT = {
-    your_turn: Z.tr("برای ارسال، روی دکمه‌ی «ارسال» بزن. Enter فقط خط جدید می‌سازد."),
     recording: Z.tr("حرف بزن. هر وقت تمام شد، روی «ارسال» بزن."),
     waiting: Z.tr("منتظر جواب معلم باش."),
     speaking: Z.tr("وقت معلم است. بعد از تمام شدن جواب، نوبت تو می‌شود."),
@@ -412,38 +411,13 @@ const Lesson = (() => {
   }
 
   // Shows the sound level while the microphone is on, so the learner can see that something is being recorded.
-  let meter = null;
-  async function startMeter() {
-    const box = $("voiceMeter");
-    const bars = box.querySelectorAll("span");
-    box.hidden = false;
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const context = new (window.AudioContext || window.webkitAudioContext)();
-      const analyser = context.createAnalyser();
-      analyser.fftSize = 64;
-      context.createMediaStreamSource(stream).connect(analyser);
-      const data = new Uint8Array(analyser.frequencyBinCount);
-      let frame = null;
-      const draw = () => {
-        analyser.getByteFrequencyData(data);
-        bars.forEach((bar, i) => {
-          const value = data[(i * 2) % data.length] / 255;
-          bar.style.height = `${Math.max(6, Math.round(value * 34))}px`;
-        });
-        frame = requestAnimationFrame(draw);
-      };
-      draw();
-      meter = { stream, context, stop: () => { cancelAnimationFrame(frame); stream.getTracks().forEach((t) => t.stop()); context.close(); } };
-    } catch (_) {
-      // Without the level bars the recording still works; the blue microphone shows that it is on.
-    }
+  const meter = Z.levelMeter($("voiceMeter"));
+  function startMeter() {
+    meter.start();
   }
 
   function stopMeter() {
-    if (meter) meter.stop();
-    meter = null;
-    $("voiceMeter").hidden = true;
+    meter.stop();
   }
 
   function toggleMic() {
@@ -471,7 +445,7 @@ const Lesson = (() => {
     $("timeLeft").textContent = "";
     note((customNote || (automatic ? Z.tr("زمان جلسه تمام شد. کار خوبی بود!") : Z.tr("جلسه تمام شد. آفرین!"))) + scoreText);
     await showSummary(sessionId);
-    if (S.onEnded) S.onEnded();
+    if (S.onEnded) S.onEnded(Boolean(S.free));
   }
 
   // Cancels the open lesson or free talk after a second confirmation. It is not counted, not evaluated and not kept in the reports.
@@ -496,7 +470,7 @@ const Lesson = (() => {
     setPhase("ended");
     $("timeLeft").textContent = "";
     note(free ? Z.tr("گفتگو لغو شد.") : Z.tr("جلسه لغو شد."));
-    if (S.onEnded) S.onEnded();
+    if (S.onEnded) S.onEnded(Boolean(S.free));
   }
 
   // The end-of-lesson page: the summary, the five criteria and the phrases of this lesson (section 15.5).

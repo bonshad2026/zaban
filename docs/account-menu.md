@@ -4,7 +4,7 @@ This note is for any developer or AI coding agent working on the website. It des
 
 ## What the user sees
 
-- **Signed out:** the header shows a plain "ورود" link to `/login` and the "ثبت‌نام" button.
+- **Signed out:** the header shows only the "ورود" button, linking to `/login`. The login page lists, one per line under the form: "ورود با کد پیامکی", "رمز عبور را فراموش کرده‌ام", and "ثبت‌نام".
 - **Signed in:** the header shows the signed-in person's name and a round profile button. There is no parent panel link. The button shows the profile photo, or a plain silhouette when there is none. There is no "یادگیری من" link in the top row.
 - **Second header row (signed in only):** the person's own items, filled by `initSiteHeader` from `#memberNav`. For every signed-in person: جلسه, گفتگوی آزاد, لهجه, خودت رو محک بزن, گزارش‌ها, کمک‌آموزشی, پلن و اعتبار, اطلاعات آموزشی, تعیین سطح, and «دانش‌آموزان من» once at least one adult has chosen them as a teacher. The item for the current page gets `aria-current="page"` and a filled style.
   - «جلسه» and the other learning items open the learner page (`/student`, with `?tab=` for the tab). Every signed-in person has a learner profile, so there is no separate «آموزش من» item. If a learner profile is missing, `startOwnLearning` in `common.js` first calls `POST /v1/web/user/self`, then the learner page opens.

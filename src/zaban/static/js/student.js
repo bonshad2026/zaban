@@ -171,6 +171,7 @@
   // "no time limit" (0) sends no length, so the talk ends when the learner ends it.
   // The partner's suggested topic. It fills the field when the field is empty, or when the learner asks for another one.
   async function loadTopicSuggestion(force) {
+    if (force) endTopicMic(true); // another suggestion replaces what the learner was saying
     if (!force && $("freeTopic").value.trim()) return;
     try {
       const data = await Z.request("GET", "/v1/web/student/free-topic");
@@ -178,17 +179,56 @@
     } catch (_) { /* the field stays empty; the learner can type a topic */ }
   }
 
-  // The learner says the topic. The browser's speech recognition fills the field with what was heard.
+  // The learner says the topic. The suggestion leaves the field at once, and the words spoken take its place as they are heard.
+  // The microphone is blue while it listens, with the level bars beside it. A second tap stops it.
+  let topicRec = null;
+  let topicMeter = null;
+
+  function setTopicMicOn(on) {
+    $("freeTopicVoice").setAttribute("aria-pressed", String(on));
+    $("freeTopicVoice").classList.toggle("is-recording", on);
+  }
+
+  // Ends the listening at once: the microphone turns plain and the bars hide. Abort also drops words not yet heard.
+  function endTopicMic(abort) {
+    const rec = topicRec;
+    if (!rec) return;
+    topicRec = null;
+    setTopicMicOn(false);
+    topicMeter.stop();
+    if (abort) rec.abort();
+    else rec.stop();
+  }
+
   function speakTopic() {
+    if (topicRec) {
+      endTopicMic(false);
+      return;
+    }
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRec) return;
+    $("freeTopic").value = "";
     const rec = new SpeechRec();
     rec.lang = Accents.current;
-    rec.interimResults = false;
+    rec.continuous = true;
+    rec.interimResults = true;
     rec.onresult = (event) => {
-      $("freeTopic").value = event.results[0][0].transcript.trim();
+      $("freeTopic").value = Array.from(event.results).map((r) => r[0].transcript).join(" ").trim();
     };
-    rec.start();
+    rec.onend = () => {
+      if (topicRec === rec) endTopicMic(false);
+    };
+    topicRec = rec;
+    topicMeter = Z.levelMeter($("topicVoiceMeter"));
+    setTopicMicOn(true);
+    topicMeter.start();
+    try {
+      rec.start();
+    } catch (_) {
+      topicRec = null;
+      setTopicMicOn(false);
+      topicMeter.stop();
+    }
   }
 
   async function startFree() {
@@ -291,7 +331,8 @@
 
   async function boot() {
     Z.initLang();
-    Lesson.init({ onEnded: () => { showSetup(lastKind); } });
+    // A free talk that ends or is cancelled returns to the free talk card, not to the lesson card.
+    Lesson.init({ onEnded: (wasFree) => { showSetup(wasFree ? "free" : "lesson"); } });
     $("startBtn").addEventListener("click", startLesson);
     $("freeStartBtn").addEventListener("click", startFree);
     $("freeTopicNew").addEventListener("click", () => loadTopicSuggestion(true));
