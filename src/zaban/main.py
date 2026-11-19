@@ -139,9 +139,19 @@ def _page(name: str, current: str = "") -> HTMLResponse:
     footer = (PARTIALS_DIR / "footer.html").read_text(encoding="utf-8")
     # The page content sits in one block that grows to fill the screen, so the footer stays at the bottom even on short pages.
     # The side menu sits beside the content. It is empty and hidden until someone signs in.
-    html = html.replace("</body>", f"</div></div>{footer}</body>")
+    # The shell has no footer of its own: its frame shows the footer of each page.
+    if "<!--no-footer-->" in html:
+        html = html.replace("<!--no-footer-->", "").replace("</body>", "</div></div></body>")
+    else:
+        html = html.replace("</body>", f"</div></div>{footer}</body>")
     layout = '<div class="app-layout"><nav class="app-side" id="memberNav" aria-label="بخش من" hidden></nav><div class="site-main">'
     return HTMLResponse(prefix_html(html.replace("<!--site-header-->", f"{header}{layout}")))
+
+
+@app.get("/app", include_in_schema=False)
+def shell_page() -> HTMLResponse:
+    # The member pages open in this frame: the header and the side menu stay here while the page changes.
+    return _page("shell.html")
 
 
 @app.get("/", include_in_schema=False)

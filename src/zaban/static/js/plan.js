@@ -33,7 +33,7 @@
     try {
       const plans = await Z.request("GET", "/v1/web/billing/plans");
       const paid = await Z.request("POST", "/v1/web/billing/checkout", { plan_id: plans[0].id });
-      location.href = paid.redirect;
+      Z.go(paid.redirect);
     } catch (err) {
       Z.showError($("planError"), err.message);
     }

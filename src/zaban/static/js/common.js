@@ -8,11 +8,33 @@ const Z = (() => {
     if (!BASE || path === BASE || path.startsWith(BASE + "/")) return path;
     return BASE + path;
   }
-  // The address of the open page without the base path, so the menu can tell which page it is on.
+  // A page inside the shell's frame knows it is framed, so its header and menu are hidden.
+  const inFrame = window.self !== window.top;
+  if (inFrame) document.documentElement.classList.add("framed");
+  // The member pages open inside the shell (/app), so the header and the menu stay in place while the page changes.
+  const MEMBER_PATHS = ["/student", "/plan", "/learning-info", "/level", "/students", "/payments", "/requests", "/referrals"];
+  function isMemberPath(path) {
+    const clean = String(path).split("?")[0];
+    return MEMBER_PATHS.includes(clean);
+  }
+  // The address the page shows. In the shell it is the page given by ?p=, otherwise it is the page itself.
+  function pageUrl() {
+    const here = new URL(location.href);
+    const local = BASE && here.pathname.startsWith(BASE) ? here.pathname.slice(BASE.length) : here.pathname;
+    if (local === "/app") return new URL(BASE + (here.searchParams.get("p") || "/student"), location.origin);
+    return here;
+  }
+  // The address of the page shown, without the base path, so the menu can tell which page it is on.
   function pagePath() {
-    const path = location.pathname;
-    if (BASE && (path === BASE || path.startsWith(BASE + "/"))) return path.slice(BASE.length) || "/";
-    return path;
+    const local = pageUrl().pathname;
+    return BASE && local.startsWith(BASE) ? (local.slice(BASE.length) || "/") : local;
+  }
+  // Navigates the window. A member page opens in the shell; from inside the frame the whole window moves.
+  function go(path, replace) {
+    const dest = isMemberPath(path) ? url("/app?p=" + encodeURIComponent(path)) : url(path);
+    const top = inFrame ? window.top : window;
+    if (replace) top.location.replace(dest);
+    else top.location.href = dest;
   }
   const ERROR_TEXT = [
     ["already taken", "این نام کاربری قبلاً استفاده شده است. یک نام دیگر انتخاب کنید."],
@@ -648,7 +670,7 @@ const Z = (() => {
     event.preventDefault();
     try {
       await request("POST", "/v1/web/user/self");
-      location.href = url("/student");
+      go("/student");
     } catch (err) {
       window.alert(err.message);
     }
@@ -665,13 +687,13 @@ const Z = (() => {
 
   async function signOut() {
     await request("POST", "/v1/web/logout").catch(() => {});
-    location.href = url("/");
+    go("/");
   }
 
   // Ends every sign-in for this adult and their own learning, on every device. Only the adult can do this.
   async function signOutEverywhere() {
     await request("POST", "/v1/web/user/logout-all").catch(() => {});
-    location.href = url("/");
+    go("/");
   }
 
   // Set by each build of the menu. The document-level listeners are added only once, in initSiteHeader.
@@ -708,10 +730,10 @@ const Z = (() => {
     addItem("اطلاعات شخصی", "Personal details", openPersonalDetails);
     addItem("تعیین مربی", "Choose a teacher", openTeacherDialog);
     addItem("تغییر رمز عبور", "Change password", () => byId("accPasswordDialog").showModal());
-    addItem("درخواست‌های شما", "Your requests", () => { location.href = url("/requests"); });
-    addItem("کد معرف من", "My referral code", () => { location.href = url("/referrals"); });
+    addItem("درخواست‌های شما", "Your requests", () => { go("/requests"); });
+    addItem("کد معرف من", "My referral code", () => { go("/referrals"); });
     addItem("پرداخت‌های شما", "Your payments", () => {
-      location.href = url("/payments");
+      go("/payments");
     });
     list.appendChild(el("div", "account-sep"));
     addItem("خروج", "Sign out", () => askSignOut(
@@ -753,6 +775,12 @@ const Z = (() => {
       box.dataset.state = "guest";
       return;
     }
+    // A member page opened on its own address moves into the shell, so the header and the menu stay in place.
+    const direct = BASE && location.pathname.startsWith(BASE) ? location.pathname.slice(BASE.length) : location.pathname;
+    if (!inFrame && direct !== "/app" && isMemberPath(direct)) {
+      location.replace(url("/app?p=" + encodeURIComponent(direct + location.search)));
+      return;
+    }
     const greeting = me.name;
     const teaches = me.students || 0;
 
@@ -788,12 +816,12 @@ const Z = (() => {
 
     // The side menu of the signed-in area. Every learning tab is an entry of its own, next to the account pages.
     const path = pagePath();
-    const tool = new URLSearchParams(location.search).get("tab");
+    const tool = new URLSearchParams(pageUrl().search).get("tab");
     const onLearnerPage = path === "/student";
     const learnerSignedIn = signedIn.length > 0;
     const items = [];
     // Only one item is current at a time: free talk is its own entry, and the learning tabs follow the page's active tab.
-    const onFreeTalk = onLearnerPage && new URLSearchParams(location.search).get("free") === "1";
+    const onFreeTalk = onLearnerPage && new URLSearchParams(pageUrl().search).get("free") === "1";
     const learnerItem = (tab, fa, en) => ({
       href: tab === "lesson" ? "/student" : `/student?tab=${tab}`,
       fa,
@@ -959,7 +987,7 @@ const Z = (() => {
   }
 
   return {
-    url, pagePath, confirmDialog, openPersonalDetails, request, friendly, parseUtc, locale, currentLang, fmtDate, fmtDateTime, el, show, showError, showDevCode, codeTimer, startResendWait, resumeResendWait, initLang, initTheme, initReveal,
+    url, go, pagePath, isMemberPath, confirmDialog, openPersonalDetails, request, refreshMenu: initSiteHeader, friendly, parseUtc, locale, currentLang, fmtDate, fmtDateTime, el, show, showError, showDevCode, codeTimer, startResendWait, resumeResendWait, initLang, initTheme, initReveal,
     initSiteHeader, STATUS_FA, SUGGESTION_FA, LEVEL_FA, SESSION_FA,
   };
 })();

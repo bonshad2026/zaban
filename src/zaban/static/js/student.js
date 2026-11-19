@@ -306,7 +306,7 @@
       me = null;
     }
     if (!me) {
-      location.replace(Z.url("/login"));
+      Z.go("/login", true);
       return;
     }
     if (!me.has_own_learning) {
@@ -315,7 +315,7 @@
         await Z.request("POST", "/v1/web/user/self");
         me = await Z.request("GET", "/v1/web/me");
       } catch (_) {
-        location.replace(Z.url("/plan"));
+        Z.go("/plan", true);
         return;
       }
     }

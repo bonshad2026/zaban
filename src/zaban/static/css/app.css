@@ -912,3 +912,11 @@ dialog.account-dialog { overflow-y: auto; }
 .topic-mic { position: absolute; inset-inline-end: 4px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; }
 .topic-mic:hover { background: var(--accent-soft); color: var(--accent-dark); }
 .topic-mic svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* The shell: the header and the side menu stay in place, and each member page opens in the frame below them. */
+html.shell, html.shell body { height: 100%; overflow: hidden; }
+.shell-frame { display: block; width: 100%; height: calc(100vh - var(--header-h)); border: 0; background: var(--bg); }
+/* A page inside the frame does not show its own header and side menu. */
+html.framed .site-header, html.framed .app-side, html.framed .site-drawer { display: none; }
+@media (max-width: 760px) { .shell-frame { height: calc(100vh - 128px); } }
+@media (min-width: 761px) { html.framed #lessonBox.lesson { height: calc(100vh - 48px); } }
