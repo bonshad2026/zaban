@@ -134,6 +134,8 @@ pytest
 - Set `ENVIRONMENT=production` and a real `SECRET_KEY`. The app refuses to start without it.
 - Leave every `ZABAN_DEMO_*` value empty.
 - Use HTTPS, so cookies are sent only over secure connections.
+- Fill `ADMIN_PASSWORD`, `PUBLIC_BASE_URL` (the https address), `KAVENEGAR_API_KEY` with its approved template, `PAYMENT_GATEWAY=zarinpal` and `ZARINPAL_MERCHANT_ID`. The full list with comments is in `.env.example`.
+- Save `.env` as UTF-8 without a BOM. The tests set their own values, so the demo lines are needed only for local demo accounts.
 
 ## Changing the database schema
 
