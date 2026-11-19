@@ -21,26 +21,46 @@
       </section>
     </div>
   </main>
+  <script src="/static/js/common.js"></script>
   <script>
     (() => {
+      // Development only. The API address and the return address get the base path from Z.url() and Z.go(),
+      // so the stand-in page works at the root of a domain and under a base path such as /zaban.
       const paymentId = location.pathname.split("/").pop();
       const error = document.getElementById("devError");
+      const english = document.documentElement.lang === "en";
+      const text = (fa, en) => (english ? en : fa);
+
+      // Each failure says where it came from, so the buyer and the developer can tell them apart.
+      function serverMessage(status) {
+        if (status === 401) return text("ابتدا وارد حساب خود شوید، سپس دوباره آزمایش کنید.", "Sign in to your account first, then try again.");
+        if (status === 404) return text("مسیر یا شناسه‌ی پرداخت پیدا نشد. آدرس سایت را بررسی کنید.", "The route or payment ID was not found. Check the site address.");
+        if (status >= 500) return text("سرور نتیجه‌ی پرداخت را ثبت نکرد. کمی بعد دوباره تلاش کنید.", "The server could not record the payment result. Please try again shortly.");
+        return text("ثبت نتیجه‌ی پرداخت انجام نشد.", "The payment result could not be recorded.");
+      }
 
       async function confirm(ok) {
         error.hidden = true;
+        let res;
         try {
-          const res = await fetch("/v1/web/billing/fake/confirm", {
+          res = await fetch(Z.url("/v1/web/billing/fake/confirm"), {
             method: "POST",
             credentials: "same-origin",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ payment_id: paymentId, ok }),
           });
-          if (!res.ok) throw new Error("payment");
-          location.href = "/login?payment=" + (ok ? "ok" : "failed");
         } catch (_) {
-          error.textContent = "ثبت نتیجه انجام نشد. ابتدا وارد حساب خود شوید.";
+          error.textContent = text("اتصال به سرور برقرار نشد. اینترنت یا اتصال سیستم را بررسی کنید.", "Could not reach the server. Check your internet connection.");
           error.hidden = false;
+          return;
         }
+        if (!res.ok) {
+          error.textContent = serverMessage(res.status);
+          error.hidden = false;
+          return;
+        }
+        // The same return as the real gateway: the result is shown on the plan page, which reads ?payment=paid or failed.
+        Z.go(ok ? "/plan?payment=paid" : "/plan?payment=failed", true);
       }
 
       document.getElementById("okBtn").addEventListener("click", () => confirm(true));
