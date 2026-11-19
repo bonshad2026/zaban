@@ -207,8 +207,12 @@
   const PARTNER_CRITERIA = { range: "دامنه", accuracy: "دقت", fluency: "روانی", interaction: "تعامل", coherence: "انسجام" };
   const PARTNER_PHRASE_STATUS = { seen: "دیده‌شده", used: "به‌کار رفته", mastered: "متسلط" };
 
+  const SKILL_NAMES = { listening: "شنیداری", reading: "خواندن", grammar: "دستور و واژگان", writing: "نوشتاری", speaking: "گفتاری" };
+
   async function loadPartnerProgress() {
     const data = await Z.request("GET", "/v1/web/student/partner");
+    $("skillLevels").replaceChildren(...Object.entries(SKILL_NAMES).map(([key, label]) =>
+      el("li", "", `${Z.tr(label)}: ${data.levels?.[key] || "A1"}`)));
     $("partnerCriteria").replaceChildren(...Object.entries(PARTNER_CRITERIA).map(([key, label]) =>
       el("li", "", `${Z.tr(label)}: ${data.criteria[key] || "—"}`)));
     const phrases = data.phrases.map((p) => el("li", "", `${p.text} — ${Z.tr(PARTNER_PHRASE_STATUS[p.status] || p.status)}`));

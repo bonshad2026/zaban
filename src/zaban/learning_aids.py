@@ -423,6 +423,8 @@ def my_partner_progress(zaban_student: str | None = Cookie(default=None), db: DB
         .all()
     )
     return {
+        # The five skill levels. Speaking is the lowest of its criteria, which are listed in criteria.
+        "levels": levels_out(student),
         "criteria": {
             "range": student.level_range,
             "accuracy": student.level_accuracy,
