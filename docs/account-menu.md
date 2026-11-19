@@ -85,6 +85,10 @@ The dialog controls use the `acc` prefix (`accName`, `accEmail`, `accAge`, `accG
 
 ## Layout and menu (current)
 
+- **Shell (`/app`):** member pages open in a frame below the header and the side menu, so those stay in place while the page changes. `shell.html` and `js/shell.js` build it; `common.js` decides which pages are member pages (`MEMBER_PATHS`). A member page opened on its own address moves to `/app?p=<page>`. Pages inside the frame hide their own header and side menu (`html.framed`). Sign-in, sign-out and payment navigate the whole window (`Z.go`).
+- **Phone menu:** the bar shows four items (جلسه, گفتگوی آزاد, آزمون‌ها, گزارش‌ها) and an icon button with three lines. The button opens a sheet with the other items, on the side of the button (in Persian the left side). The sheet closes on a tap outside it, on a tap inside the frame, or on Escape. The button is marked current only when the open page is in the sheet.
+- The test item is called «آزمون‌ها» everywhere.
+- The header shows the profile photo first and the name after it. The sign-in buttons stay hidden until the visitor is known (`data-state="loading"`).
 - Adults only. There are no child accounts. Learning is for the adult, through `POST /v1/web/user/self`.
 - Guests see one «ورود» link to `/login`. The header has no sign-in menu.
 - Signed in, the public links are hidden and the header is one row: logo, greeting and the profile button.

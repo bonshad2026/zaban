@@ -29,6 +29,7 @@
 - **تعیین مربی (هدر، دیالوگ `accTeacherDialog`):** بزرگسال کد مربی را وارد می‌کند، نام مربی را تأیید می‌کند و یک مربی انتخاب می‌کند. هر کس یک مربی دارد و می‌تواند حذف کند. API: `/v1/web/user/teacher` (GET، PUT، DELETE) و `/v1/web/user/teacher/lookup`. منطق در `src/zaban/teaching.py`.
 - **صفحه‌ی `/students` (دانش‌آموزان من، `students.html` و `students.js`):** برای کسی که کد مربی دارد. فقط زبان‌آموزانی را نشان می‌دهد که او را انتخاب کرده‌اند، با گزارش و پیشرفتشان (`/v1/web/user/students`، `/students/{id}/report`، `/students/{id}/progress`).
 - **صفحه‌ی `/referrals` (کد معرف من، `referrals.html` و `referrals.js`):** کد معرف شش‌کاراکتری (حروف شبیه عدد کنار گذاشته شده‌اند). نشان می‌دهد چند نفر با این کد ثبت‌نام کرده‌اند و چند نفر پلن فعال دارند. فقط نام افراد و شمارش نشان داده می‌شود (`/v1/web/user/referrals`، `src/zaban/services/referrals.py`).
+- **پوستهٔ اعضا `/app`** (`shell.html`، `js/shell.js`): هدر و منوی کناری ثابت؛ صفحه‌های عضو (`/student`، `/plan`، `/learning-info`، `/level`، `/students`، `/payments`) در فریم زیر آن باز می‌شوند (`?p=` مسیر صفحه). فوتر در خود فریم است.
 - **صفحه‌ی زبان‌آموز `/student`** (`student.html`، `student.js`، `student-tools.js`، `lesson.js`): تب‌ها:
   - **جلسه:** درس با ریتم و حالت‌های گفتاریار (بخش ۵ docs/conversation-partner.md).
   - **لهجه:** انتخاب لهجه‌ی انگلیسی (`en-US`، `en-GB`، `en-AU` و …) برای جلسه‌ها (`/v1/web/student/accent`، فهرست در `services/accents.py`).

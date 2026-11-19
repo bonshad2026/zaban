@@ -987,7 +987,7 @@ const Z = (() => {
   }
 
   return {
-    url, go, pagePath, isMemberPath, confirmDialog, openPersonalDetails, request, refreshMenu: initSiteHeader, friendly, parseUtc, locale, currentLang, fmtDate, fmtDateTime, el, show, showError, showDevCode, codeTimer, startResendWait, resumeResendWait, initLang, initTheme, initReveal,
+    url, go, pagePath, isMemberPath, confirmDialog, openPersonalDetails, request, refreshMenu: initSiteHeader, closeSideMore, friendly, parseUtc, locale, currentLang, fmtDate, fmtDateTime, el, show, showError, showDevCode, codeTimer, startResendWait, resumeResendWait, initLang, initTheme, initReveal,
     initSiteHeader, STATUS_FA, SUGGESTION_FA, LEVEL_FA, SESSION_FA,
   };
 })();

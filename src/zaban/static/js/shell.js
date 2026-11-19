@@ -42,6 +42,10 @@
     let path = here.pathname;
     if (base && path.startsWith(base)) path = path.slice(base.length);
     if (!Z.isMemberPath(path)) return;
+    // A tap inside the page closes the «more» sheet, the same as a tap outside it on a page without a shell.
+    try {
+      frame.contentWindow.document.addEventListener("click", () => Z.closeSideMore());
+    } catch (_) { /* the page is not readable; the sheet stays until the next tap outside it */ }
     const params = new URLSearchParams(here.search);
     params.delete("frame");
     const address = path + (params.toString() ? `?${params.toString()}` : "");

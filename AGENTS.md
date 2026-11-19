@@ -18,6 +18,9 @@ This file is for any coding agent (Claude, Codex, or others). It states the proj
 ## Rules
 
 - **Static files are baked into the image.** After any change under `src/zaban/static/`, rebuild with `docker compose build --no-cache app`, then `docker compose up -d --force-recreate app`. A plain build once served stale files. Check the new text with curl afterwards.
+- **Navigation:** member pages (`/student`, `/plan`, `/learning-info`, `/level`, `/students`, `/payments`, `/requests`, `/referrals`) open inside the shell page `/app`, which keeps the header and the side menu in place. In JavaScript, navigate with `Z.go(path)` (or `Z.go(path, true)` to replace), never with `location.href` or `location.replace`, so a page inside the frame moves the whole window. Member lists live in `MEMBER_PATHS` in `common.js`; add a new member page to that list.
+- **Base path:** the site can run under `BASE_URL` (for example `https://example.com/zaban`). On the server, write links with `with_base()` from `zaban/base.py`, and set cookies with `cookie_path()`. In JavaScript, write addresses with `Z.url()`. Never write a root-relative address (`href="/..."`) that the browser will follow without the base path.
+- **Cache version:** the pages load `app.css`, `common.js` and the other scripts with `?v=N`. After a change to any of them, bump N in the pages that load them, or browsers keep the old file.
 - **Git:** work on a feature branch. Do not commit to `develop` directly. Develop only moves forward with `git merge --ff-only`. Never force-push or reset a shared branch. Do not push unless the user asks.
 - **Secrets:** `.env` is never committed. Do not print or copy its values.
 - **Adults only:** the product serves adults only. Every learner is an adult who learns for themself (`self_owner_id`), or a learner created through a customer's API key. Do not add child (under 18) account types, age bands other than `adult`, parent-managed learners, or school-grade fields. On 2026-11-15 the owner removed all child logic (code, curriculum rows for bands K, J, T, S, the `purge-children` command, child demo data), and the test data with under-18 records was deleted. If a request seems to need child support, ask the owner first. Report counts only, never names.
@@ -29,7 +32,7 @@ This file is for any coding agent (Claude, Codex, or others). It states the proj
 | Topic | Start here |
 |---|---|
 | Sign-in and accounts | `README.md` (Accounts, Website sign-in), `src/zaban/web.py`, `src/zaban/account.py`, sign-in page `static/login.html` (`/login`) |
-| Website header and profile menu | `docs/account-menu.md` |
+| Website header, profile menu and the shell (`/app`) | `docs/account-menu.md` |
 | Curriculum and learning programs | `docs/curriculum.md`, `src/zaban/curriculum_data.py`, `src/zaban/program_data.py` |
 | Conversation partner (modes, learner profile, level policy, output contract, teacher notebook, build plan) | `docs/conversation-partner.md` v0.7 (design v0.7, built in phases 0 to 7; status per phase in section 15, open checks in section 15.11), sample prompts in `docs/prompt-example.html`. Test plan for a tester: `docs/po-test-plan.md` |
 | Database columns added after first release | `ADDED_COLUMNS` in `src/zaban/db.py` |

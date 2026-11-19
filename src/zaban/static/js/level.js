@@ -20,6 +20,15 @@
     ["coherence", "انسجام", "Coherence"],
   ];
 
+  // Plain line icons, one per speaking criterion. The reports page uses the same icons.
+  const CRITERION_ICONS = {
+    range: '<svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v15H6a2 2 0 0 0-2 2z"/><path d="M4 5v17"/></svg>',
+    accuracy: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>',
+    fluency: '<svg viewBox="0 0 24 24"><path d="M2 12c2.5-4 5-4 7.5 0s5 4 7.5 0 4-3 5.5-1"/></svg>',
+    interaction: '<svg viewBox="0 0 24 24"><path d="M4 5h10v7H8l-4 3z"/><path d="M14 9h6v7h-2l-3 2.5V16h-1z"/></svg>',
+    coherence: '<svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>',
+  };
+
   // Plain line icons, one per skill. They take the text colour, so they follow the theme.
   const SKILL_ICONS = {
     listening: '<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>',
@@ -100,10 +109,17 @@
       card.appendChild(Z.el("p", "skill-note muted", label("این مهارت آزمون ندارد. سطح آن را خودتان انتخاب کنید.", "This skill has no test. Choose its level yourself.")));
     }
     if (skill.key === "speaking" && levels.criteria) {
-      // The five criteria the speaking level is made of. They change with lessons and speaking tests.
-      const list = Z.el("ul", "skill-note muted");
-      CRITERIA.forEach(([key, fa, en]) => list.appendChild(Z.el("li", "", `${label(fa, en)}: ${levels.criteria[key] || "A1"}`)));
-      card.appendChild(list);
+      // The five criteria the speaking level is made of, in the same icon rows as the reports page. They change with lessons and speaking tests.
+      const rows = Z.el("div", "level-sub");
+      CRITERIA.forEach(([key, fa, en]) => {
+        const row = Z.el("div", `level-row level-criterion criterion-${key}`);
+        const icon = Z.el("span", "skill-icon");
+        icon.setAttribute("aria-hidden", "true");
+        icon.innerHTML = CRITERION_ICONS[key];
+        row.append(icon, Z.el("strong", "level-name", label(fa, en)), Z.el("span", "level-chip", levels.criteria[key] || "A1"));
+        rows.appendChild(row);
+      });
+      card.appendChild(rows);
     }
     return card;
   }
