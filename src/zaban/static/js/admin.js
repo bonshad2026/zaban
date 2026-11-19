@@ -338,10 +338,10 @@
         statCard("درخواست مشاوره", fa(sum(data.consults)), "", statusChips(data.consults, consultLabel)),
         statCard("درخواست همکاری", fa(sum(data.cooperations)), "", statusChips(data.cooperations, cooperationLabel)),
       ]),
-      overviewSection("جلسه‌ها", "جلسه‌های گفتگو و آزمون‌های «خودت رو محک بزن».", [
+      overviewSection("جلسه‌ها", "جلسه‌های گفتگو و آزمون‌ها.", [
         statCard("کل جلسه‌ها", fa(data.lessons.total), "هر جلسه‌ای که شروع شده است"),
         statCard("جلسه‌های کامل‌شده", fa(data.lessons.completed), "جلسه‌هایی که تا پایان رفته‌اند"),
-        statCard("آزمون‌های «خودت رو محک بزن»", fa(data.self_tests), ""),
+        statCard("آزمون‌ها", fa(data.self_tests), ""),
       ]),
       overviewSection("مصرف توکن",
         "توکن واحد محاسبه‌ی مصرف هوش مصنوعی است. هر پاسخ مدل تعدادی توکن مصرف می‌کند. هر مشتری سقف توکن دارد و مصرف او از همان سقف کم می‌شود. "
@@ -404,7 +404,7 @@
       box.appendChild(evaluations);
 
       const tests = Z.el("div", "overview-section");
-      tests.appendChild(Z.el("h3", "", "آزمون‌های «خودت رو محک بزن»"));
+      tests.appendChild(Z.el("h3", "", "آزمون‌ها"));
       if (d.self_tests.length) {
         const grid = Z.el("div", "stat-grid");
         d.self_tests.forEach((t) => grid.appendChild(statCard(

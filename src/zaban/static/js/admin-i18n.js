@@ -7,7 +7,7 @@
     "+ افزودن پلن": "+ Add plan",
     "،": ",",
     "آدرس بازگشت برای ثبت در زرین‌پال": "Callback address for Zarinpal",
-    "آزمون‌های «خودت رو محک بزن»": "Self-test sessions",
+    "آزمون‌ها": "Tests",
     "آموزش": "Teaching",
     "ابتدا یک دانش‌آموز انتخاب کنید.": "Choose a learner first.",
     "اجازه‌ی تماس": "Call permission",

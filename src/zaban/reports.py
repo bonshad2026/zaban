@@ -119,7 +119,7 @@ def _test_item(t: SelfTest) -> dict:
     return {
         "type": "test",
         "id": t.id,
-        "title": f"خودت رو محک بزن: {SKILL_FA.get(t.skill, t.skill)}",
+        "title": f"آزمون: {SKILL_FA.get(t.skill, t.skill)}",
         "date": t.created_at.isoformat(),
         "duration_minutes": t.minutes,
         "status": t.status,

@@ -298,7 +298,7 @@
     const wrap = Z.el("section", "report-block report-list");
     wrap.appendChild(Z.el("h2", null, tr("گزارش‌های من")));
     if (!items.length) {
-      wrap.appendChild(Z.el("p", "muted", tr("هنوز گزارشی ثبت نشده است. از تب «جلسه» یا «خودت رو محک بزن» شروع کن.")));
+      wrap.appendChild(Z.el("p", "muted", tr("هنوز گزارشی ثبت نشده است. از تب «جلسه» یا «آزمون‌ها» شروع کن.")));
       return wrap;
     }
     const state = { kind: "all", from: "", to: "", size: PAGE_SIZES[0], page: 1 };

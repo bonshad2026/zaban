@@ -167,6 +167,7 @@ const Z = (() => {
     if (!res.ok) {
       const error = new Error(friendly(data.detail, res.status));
       error.status = res.status;
+      error.profileIncomplete = typeof data.detail === "string" && data.detail.startsWith("Complete the profile");
       error.retryAfter = Number(res.headers.get("Retry-After")) || 0;
       throw error;
     }
@@ -804,7 +805,7 @@ const Z = (() => {
     items.push({ ...learnerItem("lesson", "جلسه", "Lesson"), primary: true });
     // Free conversation (section 4.1) opens on the learner page, in the same chat, without a time limit.
     items.push({ href: "/student?free=1", fa: "گفتگوی آزاد", en: "Free talk", active: onFreeTalk, primary: true });
-    items.push({ ...learnerItem("test", "خودت رو محک بزن", "Test yourself"), primary: true });
+    items.push({ ...learnerItem("test", "آزمون‌ها", "Tests"), primary: true });
     items.push({ ...learnerItem("report", "گزارش‌ها", "Reports"), primary: true });
     items.push(learnerItem("accent", "لهجه", "Accent"));
     items.push({ href: "/learning-info", fa: "اطلاعات آموزشی", en: "Learning details", active: path === "/learning-info" });
@@ -865,6 +866,10 @@ const Z = (() => {
         more.setAttribute("aria-expanded", String(open));
       });
       nav.appendChild(more);
+      // «more» is marked current only when the open page is one of the items in the sheet.
+      if (items.some((item) => !item.primary && !item.divider && item.active)) more.setAttribute("aria-current", "page");
+      sideMore = { nav, more };
+      wireSideMore();
       nav.hidden = !items.length;
     }
     const tabs = onLearnerPage && !onFreeTalk ? document.querySelector("#appView .tabs") : null;
@@ -880,6 +885,25 @@ const Z = (() => {
   // The learner page's tabs are the side menu's entries. Each entry opens the page's own tab; the marked entry follows the active tab.
   let learnObserver = null;
   let sideTabLinks = [];
+  // The «more» sheet of a phone: it is closed by a tap outside it, or by Escape.
+  let sideMore = null;
+  let sideMoreWired = false;
+  function closeSideMore() {
+    if (!sideMore) return;
+    sideMore.nav.classList.remove("is-more-open");
+    sideMore.more.setAttribute("aria-expanded", "false");
+  }
+  function wireSideMore() {
+    if (sideMoreWired) return;
+    sideMoreWired = true;
+    document.addEventListener("click", (event) => {
+      if (sideMore && !sideMore.nav.contains(event.target)) closeSideMore();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeSideMore();
+    });
+  }
+
   function markSideTab(current) {
     sideTabLinks.forEach(([tab, link]) => {
       if (tab === current) link.setAttribute("aria-current", "page");

@@ -213,7 +213,7 @@
 
   // A start that needs the age and gender says so, and links to the personal details where they are entered.
   function showStartError(box, err) {
-    if (!err.message.includes("Complete the profile")) {
+    if (!err.profileIncomplete) {
       Z.showError(box, err.message);
       return;
     }
