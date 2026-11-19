@@ -205,10 +205,23 @@
       showSetup("running");
       Lesson.start(session);
     } catch (err) {
-      Z.showError($("freeStartError"), err.message);
+      showStartError($("freeStartError"), err);
     } finally {
       $("freeStartBtn").disabled = false;
     }
+  }
+
+  // A start that needs the age and gender says so, and links to the personal details where they are entered.
+  function showStartError(box, err) {
+    if (!err.message.includes("Complete the profile")) {
+      Z.showError(box, err.message);
+      return;
+    }
+    Z.showError(box, Z.pick("برای شروع، سن و جنسیت را در اطلاعات شخصی وارد کنید.", "To start, enter your age and gender in your personal details."));
+    const link = Z.el("button", "ghost", Z.pick("ورود به اطلاعات شخصی", "Go to personal details"));
+    link.type = "button";
+    link.addEventListener("click", () => Z.openPersonalDetails());
+    box.appendChild(link);
   }
 
   async function startLesson() {
@@ -224,7 +237,7 @@
       showSetup("running");
       Lesson.start(session);
     } catch (err) {
-      Z.showError($("startError"), err.message);
+      showStartError($("startError"), err);
     } finally {
       $("startBtn").disabled = false;
     }
@@ -292,13 +305,17 @@
     } catch (_) {
       me = null;
     }
-    if (!me || me.role !== "student") {
-      // An adult who has a plan learns for themself. Anyone else goes to sign-in.
+    if (!me) {
+      location.replace(Z.url("/login"));
+      return;
+    }
+    if (!me.has_own_learning) {
+      // A signed-in adult without a learner profile gets one now, once a plan is active. Without a plan, the plan page opens.
       try {
         await Z.request("POST", "/v1/web/user/self");
         me = await Z.request("GET", "/v1/web/me");
       } catch (_) {
-        location.replace(Z.url("/login"));
+        location.replace(Z.url("/plan"));
         return;
       }
     }

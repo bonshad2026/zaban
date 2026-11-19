@@ -801,11 +801,11 @@ const Z = (() => {
     });
     // The side menu, in this order. A divider line separates the groups, and the teachers' group sits between two lines.
     const divider = { divider: true };
-    items.push(learnerItem("lesson", "جلسه", "Lesson"));
+    items.push({ ...learnerItem("lesson", "جلسه", "Lesson"), primary: true });
     // Free conversation (section 4.1) opens on the learner page, in the same chat, without a time limit.
-    items.push({ href: "/student?free=1", fa: "گفتگوی آزاد", en: "Free talk", active: onFreeTalk });
-    items.push(learnerItem("test", "خودت رو محک بزن", "Test yourself"));
-    items.push(learnerItem("report", "گزارش‌ها", "Reports"));
+    items.push({ href: "/student?free=1", fa: "گفتگوی آزاد", en: "Free talk", active: onFreeTalk, primary: true });
+    items.push({ ...learnerItem("test", "خودت رو محک بزن", "Test yourself"), primary: true });
+    items.push({ ...learnerItem("report", "گزارش‌ها", "Reports"), primary: true });
     items.push(learnerItem("accent", "لهجه", "Accent"));
     items.push({ href: "/learning-info", fa: "اطلاعات آموزشی", en: "Learning details", active: path === "/learning-info" });
     items.push(divider);
@@ -825,9 +825,12 @@ const Z = (() => {
     if (nav) {
       nav.replaceChildren();
       sideTabLinks = [];
+      // The main items stay in the bar on a phone. The others sit in a sheet that «بیشتر» opens. On a computer the sheet is part of the column.
+      const sheet = el("div", "side-sheet");
       items.forEach((item) => {
+        const target = item.primary ? nav : sheet;
         if (item.divider) {
-          nav.appendChild(el("div", "side-divider"));
+          target.appendChild(el("div", "side-divider"));
           return;
         }
         const group = el("div", "side-group");
@@ -845,9 +848,23 @@ const Z = (() => {
           });
           sideTabLinks.push([item.tab, link]);
         }
+        if (!item.primary) link.addEventListener("click", () => nav.classList.remove("is-more-open"));
         group.appendChild(link);
-        nav.appendChild(group);
+        target.appendChild(group);
       });
+      nav.appendChild(sheet);
+      // The «more» button is an icon with three lines, the usual sign for more items.
+      const more = el("button", "side-more-btn");
+      more.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
+      more.type = "button";
+      more.setAttribute("aria-label", isEnglish() ? "More" : "بیشتر");
+      more.title = isEnglish() ? "More" : "بیشتر";
+      more.setAttribute("aria-expanded", "false");
+      more.addEventListener("click", () => {
+        const open = nav.classList.toggle("is-more-open");
+        more.setAttribute("aria-expanded", String(open));
+      });
+      nav.appendChild(more);
       nav.hidden = !items.length;
     }
     const tabs = onLearnerPage && !onFreeTalk ? document.querySelector("#appView .tabs") : null;
@@ -916,7 +933,7 @@ const Z = (() => {
   }
 
   return {
-    url, pagePath, confirmDialog, request, friendly, parseUtc, locale, currentLang, fmtDate, fmtDateTime, el, show, showError, showDevCode, codeTimer, startResendWait, resumeResendWait, initLang, initTheme, initReveal,
+    url, pagePath, confirmDialog, openPersonalDetails, request, friendly, parseUtc, locale, currentLang, fmtDate, fmtDateTime, el, show, showError, showDevCode, codeTimer, startResendWait, resumeResendWait, initLang, initTheme, initReveal,
     initSiteHeader, STATUS_FA, SUGGESTION_FA, LEVEL_FA, SESSION_FA,
   };
 })();

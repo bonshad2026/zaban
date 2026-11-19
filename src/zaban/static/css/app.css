@@ -680,6 +680,9 @@ select option:hover, select option:focus, select option:checked { background: va
 /* ---- Side menu (signed-in area). One set of rules. Only the current page is filled; nothing else has a background. ---- */
 .app-layout { display: flex; align-items: stretch; flex: 1 0 auto; min-width: 0; width: 100%; }
 .app-layout > .site-main { flex: 1 1 auto; min-width: 0; }
+/* On a computer the sheet is part of the column; on a phone it is a panel above the bar. */
+.side-sheet { display: contents; }
+.side-more-btn { display: none; }
 /* The side menu stays in view below the header while the page scrolls. Its own items scroll inside it. */
 .app-side { flex: 0 0 220px; align-self: flex-start; position: sticky; top: var(--header-h); height: calc(100vh - var(--header-h)); background: var(--card); padding: 16px 12px; border-inline-start: 0.5px solid var(--border); display: flex; flex-direction: column; gap: 4px; overflow-y: auto; scrollbar-width: thin; }
 .app-side[hidden] { display: none; }
@@ -701,6 +704,15 @@ select option:hover, select option:focus, select option:checked { background: va
   .app-side { height: auto; top: auto; overflow: visible; }
   .side-group { flex: 1 1 0; min-width: 0; gap: 0; position: static; }
   .side-divider { width: 1px; height: auto; align-self: stretch; margin: 8px 4px; }
+  .side-more-btn { display: flex; flex: 1 1 0; min-width: 0; align-items: center; justify-content: center; margin: 0; padding: 8px 2px; border: 0; border-radius: 12px; background: transparent; color: var(--text); cursor: pointer; }
+  .side-more-btn[aria-expanded="true"] { background: var(--accent-soft); }
+  .side-more-btn svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+  .side-sheet { display: none; position: fixed; bottom: calc(68px + env(safe-area-inset-bottom)); inset-inline-start: 10px; z-index: 16; flex-direction: column; gap: 2px; width: max-content; min-width: 210px; max-width: calc(100vw - 20px); max-height: 60vh; overflow-y: auto; padding: 8px; background: var(--card); border: 0.5px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); }
+  html[dir="ltr"] .side-sheet { inset-inline-start: auto; inset-inline-end: 10px; }
+  .side-sheet .side-item { justify-content: flex-start; text-align: start; padding: 10px 14px; font-size: 14px; white-space: normal; }
+  .app-side.is-more-open .side-sheet { display: flex; }
+  .side-sheet .side-group { flex: none; }
+  .side-sheet .side-divider { width: auto; height: 1px; align-self: stretch; margin: 6px 10px; }
   .side-item { justify-content: center; text-align: center; min-width: 0; padding: 8px 2px; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .site-main { padding-bottom: 84px; }
   .site-footer { display: none; }
