@@ -119,7 +119,7 @@
 | `catalog_version` | نسخه‌ی این سند که درس بر اساس آن ساخته شده است |
 | `topic_id` | شناسه‌ی موضوع (مثلاً `INTRO`) |
 | `variant_id` | شناسه‌ی نسخه (مثلاً `INTRO.A.B2`) |
-| `cefr_level` | A1 تا C2 |
+| `speaking_level` | سطح گفتاری (A1 تا C2؛ پایین‌ترین معیار گفتاری) |
 | `started_at` / `duration_min` | زمان شروع و مدت درس |
 | `chunks_targeted` | عبارت‌های هدف درس |
 | `chunks_used` | عبارت‌هایی که زبان‌آموز به‌درستی به‌کار برد |
