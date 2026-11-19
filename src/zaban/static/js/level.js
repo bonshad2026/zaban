@@ -3,12 +3,21 @@
   const english = () => document.documentElement.lang === "en";
   const LEVELS = ["A1", "A2", "B1", "B2", "C1"];
 
-  // The four skills, in the order the page shows them. Speaking and writing have no test yet; its level is chosen by hand.
+  // The five skills, in the order the page shows them. Speaking and writing have no test yet; their levels are chosen by hand.
   const SKILLS = [
     { key: "listening", fa: "شنیداری", en: "Listening", test: true },
     { key: "reading", fa: "خواندن", en: "Reading", test: true },
     { key: "grammar", fa: "دستور و واژگان", en: "Grammar and vocabulary", test: true },
-    { key: "speaking_writing", fa: "گفتار و نوشتار", en: "Speaking and writing", test: false },
+    { key: "writing", fa: "نوشتاری", en: "Writing", test: false },
+    { key: "speaking", fa: "گفتاری", en: "Speaking", test: false },
+  ];
+  // The five speaking criteria. The speaking level is the lowest of them.
+  const CRITERIA = [
+    ["range", "دامنه", "Range"],
+    ["accuracy", "دقت", "Accuracy"],
+    ["fluency", "روانی", "Fluency"],
+    ["interaction", "تعامل", "Interaction"],
+    ["coherence", "انسجام", "Coherence"],
   ];
 
   // Plain line icons, one per skill. They take the text colour, so they follow the theme.
@@ -16,7 +25,8 @@
     listening: '<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>',
     reading: '<svg viewBox="0 0 24 24"><path d="M2 5h7a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H2z"/><path d="M22 5h-7a3 3 0 0 0-3 3v12a2 2 0 0 1 2-2h8z"/></svg>',
     grammar: '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M14 6l4 4"/></svg>',
-    speaking_writing: '<svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>',
+    writing: '<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h5"/></svg>',
+    speaking: '<svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>',
   };
 
   let levels = {};
@@ -88,6 +98,12 @@
       card.appendChild(test);
     } else {
       card.appendChild(Z.el("p", "skill-note muted", label("این مهارت آزمون ندارد. سطح آن را خودتان انتخاب کنید.", "This skill has no test. Choose its level yourself.")));
+    }
+    if (skill.key === "speaking" && levels.criteria) {
+      // The five criteria the speaking level is made of. They change with lessons and speaking tests.
+      const list = Z.el("ul", "skill-note muted");
+      CRITERIA.forEach(([key, fa, en]) => list.appendChild(Z.el("li", "", `${label(fa, en)}: ${levels.criteria[key] || "A1"}`)));
+      card.appendChild(list);
     }
     return card;
   }

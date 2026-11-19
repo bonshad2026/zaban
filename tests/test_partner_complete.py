@@ -15,7 +15,7 @@ CRITERIA = ["level_range", "level_accuracy", "level_fluency", "level_interaction
 
 def test_speaking_level_before_the_first_lesson_sets_all_five_criteria(client):
     learner_login(client)
-    response = client.put("/v1/web/student/skill-levels", json={"speaking_writing": "B1"})
+    response = client.put("/v1/web/student/skill-levels", json={"speaking": "B1"})
     assert response.status_code == 200, response.text
     with SessionLocal() as db:
         student = self_student(db)
@@ -29,7 +29,7 @@ def test_speaking_level_is_fixed_after_the_first_lesson(client):
         now = utcnow()
         db.add(TutorSession(student_id=student.id, duration_minutes=10, started_at=now, ends_at=now + timedelta(minutes=10), status="completed"))
         db.commit()
-    response = client.put("/v1/web/student/skill-levels", json={"speaking_writing": "C1"})
+    response = client.put("/v1/web/student/skill-levels", json={"speaking": "C1"})
     assert response.status_code == 409
 
 

@@ -30,9 +30,16 @@
     $("levelListening").value = levels.listening || "A1";
     $("levelReading").value = levels.reading || "A1";
     $("levelGrammar").value = levels.grammar || "A1";
-    $("levelSpeakingWriting").value = levels.speaking_writing || "A1";
-    // The speaking level is chosen once, before the first lesson. After that it only shows.
-    $("levelSpeakingWriting").disabled = Boolean(data.speaking_locked);
+    $("levelWriting").value = levels.writing || "A1";
+    $("levelSpeaking").value = levels.speaking || "A1";
+    // The speaking and writing levels are chosen once, before the first lesson. After that they only show.
+    $("levelWriting").disabled = Boolean(data.speaking_locked);
+    $("levelSpeaking").disabled = Boolean(data.speaking_locked);
+    const criteria = levels.criteria || {};
+    $("criteria").textContent = t(
+      `معیارهای گفتاری: دامنه ${criteria.range || "A1"}، دقت ${criteria.accuracy || "A1"}، روانی ${criteria.fluency || "A1"}، تعامل ${criteria.interaction || "A1"}، انسجام ${criteria.coherence || "A1"}`,
+      `Speaking criteria: range ${criteria.range || "A1"}, accuracy ${criteria.accuracy || "A1"}, fluency ${criteria.fluency || "A1"}, interaction ${criteria.interaction || "A1"}, coherence ${criteria.coherence || "A1"}`,
+    );
     Z.show($("speakingLocked"), Boolean(data.speaking_locked));
     $("attributes").value = d.attributes || "";
     $("conversation").value = d.conversation_style || "";
@@ -41,8 +48,8 @@
     $("free").value = d.free_text || "";
   }
 
-  // Saves the learning text fields. The three fixed levels are not sent: they come from the level test (and the level page).
-  // The speaking level is sent only while it can still be chosen.
+  // Saves the learning text fields. The levels are not sent here: they come from the level test (and the level page).
+  // Speaking and writing are sent only while they can still be chosen.
   async function saveLearner() {
     const nullIfEmpty = (value) => value || null;
     await Z.request("PUT", "/v1/web/student/details", {
@@ -52,9 +59,10 @@
       level_sample: $("sample").value.trim(),
       free_text: $("free").value.trim(),
     });
-    if (!$("levelSpeakingWriting").disabled) {
+    if (!$("levelSpeaking").disabled) {
       await Z.request("PUT", "/v1/web/student/skill-levels", {
-        speaking_writing: $("levelSpeakingWriting").value,
+        speaking: $("levelSpeaking").value,
+        writing: $("levelWriting").value,
       });
     }
   }

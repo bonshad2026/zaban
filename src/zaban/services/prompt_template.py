@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session as DBSession
 from zaban.models import LearnerDetails, Student, TutorProfile
 from zaban.services.learner import get_accent, get_global_prompt
 from zaban.services.learner_details import details_out
+from zaban.services.skill_levels import speaking_level
 from zaban.services.curriculum import next_topic
 
 # The administrator writes a template once. The prompt is then built by filling its placeholders with stored values.
@@ -42,13 +43,17 @@ def learner_values(db: DBSession, student: Student, duration_minutes: int = 0) -
         "learner.gender": GENDER_FA.get(details["gender"] or "", ""),
         "learner.level": (
             f"شنیداری {student.level_listening or 'A1'}، خواندن {student.level_reading or 'A1'}، "
-            f"دستور و واژگان {student.level_grammar or 'A1'}، گفتار و نوشتار {student.level_speaking_writing or 'A1'}"
+            f"دستور و واژگان {student.level_grammar or 'A1'}، نوشتاری {student.level_writing or 'A1'}، "
+            f"گفتاری {speaking_level(student)}"
         ),
         "learner.accent": get_accent(db, student.id),
         "learner.level_listening": student.level_listening or "",
         "learner.level_reading": student.level_reading or "",
         "learner.level_grammar": student.level_grammar or "",
-        "learner.level_speaking_writing": student.level_speaking_writing or "",
+        "learner.level_writing": student.level_writing or "",
+        "learner.level_speaking": speaking_level(student),
+        # Kept for prompt templates saved before the writing level existed.
+        "learner.level_speaking_writing": speaking_level(student),
         "learner.conversation_style": STYLE_FA.get(details["conversation_style"] or "", ""),
         "learner.response_style": STYLE_FA.get(details["response_style"] or "", ""),
         "learner.attributes": details["attributes"] or "",

@@ -130,13 +130,11 @@ SKILL_COLUMN = {
 }
 
 
-def skill_levels(student: Student) -> dict[str, str]:
-    return {
-        "listening": student.level_listening or DEFAULT_LEVEL,
-        "reading": student.level_reading or DEFAULT_LEVEL,
-        "grammar": student.level_grammar or DEFAULT_LEVEL,
-        "speaking_writing": student.level_speaking_writing or DEFAULT_LEVEL,
-    }
+def skill_levels(student: Student) -> dict:
+    # The same levels everywhere: one per skill, with the five speaking criteria.
+    from zaban.services.skill_levels import levels_out
+
+    return levels_out(student)
 
 
 def _finish(db: DBSession, student: Student, attempt: PlacementAttempt, level: str, status: str) -> None:

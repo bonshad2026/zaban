@@ -362,7 +362,9 @@ class SkillLevelsUpdate(BaseModel):
     listening: str | None = Field(default=None, pattern=r"^(A1|A2|B1|B2|C1)$")
     reading: str | None = Field(default=None, pattern=r"^(A1|A2|B1|B2|C1)$")
     grammar: str | None = Field(default=None, pattern=r"^(A1|A2|B1|B2|C1)$")
-    speaking_writing: str | None = Field(default=None, pattern=r"^(A1|A2|B1|B2|C1)$")
+    writing: str | None = Field(default=None, pattern=r"^(A1|A2|B1|B2|C1)$")
+    # Speaking is the lowest of the five criteria. Setting it before the first lesson sets all five to the same level.
+    speaking: str | None = Field(default=None, pattern=r"^(A1|A2|B1|B2|C1)$")
 
 
 @router.put("/skill-levels")
@@ -378,19 +380,21 @@ def set_skill_levels(
         "listening": "level_listening",
         "reading": "level_reading",
         "grammar": "level_grammar",
-        "speaking_writing": "level_speaking_writing",
+        "writing": "level_writing",
     }
     changes = {key: value for key, value in body.model_dump(exclude_unset=True).items() if value is not None}
-    if "speaking_writing" in changes:
-        # The speaking level is chosen once, before the first lesson. After that the five speaking criteria change only by the system rule or the administrator.
+    if "speaking" in changes or "writing" in changes:
+        # Speaking and writing are chosen once, before the first lesson. After that they change only by tests or the system rule.
         has_lesson = db.query(TutorSession.id).filter(TutorSession.student_id == student.id).first() is not None
         if has_lesson:
-            raise HTTPException(status_code=409, detail="The speaking level can only be chosen before the first lesson")
+            raise HTTPException(status_code=409, detail="The speaking and writing levels can only be chosen before the first lesson")
+    if "speaking" in changes:
         # Before the first lesson the five criteria start at the chosen level (section 13.6).
         for criterion in ("level_range", "level_accuracy", "level_fluency", "level_interaction", "level_coherence"):
-            setattr(student, criterion, changes["speaking_writing"])
+            setattr(student, criterion, changes["speaking"])
     for key, value in changes.items():
-        setattr(student, columns[key], value)
+        if key in columns:
+            setattr(student, columns[key], value)
     db.commit()
     return {"skill_levels": skill_levels(student)}
 
