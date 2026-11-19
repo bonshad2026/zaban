@@ -121,7 +121,7 @@
       }
       texts.forEach((text) => box.appendChild(Z.el("p", "", text)));
       const link = Z.el("a", "pill", Z.pick("دیدن پلن و اعتبار", "View plan and tokens"));
-      link.href = "/plan";
+      link.href = Z.url("/plan");
       box.appendChild(link);
       box.hidden = false;
     } catch (_) {
@@ -267,7 +267,7 @@
         await Z.request("POST", "/v1/web/user/self");
         me = await Z.request("GET", "/v1/web/me");
       } catch (_) {
-        location.replace("/login");
+        location.replace(Z.url("/login"));
         return;
       }
     }

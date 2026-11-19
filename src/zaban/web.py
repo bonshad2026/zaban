@@ -3,6 +3,7 @@ from datetime import timedelta
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session as DBSession
 
+from zaban.base import cookie_path
 from zaban.config import settings
 from zaban.db import get_db
 from zaban.models import Consent, Guardian, Student, Tenant, VoiceSample, WebSession, utcnow
@@ -35,7 +36,7 @@ def _set_session_cookie(response: Response, token: str) -> None:
         httponly=True,
         samesite="lax",
         secure=settings.environment == "production",
-        path="/",
+        path=cookie_path(),
     )
 
 
@@ -243,7 +244,7 @@ def logout_everywhere(
         {"revoked_at": utcnow()}, synchronize_session=False
     )
     db.commit()
-    response.delete_cookie(WEB_COOKIE, path="/")
+    response.delete_cookie(WEB_COOKIE, path=cookie_path())
     return {"ok": True}
 
 
@@ -259,7 +260,7 @@ def logout(
     if row is not None and row.revoked_at is None:
         row.revoked_at = utcnow()
         db.commit()
-    response.delete_cookie(WEB_COOKIE, path="/")
+    response.delete_cookie(WEB_COOKIE, path=cookie_path())
     return {"ok": True}
 
 

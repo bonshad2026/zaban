@@ -182,7 +182,7 @@
       box.appendChild(el("h3", "", Z.pick("همه‌ی دفعات", "All attempts")));
       lesson.attempts.forEach((attempt) => box.appendChild(attemptCard(attempt)));
       const link = el("a", "", Z.pick("دیدن گزارش کامل در صفحه‌ی گزارش‌ها", "See the full report on My report"));
-      link.href = "/student?tab=report";
+      link.href = Z.url("/student?tab=report");
       box.appendChild(el("p", "", "")).appendChild(link);
     } else if (lesson.status === "current") {
       box.appendChild(el("p", "notice", Z.tr("این جلسه‌ی فعلی توست. جلسه‌ی بعدی همین درس است.")));
@@ -251,7 +251,7 @@
     card.append(el("h3", "", item.title), el("p", "muted", Z.pick(`${CATEGORY_LABELS[item.category] || item.category} — سطح ${item.level}`, `${CATEGORY_LABELS[item.category] || item.category} — level ${item.level}`)));
     if (item.tags && item.tags.length) card.append(el("p", "muted", Z.pick(`برچسب‌ها: ${item.tags.join("، ")}`, `Tags: ${item.tags.join(", ")}`)));
     if (item.has_file) {
-      const src = `/v1/web/student/help-content/${item.id}/file`;
+      const src = Z.url(`/v1/web/student/help-content/${item.id}/file`);
       if (item.mime && item.mime.startsWith("audio/")) {
         const audio = el("audio");
         audio.controls = true;
@@ -270,13 +270,13 @@
         card.appendChild(video);
       }
       const download = el("a", "btn-link", Z.tr("دانلود"));
-      download.href = src;
+      download.href = Z.url(src);
       download.setAttribute("download", item.title);
       card.appendChild(download);
     }
     if (item.url) {
       const link = el("a", "btn-link", Z.tr("باز کردن"));
-      link.href = item.url;
+      link.href = Z.url(item.url);
       link.target = "_blank";
       link.rel = "noopener noreferrer";
       card.appendChild(link);

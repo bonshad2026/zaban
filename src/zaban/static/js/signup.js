@@ -62,7 +62,7 @@
         referral_code: form.referral_code.value.trim() || null,
       });
       // The account exists and the browser holds its sign-in. The plan page comes next.
-      location.href = "/student";
+      location.href = Z.url("/student");
     } catch (err) {
       Z.showError($("signupError"), err.message);
     }

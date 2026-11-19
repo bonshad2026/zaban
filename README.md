@@ -134,8 +134,33 @@ pytest
 - Set `ENVIRONMENT=production` and a real `SECRET_KEY`. The app refuses to start without it.
 - Leave every `ZABAN_DEMO_*` value empty.
 - Use HTTPS, so cookies are sent only over secure connections.
-- Fill `ADMIN_PASSWORD`, `PUBLIC_BASE_URL` (the https address), `KAVENEGAR_API_KEY` with its approved template, `PAYMENT_GATEWAY=zarinpal` and `ZARINPAL_MERCHANT_ID`. The full list with comments is in `.env.example`.
+- Fill `ADMIN_PASSWORD`, `BASE_URL` (the https address, with the path if the site is not at the root of its domain), `KAVENEGAR_API_KEY` with its approved template, `PAYMENT_GATEWAY=zarinpal` and `ZARINPAL_MERCHANT_ID`. The full list with comments is in `.env.example`.
 - Save `.env` as UTF-8 without a BOM. The tests set their own values, so the demo lines are needed only for local demo accounts.
+
+## Running under a path on a shared domain
+
+The app always runs at the root of its own server. To publish it under a path such as `https://example.com/zaban`, do two things:
+
+1. Set `BASE_URL=https://example.com/zaban` in `.env`. The app writes this path into every link, script address and cookie.
+2. Let the reverse proxy remove the path before it reaches the app. Nginx:
+
+```nginx
+location /zaban/ {
+    proxy_pass http://127.0.0.1:8020/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto https;
+}
+```
+
+Caddy:
+
+```caddy
+handle_path /zaban/* {
+    reverse_proxy 127.0.0.1:8020
+}
+```
+
+The trailing slash in `proxy_pass` is what removes `/zaban`. Without it the app receives paths it does not know.
 
 ## Changing the database schema
 

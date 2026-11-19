@@ -1,5 +1,19 @@
 // Shared helpers for every page. Users never see raw JSON or HTTP codes; errors become plain Persian sentences.
 const Z = (() => {
+  // The base path the site is served under, set by the server (for example /zaban). Empty at the root of the domain.
+  const BASE = window.ZABAN_BASE || "";
+  // Puts the base path in front of a root-relative address. Other addresses, and addresses that already have it, are returned as they are.
+  function url(path) {
+    if (typeof path !== "string" || !path.startsWith("/") || path.startsWith("//")) return path;
+    if (!BASE || path === BASE || path.startsWith(BASE + "/")) return path;
+    return BASE + path;
+  }
+  // The address of the open page without the base path, so the menu can tell which page it is on.
+  function pagePath() {
+    const path = location.pathname;
+    if (BASE && (path === BASE || path.startsWith(BASE + "/"))) return path.slice(BASE.length) || "/";
+    return path;
+  }
   const ERROR_TEXT = [
     ["already taken", "این نام کاربری قبلاً استفاده شده است. یک نام دیگر انتخاب کنید."],
     ["Too many wrong passwords", "چند بار رمز اشتباه وارد شده است. ۱۵ دقیقه بعد دوباره تلاش کنید."],
@@ -142,7 +156,7 @@ const Z = (() => {
     }
     let res;
     try {
-      res = await fetch(path, options);
+      res = await fetch(url(path), options);
     } catch (_) {
       throw new Error(isEnglish()
         ? "Could not reach the server. Please check your internet connection."
@@ -397,7 +411,7 @@ const Z = (() => {
     const node = el(tag, className, isEnglish() ? en : fa);
     node.dataset.fa = fa;
     node.dataset.en = en;
-    if (href) node.href = href;
+    if (href) node.href = url(href);
     return node;
   }
 
@@ -633,7 +647,7 @@ const Z = (() => {
     event.preventDefault();
     try {
       await request("POST", "/v1/web/user/self");
-      location.href = "/student";
+      location.href = url("/student");
     } catch (err) {
       window.alert(err.message);
     }
@@ -650,13 +664,13 @@ const Z = (() => {
 
   async function signOut() {
     await request("POST", "/v1/web/logout").catch(() => {});
-    location.href = "/";
+    location.href = url("/");
   }
 
   // Ends every sign-in for this adult and their own learning, on every device. Only the adult can do this.
   async function signOutEverywhere() {
     await request("POST", "/v1/web/user/logout-all").catch(() => {});
-    location.href = "/";
+    location.href = url("/");
   }
 
   // Set by each build of the menu. The document-level listeners are added only once, in initSiteHeader.
@@ -693,10 +707,10 @@ const Z = (() => {
     addItem("اطلاعات شخصی", "Personal details", openPersonalDetails);
     addItem("تعیین مربی", "Choose a teacher", openTeacherDialog);
     addItem("تغییر رمز عبور", "Change password", () => byId("accPasswordDialog").showModal());
-    addItem("درخواست‌های شما", "Your requests", () => { location.href = "/requests"; });
-    addItem("کد معرف من", "My referral code", () => { location.href = "/referrals"; });
+    addItem("درخواست‌های شما", "Your requests", () => { location.href = url("/requests"); });
+    addItem("کد معرف من", "My referral code", () => { location.href = url("/referrals"); });
     addItem("پرداخت‌های شما", "Your payments", () => {
-      location.href = "/payments";
+      location.href = url("/payments");
     });
     list.appendChild(el("div", "account-sep"));
     addItem("خروج", "Sign out", () => askSignOut(
@@ -770,7 +784,7 @@ const Z = (() => {
     }
 
     // The side menu of the signed-in area. Every learning tab is an entry of its own, next to the account pages.
-    const path = location.pathname;
+    const path = pagePath();
     const tool = new URLSearchParams(location.search).get("tab");
     const onLearnerPage = path === "/student";
     const learnerSignedIn = signedIn.length > 0;
@@ -827,7 +841,7 @@ const Z = (() => {
             if (!button) return;
             event.preventDefault();
             button.click();
-            history.replaceState(null, "", item.href);
+            history.replaceState(null, "", url(item.href));
           });
           sideTabLinks.push([item.tab, link]);
         }
@@ -875,7 +889,7 @@ const Z = (() => {
   }
 
   return {
-    request, friendly, parseUtc, locale, currentLang, fmtDate, fmtDateTime, el, show, showError, showDevCode, codeTimer, startResendWait, resumeResendWait, initLang, initTheme, initReveal,
+    url, pagePath, request, friendly, parseUtc, locale, currentLang, fmtDate, fmtDateTime, el, show, showError, showDevCode, codeTimer, startResendWait, resumeResendWait, initLang, initTheme, initReveal,
     initSiteHeader, STATUS_FA, SUGGESTION_FA, LEVEL_FA, SESSION_FA,
   };
 })();

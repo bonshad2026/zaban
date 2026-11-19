@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session as DBSession
 
 from zaban.services.skill_levels import levels_out
+from zaban.base import cookie_path
 from zaban.config import settings
 from zaban.db import get_db
 from zaban.models import (
@@ -133,14 +134,14 @@ def admin_login(body: AdminLogin, response: Response, db: DBSession = Depends(ge
         httponly=True,
         samesite="strict",
         secure=settings.environment == "production",
-        path="/",
+        path=cookie_path(),
     )
     return {"ok": True}
 
 
 @router.post("/logout")
 def admin_logout(response: Response) -> dict:
-    response.delete_cookie(ADMIN_COOKIE, path="/")
+    response.delete_cookie(ADMIN_COOKIE, path=cookie_path())
     return {"ok": True}
 
 
@@ -149,7 +150,7 @@ def admin_logout_everywhere(response: Response, db: DBSession = Depends(get_db))
     # Ends the admin sign-in on every device, this one included.
     set_setting(db, ADMIN_VERSION_KEY, str(_admin_version(db) + 1))
     db.commit()
-    response.delete_cookie(ADMIN_COOKIE, path="/")
+    response.delete_cookie(ADMIN_COOKIE, path=cookie_path())
     return {"ok": True}
 
 

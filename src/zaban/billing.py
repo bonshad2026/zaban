@@ -9,6 +9,7 @@ from zaban.config import settings
 from zaban.db import get_db
 from zaban.models import BillingPlan, Payment, utcnow
 from zaban.services.payments import confirm_payment, get_gateway, has_active_plan, mark_failed, mark_paid
+from zaban.base import with_base
 from zaban.services.settings_store import PAYMENT_PROVIDER_KEY, PUBLIC_BASE_URL_KEY, ZARINPAL_MERCHANT_KEY, get_setting
 from zaban.web import _guardian_from_cookie
 
@@ -144,7 +145,7 @@ def checkout(
         mark_failed(db, payment, "درگاه پرداخت در دسترس نیست. دوباره تلاش کنید.")
         raise
     db.commit()
-    return {"payment_id": payment.id, "redirect": redirect}
+    return {"payment_id": payment.id, "redirect": with_base(redirect)}
 
 
 @router.get("/zarinpal/callback")
@@ -157,17 +158,17 @@ def zarinpal_callback(
     # The buyer comes back here from ZarinPal. The payment is marked paid only after ZarinPal verifies it.
     payment = db.get(Payment, payment_id)
     if payment is None or payment.gateway != "zarinpal" or payment.gateway_ref != Authority:
-        return RedirectResponse(url="/plan?payment=failed", status_code=303)
+        return RedirectResponse(url=with_base("/plan?payment=failed"), status_code=303)
     if Status != "OK":
         mark_failed(db, payment, "پرداخت در درگاه لغو شد یا انجام نشد.")
-        return RedirectResponse(url="/plan?payment=failed", status_code=303)
+        return RedirectResponse(url=with_base("/plan?payment=failed"), status_code=303)
     merchant = get_setting(db, ZARINPAL_MERCHANT_KEY, settings.zarinpal_merchant_id or "")
     if get_gateway("zarinpal", merchant).verify(payment, Authority):
         # The gateway confirmed the money, so the plan starts now.
         confirm_payment(db, payment, True)
-        return RedirectResponse(url="/plan?payment=paid", status_code=303)
+        return RedirectResponse(url=with_base("/plan?payment=paid"), status_code=303)
     mark_failed(db, payment, "تأیید پرداخت از سوی درگاه انجام نشد.")
-    return RedirectResponse(url="/plan?payment=failed", status_code=303)
+    return RedirectResponse(url=with_base("/plan?payment=failed"), status_code=303)
 
 
 @router.post("/fake/confirm")

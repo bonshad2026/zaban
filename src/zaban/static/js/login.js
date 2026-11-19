@@ -11,7 +11,7 @@
     showPaymentNotice();
     const status = await loadBilling();
     if (status.has_active_plan) {
-      location.replace("/student");
+      location.replace(Z.url("/student"));
       return;
     }
     showView("app");
@@ -130,7 +130,7 @@
       }
       try {
         await Z.request("POST", "/v1/web/user/otp/login", { phone, code });
-        location.href = "/student";
+        location.href = Z.url("/student");
       } catch (err) {
         Z.showError($("loginError"), err.message);
       }
@@ -147,7 +147,7 @@
       });
       form.password.value = "";
       // After sign-in the visitor lands on the lesson page.
-      location.href = "/student";
+      location.href = Z.url("/student");
     } catch (err) {
       Z.showError($("loginError"), err.message);
     }

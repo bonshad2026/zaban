@@ -6,6 +6,8 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
+
+from zaban.base import prefix_html
 from fastapi.staticfiles import StaticFiles
 
 from zaban import models  # noqa: F401  (registers tables before create_all)
@@ -139,7 +141,7 @@ def _page(name: str, current: str = "") -> HTMLResponse:
     # The side menu sits beside the content. It is empty and hidden until someone signs in.
     html = html.replace("</body>", f"</div></div>{footer}</body>")
     layout = '<div class="app-layout"><nav class="app-side" id="memberNav" aria-label="بخش من" hidden></nav><div class="site-main">'
-    return HTMLResponse(html.replace("<!--site-header-->", f"{header}{layout}"))
+    return HTMLResponse(prefix_html(html.replace("<!--site-header-->", f"{header}{layout}")))
 
 
 @app.get("/", include_in_schema=False)

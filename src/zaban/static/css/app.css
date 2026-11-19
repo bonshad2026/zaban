@@ -19,7 +19,7 @@
   --bad-soft: #2a2418;
   --border: #2a2a33;
   --shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
-  --page-bg: url("/static/img/page-bg-dark.svg");
+  --page-bg: url("../img/page-bg-dark.svg");
   color-scheme: dark;
 }
 /* Light theme: the same tokens on a warm paper background. Chosen from the header toggle. */
@@ -41,7 +41,7 @@
   --bad-soft: #f5ecd6;
   --border: #e3dccb;
   --shadow: 0 18px 48px rgba(60, 45, 15, 0.12);
-  --page-bg: url("/static/img/page-bg-light.svg");
+  --page-bg: url("../img/page-bg-light.svg");
   color-scheme: light;
 }
 * { box-sizing: border-box; }

@@ -1,6 +1,7 @@
 import os
 import secrets
 from dataclasses import dataclass
+from urllib.parse import urlparse
 
 
 @dataclass(frozen=True)
@@ -37,12 +38,16 @@ class Settings:
     demo_student_password: str | None
     # The public address of this site, used for the payment gateway's return address.
     public_base_url: str
+    # The path the site is served under, for example /zaban. Empty when the site is at the root of its domain.
+    base_path: str
     # Contact details shown on the contact page. Leave empty to hide them.
     contact_phone: str | None
     contact_email: str | None
 
 
 def load_settings() -> Settings:
+    # BASE_URL is the full public address, for example https://example.com/zaban. PUBLIC_BASE_URL is the older name.
+    public_base_url = (os.getenv("BASE_URL") or os.getenv("PUBLIC_BASE_URL") or "http://127.0.0.1:8000").rstrip("/")
     return Settings(
         environment=os.getenv("ENVIRONMENT", "development"),
         database_url=os.getenv("DATABASE_URL", "sqlite:///./zaban.db"),
@@ -70,7 +75,8 @@ def load_settings() -> Settings:
         admin_password=os.getenv("ADMIN_PASSWORD") or None,
         demo_student_username=os.getenv("ZABAN_DEMO_STUDENT_USERNAME") or None,
         demo_student_password=os.getenv("ZABAN_DEMO_STUDENT_PASSWORD") or None,
-        public_base_url=os.getenv("PUBLIC_BASE_URL", "http://127.0.0.1:8000").rstrip("/"),
+        public_base_url=public_base_url,
+        base_path=urlparse(public_base_url).path.rstrip("/"),
         contact_phone=os.getenv("CONTACT_PHONE") or None,
         contact_email=os.getenv("CONTACT_EMAIL") or None,
     )
