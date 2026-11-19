@@ -342,6 +342,9 @@ const Z = (() => {
 
   // Shared language switch for the public pages. Only elements with data-fa / data-en change.
   function applyLang(lang) {
+    // Bootstrap has one build for each direction. The page switches between them with the language.
+    const bootstrap = document.getElementById("bsCss");
+    if (bootstrap) bootstrap.href = lang === "en" ? bootstrap.dataset.ltr : bootstrap.dataset.rtl;
     document.documentElement.lang = lang;
     document.documentElement.dir = lang === "en" ? "ltr" : "rtl";
     document.querySelectorAll("[data-fa]").forEach((node) => {
@@ -351,8 +354,11 @@ const Z = (() => {
     document.querySelectorAll("[data-placeholder-fa]").forEach((node) => {
       node.placeholder = lang === "en" ? node.dataset.placeholderEn : node.dataset.placeholderFa;
     });
-    document.querySelectorAll("#langToggle [data-lang]").forEach((node) => {
-      node.classList.toggle("is-active", node.dataset.lang === lang);
+    // The header button shows the language in use, and the list marks it.
+    const langButton = document.getElementById("langToggle");
+    if (langButton) langButton.textContent = lang === "en" ? "EN" : "فا";
+    document.querySelectorAll(".lang-menu-list [data-lang]").forEach((node) => {
+      node.classList.toggle("active", node.dataset.lang === lang);
     });
     paintThemeToggle();
   }
@@ -389,6 +395,11 @@ const Z = (() => {
         applyTheme(next);
       });
     }
+    // The member shell shows each page in a frame. A change made in the shell reaches the frame through this event,
+    // so the page inside it follows the same theme.
+    window.addEventListener("storage", (event) => {
+      if (event.key === "zaban-theme") applyTheme(event.newValue === "light" ? "light" : "dark");
+    });
   }
 
   // Runs once per page. Pages may call it again without adding a second click handler.
@@ -399,34 +410,16 @@ const Z = (() => {
     let lang = "fa";
     try { lang = localStorage.getItem("zaban-lang") || "fa"; } catch (_) { /* storage blocked */ }
     applyLang(lang);
-    const toggle = document.getElementById("langToggle");
-    if (toggle) {
-      toggle.addEventListener("click", () => {
-        const next = document.documentElement.lang === "en" ? "fa" : "en";
+    // The header language menu: the list chooses Persian or English. Choosing one saves it and shows the page in that language.
+    document.querySelectorAll(".lang-menu-list [data-lang]").forEach((item) => {
+      item.addEventListener("click", () => {
+        const next = item.dataset.lang;
         try { localStorage.setItem("zaban-lang", next); } catch (_) { /* storage blocked */ }
         applyLang(next);
+        closeLangMenu();
         document.dispatchEvent(new Event("zaban:lang"));
       });
-    }
-  }
-
-  function byId(id) {
-    return document.getElementById(id);
-  }
-
-  // Shown when the adult has no photo: a plain silhouette.
-  const AVATAR_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="4"/><path d="M4.5 20.5c1.2-3.9 4-6 7.5-6s6.3 2.1 7.5 6"/></svg>';
-
-  function paintAvatar(node, src) {
-    node.replaceChildren();
-    if (src) {
-      const img = el("img", "avatar-img");
-      img.src = src;
-      img.alt = "";
-      node.appendChild(img);
-    } else {
-      node.insertAdjacentHTML("beforeend", AVATAR_ICON);
-    }
+    });
   }
 
   // A link or button whose words follow the language switch.
@@ -474,6 +467,8 @@ const Z = (() => {
     show(byId("accInfoOk"), false);
     try {
       const me = await request("GET", "/v1/web/user/profile");
+      // The name shows above the title, where the phone header has no room for it.
+      byId("infoPersonName").textContent = me.name;
       byId("accName").value = me.name;
       byId("accPhone").value = me.phone;
       byId("accEmail").value = me.email;
@@ -499,6 +494,25 @@ const Z = (() => {
   }
 
   // The photo shown in the personal-details form. Only a change is sent when the form is saved.
+  function byId(id) {
+    return document.getElementById(id);
+  }
+
+  // Shown when the adult has no photo: a plain silhouette.
+  const AVATAR_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="4"/><path d="M4.5 20.5c1.2-3.9 4-6 7.5-6s6.3 2.1 7.5 6"/></svg>';
+
+  function paintAvatar(node, src) {
+    node.replaceChildren();
+    if (src) {
+      const img = el("img", "avatar-img");
+      img.src = src;
+      img.alt = "";
+      node.appendChild(img);
+    } else {
+      node.insertAdjacentHTML("beforeend", AVATAR_ICON);
+    }
+  }
+
   let photoDraft = "";
   let photoChanged = false;
   function setPhoto(src) {
@@ -703,7 +717,7 @@ const Z = (() => {
   let headerWired = false;
 
   // The profile photo in the header. Its menu holds the account items and sign-out.
-  function buildAccountMenu(signedIn, avatarSrc) {
+  function buildAccountMenu(signedIn, avatarSrc, name) {
     const wrap = el("div", "account-menu");
     const avatar = el("button", "avatar-btn");
     avatar.type = "button";
@@ -713,6 +727,10 @@ const Z = (() => {
 
     const list = el("div", "account-menu-list");
     list.setAttribute("role", "menu");
+    // On a phone the name is not beside the photo, so it leads the menu instead.
+    const who = el("div", "account-menu-name d-md-none px-2 pb-2 small text-secondary");
+    who.textContent = name || "";
+    list.appendChild(who);
     const close = () => {
       list.classList.remove("is-open");
       avatar.setAttribute("aria-expanded", "false");
@@ -752,6 +770,9 @@ const Z = (() => {
     avatar.addEventListener("click", (event) => {
       event.stopPropagation();
       const open = !list.classList.contains("is-open");
+      // The menu opens from the side of the button it belongs to: a button on the left opens to the right, and the reverse.
+      const box = avatar.getBoundingClientRect();
+      list.dataset.side = box.left + box.width / 2 < window.innerWidth / 2 ? "left" : "right";
       list.classList.toggle("is-open", open);
       avatar.setAttribute("aria-expanded", String(open));
     });
@@ -794,7 +815,7 @@ const Z = (() => {
     box.replaceChildren();
     // The photo comes first and opens the account menu; the name follows it.
     const nameNode = el("span", "site-greeting", greeting);
-    const menu = buildAccountMenu(signedIn, profile.avatar);
+    const menu = buildAccountMenu(signedIn, profile.avatar, greeting);
     box.append(menu.wrap, nameNode);
     box.dataset.state = "member";
 
@@ -992,6 +1013,49 @@ const Z = (() => {
   };
 })();
 
+// The language list opens from its button, on the side of the button, like the profile menu.
+function closeLangMenu() {
+  document.querySelectorAll(".lang-menu-list.show").forEach((list) => list.classList.remove("show"));
+  const button = document.getElementById("langToggle");
+  if (button) button.setAttribute("aria-expanded", "false");
+}
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("#langToggle");
+  if (button) {
+    const list = button.parentElement.querySelector(".lang-menu-list");
+    const open = !list.classList.contains("show");
+    closeLangMenu();
+    if (open) {
+      const box = button.getBoundingClientRect();
+      list.dataset.side = box.left + box.width / 2 < window.innerWidth / 2 ? "left" : "right";
+      list.classList.add("show");
+      button.setAttribute("aria-expanded", "true");
+    }
+    return;
+  }
+  if (!event.target.closest(".lang-menu")) closeLangMenu();
+});
+
+// The phone menu: the button opens the list of items, and a tap outside it closes the list.
+document.addEventListener("click", (event) => {
+  const nav = document.getElementById("siteDrawer");
+  const toggle = document.getElementById("menuToggle");
+  if (!nav || !toggle) return;
+  if (event.target.closest("#menuToggle")) {
+    const open = !nav.classList.contains("is-open");
+    // The list opens from the side of the button: a button on the left opens to the right, and the reverse.
+    const box = toggle.getBoundingClientRect();
+    nav.dataset.side = box.left + box.width / 2 < window.innerWidth / 2 ? "left" : "right";
+    nav.classList.toggle("is-open", open);
+    toggle.setAttribute("aria-expanded", String(open));
+    return;
+  }
+  if (!event.target.closest("#siteDrawer")) {
+    nav.classList.remove("is-open");
+    toggle.setAttribute("aria-expanded", "false");
+  }
+});
+
 // Every page gets the language switch and the sign-in state of the header.
 document.addEventListener("DOMContentLoaded", () => {
   Z.initLang();
@@ -999,3 +1063,97 @@ document.addEventListener("DOMContentLoaded", () => {
   Z.initReveal();
   Z.initSiteHeader();
 });
+
+// Every drop-down list of the site is drawn by the site, with Bootstrap's own menu, so its colours follow the theme.
+// The native <select> stays in the page and keeps the value, so the scripts that read or set it do not change.
+(() => {
+  const nativeValue = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
+
+  function build(select) {
+    if (select.dataset.styled === "1" || select.multiple) return;
+    select.dataset.styled = "1";
+    select.classList.add("d-none");
+
+    const wrap = document.createElement("div");
+    wrap.className = "dropdown w-100";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "btn btn-outline-secondary w-100 d-flex justify-content-between align-items-center text-start";
+    button.setAttribute("aria-haspopup", "listbox");
+    button.setAttribute("aria-expanded", "false");
+    const label = document.createElement("span");
+    const caret = document.createElement("span");
+    caret.setAttribute("aria-hidden", "true");
+    caret.textContent = "▾";
+    button.append(label, caret);
+    const menu = document.createElement("div");
+    menu.className = "dropdown-menu w-100 select-menu";
+    menu.setAttribute("role", "listbox");
+    wrap.append(button, menu);
+    select.after(wrap);
+
+    const close = () => {
+      menu.classList.remove("show");
+      button.setAttribute("aria-expanded", "false");
+    };
+    const render = () => {
+      const chosen = select.options[select.selectedIndex];
+      label.textContent = chosen ? chosen.textContent : "";
+      button.disabled = select.disabled;
+      menu.replaceChildren(...Array.from(select.options).map((option) => {
+        const item = document.createElement("button");
+        item.type = "button";
+        item.className = "dropdown-item" + (option.selected ? " active" : "");
+        item.setAttribute("role", "option");
+        item.setAttribute("aria-selected", String(option.selected));
+        item.disabled = option.disabled;
+        item.textContent = option.textContent;
+        item.addEventListener("click", () => {
+          nativeValue.set.call(select, option.value);
+          select.dispatchEvent(new Event("change", { bubbles: true }));
+          render();
+          close();
+          button.focus();
+        });
+        return item;
+      }));
+    };
+
+    button.addEventListener("click", () => {
+      const open = !menu.classList.contains("show");
+      document.querySelectorAll(".select-menu.show").forEach((other) => other.classList.remove("show"));
+      menu.classList.toggle("show", open);
+      button.setAttribute("aria-expanded", String(open));
+    });
+    document.addEventListener("click", (event) => {
+      if (!wrap.contains(event.target)) close();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") close();
+    });
+    // Values set by the scripts, and option lists that change, are shown at once.
+    Object.defineProperty(select, "value", {
+      configurable: true,
+      get() { return nativeValue.get.call(this); },
+      set(value) { nativeValue.set.call(this, value); render(); },
+    });
+    select.addEventListener("change", render);
+    new MutationObserver(render).observe(select, { childList: true, subtree: true, attributes: true, attributeFilter: ["disabled"] });
+    render();
+  }
+
+  function buildAll(root) {
+    if (root.matches && root.matches("select")) build(root);
+    if (root.querySelectorAll) root.querySelectorAll("select").forEach(build);
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    buildAll(document);
+    // Drop-downs added later by the scripts get the same drawing.
+    new MutationObserver((records) => {
+      records.forEach((record) => record.addedNodes.forEach((node) => {
+        if (node.nodeType === 1) buildAll(node);
+      }));
+    }).observe(document.body, { childList: true, subtree: true });
+  });
+})();

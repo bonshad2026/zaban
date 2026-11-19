@@ -148,7 +148,7 @@ def _page(name: str, current: str = "") -> HTMLResponse:
         html = html.replace("<!--no-footer-->", "").replace("</body>", "</div></div></body>")
     else:
         html = html.replace("</body>", f"</div></div>{footer}</body>")
-    layout = '<div class="app-layout"><nav class="app-side" id="memberNav" aria-label="بخش من" hidden></nav><div class="site-main">'
+    layout = '<div class="app-layout"><div class="app-side-col"><nav class="app-side" id="memberNav" aria-label="بخش من" hidden></nav></div><div class="site-main">'
     return HTMLResponse(prefix_html(html.replace("<!--site-header-->", f"{header}{layout}")))
 
 

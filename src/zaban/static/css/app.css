@@ -686,7 +686,7 @@ select option:hover, select option:focus, select option:checked { background: va
 .side-sheet { display: contents; }
 .side-more-btn { display: none; }
 /* The side menu stays in view below the header while the page scrolls. Its own items scroll inside it. */
-.app-side { flex: 0 0 220px; align-self: flex-start; position: sticky; top: var(--header-h); height: calc(100vh - var(--header-h)); background: var(--card); padding: 16px 12px; border-inline-start: 0.5px solid var(--border); display: flex; flex-direction: column; gap: 4px; overflow-y: auto; scrollbar-width: thin; }
+.app-side { position: sticky; top: var(--header-h); max-height: calc(100vh - var(--header-h)); width: 100%; box-sizing: border-box; background: transparent; padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; scrollbar-width: thin; }
 .app-side[hidden] { display: none; }
 .side-group { position: relative; display: flex; flex-direction: column; gap: 4px; }
 /* Every entry is a link or a button with the same look. The global button colour does not apply here. */
@@ -917,6 +917,218 @@ dialog.account-dialog { overflow-y: auto; }
 html.shell, html.shell body { height: 100%; overflow: hidden; }
 .shell-frame { display: block; width: 100%; height: calc(100vh - var(--header-h)); border: 0; background: var(--bg); }
 /* A page inside the frame does not show its own header and side menu. */
-html.framed .site-header, html.framed .app-side, html.framed .site-drawer { display: none; }
+html.framed .site-header, html.framed .app-side, html.framed .app-side-col, html.framed .site-drawer, html.framed .site-footer { display: none; }
 @media (max-width: 760px) { .shell-frame { height: calc(100vh - 128px); } }
 @media (min-width: 761px) { html.framed #lessonBox.lesson { height: calc(100vh - 48px); } }
+
+/* ---- Side menu column: the column has the menu's colour and is as tall as the page column, so it meets the footer
+   without overlap. The menu itself sticks to the top while the page scrolls. ---- */
+.app-side-col { flex: 0 0 220px; align-self: stretch; background: var(--card); border-inline-start: 0.5px solid var(--border); min-width: 0; }
+/* The account block (profile photo, then name) sits at the start of the header line, on a computer. */
+@media (min-width: 761px) { .site-actions { order: -1; } }
+/* A small gap above the footer at the end of the page, on a computer. The member shell has its own frame, so it has none. */
+@media (min-width: 761px) {
+  .app-layout { padding-bottom: var(--side-gap, 24px); }
+  html.shell .app-layout { padding-bottom: 0; }
+}
+/* On a phone the menu is the fixed bottom bar, so the column adds no box of its own. */
+@media (max-width: 760px) {
+  .app-side-col { display: contents; }
+  .app-layout { padding-bottom: 0; }
+}
+
+/* ---- Header order (desktop and phone): profile photo, name, menu, language, logo, site name. ----
+   The bar always runs left to right, so the place of each item is the same in both languages.
+   The menu links read in the language's own direction: Persian from the right, English from the left. */
+.site-header-inner { direction: ltr; justify-content: flex-start; gap: 14px; }
+.site-header-inner > * { order: 0; }
+html[dir="rtl"] .site-nav { direction: rtl; }
+html[dir="ltr"] .site-nav { direction: ltr; }
+.site-header .site-nav { margin-inline: auto; }
+.site-brand { display: inline-flex; align-items: center; gap: 10px; margin-inline-start: 0; margin-inline-end: 0; text-decoration: none; color: var(--text); }
+.site-brand svg { height: 40px; width: auto; }
+.site-name { font-family: "Cormorant Garamond", "Vazirmatn", serif; font-size: 20px; white-space: nowrap; }
+/* Phone: the menu is a bar at the bottom of the screen (guests). Signed-in members use their own bottom bar. */
+@media (max-width: 760px) {
+  .site-header-inner { flex-wrap: nowrap; padding: 10px 12px; gap: 8px; }
+  .site-header-inner > .site-nav { display: none; }
+  .site-drawer { display: contents; }
+  .site-brand svg { height: 32px; }
+  .site-name { font-size: 17px; }
+  .site-header[data-member="true"] .site-drawer { display: none; }
+  .site-header:not([data-member="true"]) .site-nav { display: flex; position: fixed; inset: auto 0 0 0; z-index: 15; justify-content: space-around; gap: 4px; padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); margin: 0; background: var(--card); border-top: 0.5px solid var(--border); font-size: 12px; }
+  .site-header:not([data-member="true"]) .site-nav a { padding: 6px 4px; }
+  .site-main { padding-bottom: 84px; }
+}
+
+/* A visitor who is not signed in has no side menu, so its column is not drawn either. */
+.app-side-col:has(> .app-side[hidden]) { display: none; }
+
+/* ---- Member shell: the page fills the screen, and the frame takes the space left under the header and above the bottom bar.
+   The page inside the frame scrolls on its own, on a phone as well. Nothing here depends on a fixed screen height. ---- */
+html.shell body { display: flex; flex-direction: column; }
+html.shell .app-layout { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: row; }
+html.shell .site-main { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+html.shell .shell-frame { flex: 1 1 auto; min-height: 0; height: auto; }
+/* A page in the frame fills the frame's width and scrolls inside it. */
+html.framed .page-wrap { max-width: none; }
+@media (max-width: 760px) {
+  html.shell .app-layout { display: flex; flex-direction: column; }
+  html.shell .shell-frame { height: auto; }
+}
+/* The shell's own footer sits at the very end of the screen, below the frame, like the header sits at the top. */
+html.shell .site-footer { flex: none; }
+
+
+/* ---- Phone header: the profile and name stay on the left in both languages. The language, theme, logo and site name
+   sit on the right. The menu is a row directly under the bar, for every visitor, signed in or not. ---- */
+@media (max-width: 760px) {
+  .site-header-inner { flex-wrap: wrap; justify-content: flex-start; row-gap: 8px; }
+  .site-actions { margin-inline-end: auto; }
+  .site-header .site-drawer { display: contents; position: static; opacity: 1; visibility: visible; transform: none; background: none; border: 0; box-shadow: none; padding: 0; max-height: none; }
+  .site-header .site-nav { display: flex; order: 10; width: 100%; position: static; inset: auto; justify-content: space-around; gap: 4px; padding: 0 0 4px; margin: 0; background: none; border: 0; font-size: 12.5px; }
+}
+
+/* ---- Phone: the header and the shell fit the width of the screen, so nothing is cut off on the right. ---- */
+@media (max-width: 760px) {
+  .site-header-inner { gap: 6px; padding: 10px; }
+  .site-greeting { max-width: 84px; font-size: 12.5px; }
+  button.avatar-btn { width: 36px; height: 36px; }
+  .site-tools .icon-btn, .site-tools .lang-toggle { height: 30px; width: auto; }
+  .site-tools .icon-btn { width: 30px; }
+  .site-brand svg { height: 28px; }
+  .site-name { font-size: 15px; }
+  .site-brand { gap: 6px; }
+  html.shell .site-main, html.shell .shell-frame { max-width: 100%; min-width: 0; box-sizing: border-box; }
+}
+
+/* On a phone the member shell scrolls with the page, so the content is never cut off at the bottom. */
+@media (max-width: 760px) {
+  html.shell, html.shell body { height: auto; overflow: visible; }
+}
+
+/* ---- Bootstrap follows the palette of this site: the same background, text, accent and borders as before. ---- */
+:root {
+  --bs-body-bg: var(--bg);
+  --bs-body-color: var(--text);
+  --bs-primary: var(--accent);
+  --bs-link-color: var(--accent);
+  --bs-border-color: var(--border);
+  --bs-secondary-color: var(--muted);
+}
+/* The header's menu row sits below the bar on a phone and beside the controls on a computer. */
+.header-nav { min-width: 0; }
+@media (min-width: 768px) { .header-nav { width: auto !important; } }
+#themeToggle .icon-moon { display: none; }
+:root[data-theme="light"] #themeToggle .icon-sun { display: none; }
+:root[data-theme="light"] #themeToggle .icon-moon { display: inline-block; }
+
+
+/* The account block sits on the side of the sidebar's opposite: on the left in Persian (the sidebar is on the right),
+   and on the right in English (the sidebar is on the left). Its menu opens from the button toward the page. */
+/* The header runs left to right in both languages, and each language lays it out from its own side.
+   Persian (sidebar on the right): profile, menu, controls, logo and name.
+   English (sidebar on the left): logo and name, controls, menu, profile. */
+html[dir="rtl"] #siteActions { order: 0 !important; }
+html[dir="rtl"] .header-nav { order: 1 !important; }
+html[dir="rtl"] #siteTools { order: 2 !important; }
+html[dir="rtl"] .navbar-brand { order: 3 !important; }
+html[dir="ltr"] .navbar-brand { order: 0 !important; }
+html[dir="ltr"] #siteTools { order: 1 !important; }
+html[dir="ltr"] .header-nav { order: 2 !important; }
+html[dir="ltr"] #siteActions { order: 3 !important; }
+html[dir="rtl"] .account-menu-list { inset-inline-start: 0; inset-inline-end: auto; }
+html[dir="ltr"] .account-menu-list { inset-inline-end: 0; inset-inline-start: auto; }
+
+/* In English the account block is the mirror of Persian: the name comes first from the left, and the photo sits at the right edge.
+   Only the signed-in block is reversed; the sign-in buttons of a visitor keep their order. */
+html[dir="ltr"] #siteActions[data-state="member"] { flex-direction: row-reverse; }
+
+/* Header menu direction: Persian starts from the right (خانه), English from the left (Home). */
+html[dir="rtl"] .header-nav { direction: rtl; }
+html[dir="ltr"] .header-nav { direction: ltr; }
+/* Phone header: the same single row as a computer. The menu is replaced by one button, and its list opens below it. */
+#menuRow { order: 1; }
+html[dir="ltr"] #menuRow { order: 2; }
+@media (max-width: 767.98px) {
+  /* The three-line button sits right beside the profile photo, not in the middle of the row. */
+  #menuRow { position: relative; flex: 0 0 auto; }
+  html[dir="rtl"] #siteTools { margin-left: auto !important; }
+  html[dir="ltr"] #menuRow { margin-left: auto !important; }
+  .header-nav.is-open {
+    display: flex !important;
+    flex-direction: column;
+    align-items: stretch;
+    position: absolute;
+    top: calc(100% + 8px);
+    min-width: 200px;
+    z-index: 25;
+    padding: 6px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+  }
+  .header-nav.is-open[data-side="left"] { left: 0; right: auto; }
+  .header-nav.is-open[data-side="right"] { right: 0; left: auto; }
+  .header-nav.is-open .nav-link { padding: 10px 12px; border-radius: 10px; }
+}
+/* The profile menu items follow the language: right-aligned in Persian, left-aligned in English. */
+html[dir="rtl"] .account-menu-list button.account-item { text-align: right; }
+html[dir="ltr"] .account-menu-list button.account-item { text-align: left; }
+/* The profile menu opens from the side of its button and into the page: a button on the left opens to the right. */
+.account-menu-list[data-side="left"] { left: 0; right: auto; }
+.account-menu-list[data-side="right"] { right: 0; left: auto; }
+@media (max-width: 760px) {
+  .account-menu-list { position: absolute; top: calc(100% + 8px); min-width: 240px; background: var(--card); color: var(--text); }
+}
+
+/* The language switch: the two names sit inside the switch, and the one in use sits on the knob. */
+.lang-switch .form-check-input { width: 3.6em; height: 1.8em; margin: 0; float: none; cursor: pointer; }
+.lang-switch-label { position: absolute; top: 50%; transform: translateY(-50%); z-index: 1; font-size: 11px; font-weight: 700; color: var(--muted); pointer-events: none; }
+.lang-switch-label[data-lang-label="en"] { left: 0.6em; }
+.lang-switch-label[data-lang-label="fa"] { right: 0.6em; }
+.lang-switch-label.is-current { color: var(--on-accent); }
+
+
+/* Drop-down lists: the menu uses the site's colours in both themes, and its items use the accent. */
+.select-menu { --bs-dropdown-bg: var(--card); --bs-dropdown-border-color: var(--border); --bs-dropdown-link-color: var(--text); --bs-dropdown-link-hover-bg: var(--accent-soft); --bs-dropdown-link-hover-color: var(--accent); --bs-dropdown-link-active-bg: var(--accent-soft); --bs-dropdown-link-active-color: var(--accent); max-height: 280px; overflow-y: auto; }
+.select-menu .dropdown-item { text-align: start; }
+.dropdown:has(> .select-menu) > .btn-outline-secondary { color: var(--text); }
+
+/* The language switch is a plain switch: a knob, no tick, and the site's accent when it is on. */
+.lang-switch .form-check-input { background-color: var(--border); border-color: var(--border); }
+.lang-switch .form-check-input:checked { background-color: var(--accent); border-color: var(--accent); }
+.lang-switch .form-check-input:focus { box-shadow: 0 0 0 0.2rem var(--accent-soft); }
+/* Drop-down button: the site's surface and text, and the accent only as a soft background when it is open or focused. */
+.dropdown > .btn-outline-secondary { background: var(--card) !important; color: var(--text) !important; border-color: var(--border) !important; }
+.dropdown > .btn-outline-secondary:hover, .dropdown > .btn-outline-secondary:focus, .dropdown > .btn-outline-secondary[aria-expanded="true"] { background: var(--accent-soft) !important; border-color: var(--accent) !important; color: var(--text) !important; }
+/* Drop-down items: the item under the pointer or the keyboard, and the chosen item, get a soft background; the chosen one is bold. */
+.select-menu .dropdown-item:hover, .select-menu .dropdown-item:focus { background: var(--accent-soft); color: var(--text); }
+.select-menu .dropdown-item.active { background: var(--accent-soft); color: var(--text); font-weight: 700; }
+
+/* The language list opens from its button, on the side of the button, like the profile menu. */
+.lang-menu-list { min-width: 150px; z-index: 30; padding: 6px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); top: calc(100% + 8px); }
+.lang-menu-list.show { display: grid; gap: 2px; }
+.lang-menu-list[data-side="left"] { left: 0; right: auto; }
+.lang-menu-list[data-side="right"] { right: 0; left: auto; }
+.lang-menu-list .dropdown-item { text-align: start; border-radius: 10px; }
+.lang-menu-list .dropdown-item:hover, .lang-menu-list .dropdown-item:focus { background: var(--accent-soft); color: var(--text); }
+.lang-menu-list .dropdown-item.active { background: var(--accent-soft); color: var(--text); font-weight: 700; }
+
+/* The phone menu button shows three lines when the list is closed and a cross when it is open. */
+#menuToggle .icon-close { display: none; }
+#menuToggle[aria-expanded="true"] .icon-bars { display: none; }
+#menuToggle[aria-expanded="true"] .icon-close { display: inline-block; }
+
+
+/* On a computer the menu wrapper takes no box of its own, so the menu sits in the header row with the other items.
+   (Bootstrap 5.3 has no display class for this, so it is set here.) */
+@media (min-width: 768px) {
+  #menuRow { display: contents !important; }
+}
+
+/* On a phone the header has no room for the name beside the photo. The name shows in the personal details instead. */
+@media (max-width: 767.98px) {
+  .site-greeting { display: none !important; }
+}
