@@ -11,6 +11,7 @@ from zaban.services.partner_end import MAX_ATTEMPTS, SUMMARY_INSTRUCTIONS, Calls
 from zaban.services.evaluations import record_evaluation
 from zaban.services.skill_levels import apply_scored_skill
 from zaban.services.partner_levels import apply_criteria, recent_evaluations
+from zaban.services.learner_analysis import update_analysis
 from zaban.services.partner_notebook import save_notebook
 from zaban.services.partner_settings import partner_value
 
@@ -49,6 +50,7 @@ def run_test_update(db: DBSession, student: Student, test: SelfTest, now: dateti
         max_words = int(partner_value(db, "partner_memory_max_words"))
         notebook = write_notebook(calls, student, db, _event(test, criteria, changes), max_words)
         save_notebook(db, student, notebook, "self_test", now)
+        update_analysis(db, student, "test", now)
         if owner is not None:
             owner.plan_tokens_used += calls.used
         test.partner_attempts = attempts

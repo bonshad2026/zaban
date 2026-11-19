@@ -281,20 +281,19 @@ button.secondary:hover:not(:disabled) { background: var(--accent); color: var(--
   background: var(--accent);
 }
 .mic svg { width: 26px; height: 26px; fill: currentColor; }
-.mic.is-recording { background: #2563eb; color: #fff; animation: pulse-blue 1.2s infinite; }
-.chip.turn-recording { background: #2563eb; color: #fff; }
-@keyframes pulse-blue {
-  0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.55); }
-  70% { box-shadow: 0 0 0 14px rgba(37, 99, 235, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+.mic.is-recording { background: var(--accent); color: var(--on-accent); animation: pulse-accent 1.2s infinite; }
+@keyframes pulse-accent {
+  0% { box-shadow: 0 0 0 0 var(--accent-soft); }
+  70% { box-shadow: 0 0 0 14px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
 }
 .lesson-help { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 .lesson-row { border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; margin: 6px 0; }
-.lesson-row.lesson-current { border-color: #2563eb; background: var(--accent-soft); }
+.lesson-row.lesson-current { border-color: var(--accent); background: var(--accent-soft); }
 .lesson-row.lesson-upcoming { opacity: 0.6; }
 /* Live level bars shown while the microphone is listening. */
 .voice-meter { display: flex; align-items: center; justify-content: center; gap: 4px; height: 34px; margin: 6px 0; }
-.voice-meter span { display: block; width: 5px; height: 6px; border-radius: 3px; background: #2563eb; transition: height 0.06s linear; }
+.voice-meter span { display: block; width: 5px; height: 6px; border-radius: 3px; background: var(--accent); transition: height 0.06s linear; }
 @keyframes pulse {
   0% { box-shadow: 0 0 0 0 rgba(180, 35, 24, 0.45); }
   70% { box-shadow: 0 0 0 16px rgba(180, 35, 24, 0); }
@@ -394,15 +393,50 @@ dialog.account-dialog h2 { margin-bottom: 4px; }
 .report-rows { display: flex; flex-direction: column; gap: 8px; }
 .report-row { box-sizing: border-box; padding: 12px 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); }
 .report-open { margin-top: 8px; }
-.report-block { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
-.report-block > h2 { margin: 0; }
+/* The report page: each part is its own box, with its title in bold and the text around it in normal weight. */
+.report-stack { display: flex; flex-direction: column; gap: 24px; }
+.report-top { display: flex; justify-content: flex-start; }
+.report-block { display: flex; flex-direction: column; gap: 12px; }
+.report-stack > .report-block + .report-block { padding-top: 24px; border-top: 1px solid var(--border); }
+.report-block > h2 { margin: 0; font-weight: 700; color: var(--accent); }
+.report-block strong { font-weight: 400; }
+.report-dates { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.report-date, .report-size { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--muted); }
+.report-pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 10px; margin-top: 8px; }
+.report-date input { width: 150px; }
+.report-date { position: relative; }
+.report-input { position: relative; display: flex; align-items: center; }
+.report-input input { width: 150px; padding-inline-end: 38px; }
+.report-cal-btn { position: absolute; inset-inline-end: 4px; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; }
+.report-cal-btn:hover { background: var(--accent-soft); color: var(--accent-dark); }
+.report-cal-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.report-calendar { position: absolute; top: 100%; inset-inline-start: 0; z-index: 20; width: 280px; margin-top: 6px; padding: 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); box-shadow: var(--shadow); }
+.report-cal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.report-cal-nav { padding: 4px 10px; font-size: 16px; line-height: 1; }
+.report-cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; text-align: center; }
+.report-cal-week { font-size: 12px; color: var(--muted); }
+.report-cal-day { padding: 6px 0; border: 0; border-radius: 8px; background: transparent; color: var(--text); font-size: 14px; cursor: pointer; }
+.report-cal-day:hover { background: var(--accent-soft); }
+.report-cal-day[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+.report-size { margin-inline-start: auto; }
+.report-size select { width: auto; }
 .report-status-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.report-block .skill-rows { margin-top: 0; }
+.level-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.level-item { border: 1px solid var(--border); border-radius: 14px; background: var(--card); min-width: 0; }
+.level-item.level-speaking { grid-column: 1 / -1; }
+.level-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; }
+.level-row .skill-icon { width: 36px; height: 36px; border-radius: 10px; }
+.level-row .skill-icon svg { width: 20px; height: 20px; }
+.level-name { flex: 1; min-width: 0; }
+.level-sub { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; padding: 0 14px 14px; }
+.level-sub .level-row { padding: 8px 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--card-raised); }
+@media (max-width: 560px) { .level-list { grid-template-columns: minmax(0, 1fr); } }
 .evaluation { display: flex; flex-direction: column; gap: 6px; }
 .evaluation p { margin: 0; }
 .evaluation-heading { margin: 14px 0 2px; font-size: 16px; color: var(--accent-dark); }
 .evaluation-list { margin: 0; padding-inline-start: 20px; display: flex; flex-direction: column; gap: 4px; }
 .report-row-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.report-row-top strong { font-weight: 700; }
 .report-type { flex: 0 0 auto; padding: 2px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-dark); font-size: 12px; }
 .avatar-edit { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 12px; }
 .avatar-edit-actions { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -608,6 +642,10 @@ select { color-scheme: dark; }
 select:disabled { appearance: none; -webkit-appearance: none; opacity: 1; cursor: default; }
 :root[data-theme="light"] select { color-scheme: light; }
 select option, select optgroup { background: var(--card); color: var(--text); }
+/* The theme's own colours for the controls: no browser blue on focus, selection or the select box. */
+:root { accent-color: var(--accent); }
+select, select:focus, select:active { background-color: var(--card); color: var(--text); }
+::selection { background: var(--accent-soft); color: var(--accent-dark); }
 select option:hover, select option:focus, select option:checked { background: var(--accent-soft); color: var(--accent); }
 /* More space between the consent line and the submit button, and between the button and the field above */
 .form-grid .inline { margin-bottom: 8px; }
@@ -733,23 +771,24 @@ dialog.account-dialog { overflow-y: auto; }
 /* ---- Level page: one row per skill, and the test card ---- */
 /* Four boxes in one row on a wide screen, two per row on a laptop, one per row on a phone. */
 /* Two skill boxes side by side; one box per row on a phone. Each box ends with the set-level button. */
-.skill-rows { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
+.skill-rows { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+@media (max-width: 900px) { .skill-rows { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) { .skill-rows { grid-template-columns: minmax(0, 1fr); } }
 /* All skill boxes share the site's card colours and the site's accent colour for icons. */
-.skill-card { --tint: var(--card-raised); --tint-line: var(--border); --tint-icon: var(--accent); border: 1px solid var(--tint-line); border-radius: 20px; padding: 24px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 18px; min-width: 0; background: var(--tint); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04); transition: border-color 0.2s, box-shadow 0.2s; }
+.skill-card { --tint: var(--card-raised); --tint-line: var(--border); --tint-icon: var(--accent); border: 1px solid var(--tint-line); border-radius: 20px; padding: 18px; display: flex; flex-direction: column; align-items: stretch; gap: 14px; min-width: 0; background: var(--tint); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04); transition: border-color 0.2s, box-shadow 0.2s; }
 .skill-card:hover { border-color: var(--accent); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06); }
-.skill-head { display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 0; width: 100%; }
+.skill-head { display: flex; flex-direction: row; align-items: center; gap: 12px; min-width: 0; width: 100%; }
 .skill-icon { flex: 0 0 auto; width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; background: var(--card); color: var(--tint-icon); border: 1px solid var(--tint-line); }
 .skill-icon svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .skill-name { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
 .level-chip { flex: 0 0 auto; font-weight: 700; font-size: 13px; padding: 3px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-dark); }
-.skill-set { display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 0; width: 100%; }
-.skill-set select { flex: 0 1 120px; width: auto; min-width: 0; padding: 8px 10px; font-size: 14px; }
+.skill-set { display: flex; align-items: center; justify-content: flex-start; gap: 8px; min-width: 0; width: 100%; }
+.skill-set select { flex: 1 1 140px; width: auto; min-width: 0; padding: 8px 10px; font-size: 14px; }
 /* Compact buttons: the page should not stretch them to fill the space. */
 .skill-btn { padding: 9px 14px; font-size: 14px; white-space: nowrap; margin: 0; }
 .skill-set .skill-btn { flex: 0 0 auto; }
-.skill-test { width: 100%; margin-top: auto; padding: 13px 16px; font-size: 15px; font-weight: 700; }
-.skill-note { font-size: 13px; margin: auto 0 0; padding: 12px; border-radius: 12px; background: var(--card); width: 100%; }
+.skill-test { width: 100%; margin-top: 0; padding: 13px 16px; font-size: 15px; font-weight: 700; }
+.skill-note { font-size: 13px; margin: 0; padding: 12px; border-radius: 12px; background: var(--card); width: 100%; }
 .test-text { font-size: 18px; line-height: 1.8; }
 .test-options { display: grid; gap: 8px; margin: 12px 0; }
 .test-option { text-align: start; background: transparent; color: var(--text); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; cursor: pointer; }

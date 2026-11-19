@@ -22,6 +22,7 @@ from zaban.services.help_content import GENDERS, LEVELS, facet_tree, tags_by_con
 from zaban.services.self_test import answer_test, finish_test, owned_test, start_test
 from zaban.services.curriculum import covered_topic_ids, path_topics
 from zaban.models import LearnerPhrase, LessonTopic, PhraseItem, TutorSession, utcnow
+from zaban.services.learner_analysis import ensure_analysis
 from zaban.web import _student_from_cookie
 
 # Learner-facing learning aids: the help content library and the self-test ("خودت رو محک بزن").
@@ -438,6 +439,14 @@ def partner_out(db: DBSession, student: Student) -> dict:
 def my_partner_progress(zaban_student: str | None = Cookie(default=None), db: DBSession = Depends(get_db)) -> dict:
     student = _student_from_cookie(db, zaban_student)
     return partner_out(db, student)
+
+
+@router.get("/analysis")
+def my_analysis(zaban_student: str | None = Cookie(default=None), db: DBSession = Depends(get_db)) -> dict:
+    # The newest status analysis of the learner. Earlier versions are kept but not shown yet.
+    student = _student_from_cookie(db, zaban_student)
+    row = ensure_analysis(db, student)
+    return {"text": row.text if row else None, "created_at": row.created_at.isoformat() if row else None}
 
 
 @router.get("/progress")

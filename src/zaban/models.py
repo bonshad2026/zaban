@@ -647,6 +647,17 @@ class LearnerMemory(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
 
+class LearnerAnalysis(Base):
+    # The status analysis of a learner. One row per version; the newest is shown, the earlier ones are kept for a history.
+    __tablename__ = "learner_analyses"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    student_id: Mapped[str] = mapped_column(ForeignKey("students.id", ondelete="CASCADE"), index=True)
+    text: Mapped[str] = mapped_column(Text, default="")
+    event: Mapped[str] = mapped_column(String(40), default="")  # lesson, free, or test
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
 class LearnerMemoryVersion(Base):
     # Every saved version of the notebook, so the administrator can go back to an earlier one.
     __tablename__ = "learner_memory_versions"

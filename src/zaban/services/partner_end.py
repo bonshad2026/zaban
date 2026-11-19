@@ -9,6 +9,7 @@ from zaban.models import Guardian, Message, PhraseItem, SessionLogEntry, Student
 from zaban.services.ai_gateway import AIResult, complete
 from zaban.services.metering import record_usage
 from zaban.services.evaluations import record_evaluation
+from zaban.services.learner_analysis import update_analysis
 from zaban.services.partner_levels import CRITERION_COLUMNS, apply_criteria, recent_evaluations
 from zaban.services.partner_notebook import NOTEBOOK_RULES, current_notebook, notebook_problems, save_notebook
 from zaban.services.partner_output import read_json_object
@@ -114,6 +115,7 @@ def _run(db: DBSession, student: Student, session: TutorSession, messages: list[
     save_notebook(db, student, notebook, "session_end", now)
     if owner is not None:
         owner.plan_tokens_used += calls.used
+    update_analysis(db, student, "free" if session.session_kind == "free" else "lesson", now)
     session.end_status = "evaluated"
 
 

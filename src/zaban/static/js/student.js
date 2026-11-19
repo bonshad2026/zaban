@@ -208,15 +208,17 @@
     box.innerHTML = "";
     box.appendChild(Z.el("p", "muted", Z.tr("در حال بارگذاری گزارش…")));
     try {
-      const [progress, partner, items] = await Promise.all([
+      const [progress, partner, items, analysis] = await Promise.all([
         Z.request("GET", "/v1/web/student/progress"),
         Z.request("GET", "/v1/web/student/partner"),
         Z.request("GET", `/v1/students/${me.id}/reports/items`),
+        Z.request("GET", "/v1/web/student/analysis"),
       ]);
       ReportView.render($("reportBox"), {
         progress,
         partner,
         items: items.items,
+        analysis,
         // The full progress view is the progress tab, which stays as it is for now.
         onShowProgress: () => document.querySelector('.tab[data-tab="progress"]').click(),
       });
