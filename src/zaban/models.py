@@ -162,6 +162,8 @@ class Student(Base):
     level_fluency: Mapped[str] = mapped_column(String(4), default="A1")
     level_interaction: Mapped[str] = mapped_column(String(4), default="A1")
     level_coherence: Mapped[str] = mapped_column(String(4), default="A1")
+    # The writing level is its own skill, separate from the five speaking criteria.
+    level_writing: Mapped[str] = mapped_column(String(4), default="A1")
     # Tone the partner uses with the learner: formal, neutral or casual (section 5.4).
     register_pref: Mapped[str] = mapped_column(String(12), default="neutral")
     # Password login protection: after repeated wrong passwords the login is paused for a while.
@@ -654,3 +656,19 @@ class LearnerMemoryVersion(Base):
     text: Mapped[str] = mapped_column(Text, default="")
     event: Mapped[str] = mapped_column(String(40), default="")  # for example session_end or admin_edit
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class LearnerEvaluation(Base):
+    # One table for every evaluated activity: a lesson, a free talk or a self-test. The level rules and the analysis read it.
+    __tablename__ = "learner_evaluations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    student_id: Mapped[str] = mapped_column(ForeignKey("students.id", ondelete="CASCADE"), index=True)
+    source: Mapped[str] = mapped_column(String(20))  # lesson, free or self_test
+    source_id: Mapped[str] = mapped_column(String(32))
+    skill: Mapped[str] = mapped_column(String(20))  # for example speaking, listening, writing, reading, grammar, or the test's own skill
+    score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    feedback: Mapped[str] = mapped_column(Text, default="")  # the written evaluation, in Persian
+    changes: Mapped[str] = mapped_column(Text, default="{}")  # JSON: the level changes this activity made
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+

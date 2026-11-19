@@ -144,3 +144,22 @@ def test_self_test_is_private_to_its_owner(client):
     assert client.get("/v1/web/student/self-tests/not-a-test").status_code == 404
 
 
+
+
+def test_a_message_sent_after_the_time_is_kept_and_the_test_ends(client):
+    # When the time runs out, the learner's last message is saved and the evaluation is written on it.
+    from datetime import timedelta
+
+    from zaban.models import utcnow
+
+    learner_login(client)
+    test = client.post("/v1/web/student/self-tests", json={"kind": "suggested", "skill": "speaking", "minutes": 5}).json()
+    with SessionLocal() as db:
+        row = db.get(SelfTest, test["id"])
+        row.ends_at = utcnow() - timedelta(seconds=1)
+        db.commit()
+    late = client.post(f"/v1/web/student/self-tests/{test['id']}/messages", json={"content": "I like cats."})
+    assert late.status_code == 200
+    body = late.json()
+    assert body["status"] == "finished"
+    assert "I like cats." in [m["content"] for m in body["messages"]]

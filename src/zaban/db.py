@@ -44,6 +44,7 @@ ADDED_COLUMNS = [
     ("students", "level_fluency", "VARCHAR(4) NOT NULL DEFAULT 'A1'"),
     ("students", "level_interaction", "VARCHAR(4) NOT NULL DEFAULT 'A1'"),
     ("students", "level_coherence", "VARCHAR(4) NOT NULL DEFAULT 'A1'"),
+    ("students", "level_writing", "VARCHAR(4) NOT NULL DEFAULT 'A1'"),
     ("students", "register_pref", "VARCHAR(12) NOT NULL DEFAULT 'neutral'"),
     ("sessions", "eval_range", "VARCHAR(4)"),
     ("sessions", "eval_accuracy", "VARCHAR(4)"),
@@ -98,6 +99,9 @@ def add_missing_columns() -> None:
                 if (table, column) == ("guardians", "plan_token_allowance"):
                     # Adults who already paid get a standard allowance, so their plan stays usable until its date.
                     conn.execute(text("UPDATE guardians SET plan_token_allowance = 1000000 WHERE plan_expires_at IS NOT NULL"))
+        if ("students", "level_writing") in added:
+            # Writing was part of the old speaking-and-writing level. Learners start with that level, once.
+            conn.execute(text("UPDATE students SET level_writing = level_speaking_writing"))
         if ("students", SPEAKING_CRITERIA[0]) in added:
             # Learners who existed before the partner had their speaking level copied into the five criteria, once.
             conn.execute(

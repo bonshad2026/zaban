@@ -839,3 +839,6 @@ dialog.account-dialog { overflow-y: auto; }
 .plan-alert[hidden] { display: none; }
 .plan-alert p { margin: 0; font-weight: 600; }
 .plan-alert a.pill { justify-self: start; }
+
+/* The self-test evaluation keeps its headings and bullet lines. */
+#testResult { white-space: pre-line; }

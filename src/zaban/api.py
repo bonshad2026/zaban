@@ -1,3 +1,4 @@
+import logging
 from datetime import timedelta
 
 from pydantic import BaseModel, Field
@@ -46,6 +47,9 @@ PLAN_USED_NOTICE = "توکن‌های پلن شما تمام شده و این ک
 router = APIRouter()
 
 GUARD_REPLY = "Let's keep our lesson on English. Can you say that in a different way?"
+# Shown when the model sends no text at all (for example, it ran out of room). The learner can send again.
+EMPTY_REPLY_NOTICE = "معلم این بار پاسخی نفرستاد. لطفاً جمله‌ات را دوباره بفرست."
+logger = logging.getLogger(__name__)
 
 
 def _require_student_plan(db: DBSession, student: Student) -> None:
@@ -476,7 +480,8 @@ def send_message(
         db.commit()
         return {"reply": GUARD_REPLY, "block": block, "guarded": reason, "mode": None, "seconds_left": None}
 
-    history = [{"role": m.role, "content": m.content} for m in session.messages]
+    # Blank messages from earlier turns are left out: an empty text is not a valid message for the model.
+    history = [{"role": m.role, "content": m.content} for m in session.messages if m.content.strip()]
     history.append({"role": "user", "content": text})
     # The partner answers in JSON. Only a valid answer is shown as a reply and written to the learner's record.
     # Free conversation has no time and no rhythm. A lesson uses the part of its rhythm that is running now.
@@ -493,6 +498,17 @@ def send_message(
         earlier = parse_output(last.content) if last is not None else None
         previous_target = earlier.target if earlier is not None and earlier.valid else None
     reply = tutor_reply(partner_prompt, history)
+    if not reply.text.strip():
+        logger.warning("Partner reply was empty (stop reason: %s, session %s)", reply.stop_reason, session.id)
+        db.add(Message(session_id=session.id, role="user", content=text))
+        record_usage(db, auth.tenant, session.id, reply.input_tokens, reply.output_tokens)
+        db.commit()
+        return {
+            "reply": EMPTY_REPLY_NOTICE, "block": block, "guarded": None, "mode": reply.mode,
+            "seconds_left": max(0, int((session.ends_at - now).total_seconds())), "closed": False, "notice": None,
+            "partner": {"valid": False, "feedback": None, "new_phrase": None, "next_action": "continue"},
+            "shadowing": None, "warnings": [], "rhythm": _rhythm_out(rhythm) if rhythm else None,
+        }
     turn = parse_output(reply.text)
     if turn.valid:
         apply_turn(db, student, session.id, turn, text, now)

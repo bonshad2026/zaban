@@ -63,6 +63,9 @@ def answer_test(db: DBSession, student: Student, test: SelfTest, content: str) -
     if test.status != "active":
         raise HTTPException(status_code=409, detail="This test is finished")
     if _is_expired(test):
+        # The time ran out before this message. It is still kept, so the evaluation can use it and the learner can see it.
+        db.add(SelfTestMessage(test_id=test.id, role="user", content=content.strip()))
+        db.commit()
         finish_test(db, student, test)
         return test
     db.add(SelfTestMessage(test_id=test.id, role="user", content=content.strip()))
@@ -95,7 +98,11 @@ def finish_test(db: DBSession, student: Student, test: SelfTest) -> SelfTest:
         {
             "role": "user",
             "content": (
-                "The test is over. Write a short evaluation: strengths, weak points, and next steps. "
+                "The test is over. Write the evaluation in Persian (Farsi), with exactly these headings:\n"
+                "نقاط قوت:\n(bullet points)\n"
+                "نقاط ضعف:\n(bullet points)\n"
+                "گام‌های بعدی برای پیشرفت:\n(bullet points; then one example sentence in English for the learner to practise, "
+                "written as: مثال: <English sentence>, and its translation written as: ترجمه: <Persian translation>)\n"
                 "Then add one last line exactly in this form: SCORE: <a whole number from 0 to 100>, "
                 "judging the answers for the learner's level."
             ),

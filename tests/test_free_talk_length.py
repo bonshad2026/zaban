@@ -33,3 +33,24 @@ def test_free_talk_only_accepts_the_lesson_lengths(client):
     for minutes in (4, 61, 70):
         response = client.post(f"/v1/students/{student_id}/free-conversation", json={"duration_minutes": minutes}, headers=DEMO)
         assert response.status_code == 422, response.text
+
+
+def test_an_empty_model_reply_gives_a_notice_and_no_blank_message(client, monkeypatch):
+    # The model can send no text. The learner gets a short notice, and no blank message is stored or sent back later.
+    from zaban.api import EMPTY_REPLY_NOTICE
+    from zaban.models import Message
+    from zaban.services.ai import TutorReply
+
+    student_id = _with_plan(client)
+    session_id = client.post(f"/v1/students/{student_id}/free-conversation", headers=DEMO).json()["id"]
+    monkeypatch.setattr(
+        "zaban.api.tutor_reply",
+        lambda prompt, messages: TutorReply(text="", input_tokens=5, output_tokens=0, mode="live", stop_reason="max_tokens"),
+    )
+    answer = client.post(f"/v1/sessions/{session_id}/messages", json={"content": "I like football very much"}, headers=DEMO)
+    assert answer.status_code == 200, answer.text
+    assert answer.json()["reply"] == EMPTY_REPLY_NOTICE
+    with SessionLocal() as db:
+        stored = [m.content for m in db.query(Message).filter(Message.session_id == session_id)]
+    assert "" not in stored
+    assert "I like football very much" in stored

@@ -24,6 +24,7 @@ class AIResult:
     input_tokens: int
     output_tokens: int
     mode: str  # "live" when the model answered, "offline" when no key or model is configured
+    stop_reason: str | None = None  # why the model stopped, for example "max_tokens" when the reply was cut off
 
 
 @dataclass(frozen=True)
@@ -77,6 +78,7 @@ def complete(system_prompt: str, messages: list[dict], max_tokens: int = 300) ->
         input_tokens=response.usage.input_tokens,
         output_tokens=response.usage.output_tokens,
         mode="live",
+        stop_reason=response.stop_reason,
     )
 
 
@@ -141,6 +143,7 @@ def _openai_complete(config: AIConfig, system_prompt: str, messages: list[dict],
         input_tokens=data["usage"]["prompt_tokens"],
         output_tokens=data["usage"]["completion_tokens"],
         mode="live",
+        stop_reason=data["choices"][0].get("finish_reason"),
     )
 
 

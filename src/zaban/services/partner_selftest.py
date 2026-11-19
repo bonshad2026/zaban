@@ -1,17 +1,21 @@
 # The conversation partner's part of «خودت رو محک بزن» (docs/conversation-partner.md, sections 4.14, 14.3 and 14.6).
 # Every finished test updates the notebook. Speaking and mixed tests also give the five criteria, which take part in the level rule.
 # The report and score stay as they are; what is written here is all-or-nothing, like a lesson.
+import logging
 from datetime import datetime
 
 from sqlalchemy.orm import Session as DBSession
 
 from zaban.models import Guardian, SelfTest, Student, Tenant, utcnow
 from zaban.services.partner_end import MAX_ATTEMPTS, SUMMARY_INSTRUCTIONS, Calls, read_summary, transcript, write_notebook
+from zaban.services.evaluations import record_evaluation
+from zaban.services.skill_levels import apply_scored_skill
 from zaban.services.partner_levels import apply_criteria, recent_evaluations
 from zaban.services.partner_notebook import save_notebook
 from zaban.services.partner_settings import partner_value
 
 CRITERIA_SKILLS = ("speaking", "mixed")
+logger = logging.getLogger(__name__)
 
 
 def _event(test: SelfTest, criteria: dict | None, changes: dict) -> str:
@@ -39,6 +43,9 @@ def run_test_update(db: DBSession, student: Student, test: SelfTest, now: dateti
             window = max(int(partner_value(db, "partner_level_up_sessions")), int(partner_value(db, "partner_level_down_sessions")))
             history = recent_evaluations(db, student.id, test.id, window)
             changes = apply_criteria(db, student, test, criteria, history)
+        # Listening and writing tests move their own skill level by the score (stage 2).
+        changes = {**changes, **apply_scored_skill(db, student, test.skill, test.score, test.id)}
+        record_evaluation(db, student.id, "self_test", test.id, test.skill, test.result, test.score, changes)
         max_words = int(partner_value(db, "partner_memory_max_words"))
         notebook = write_notebook(calls, student, db, _event(test, criteria, changes), max_words)
         save_notebook(db, student, notebook, "self_test", now)
@@ -48,6 +55,7 @@ def run_test_update(db: DBSession, student: Student, test: SelfTest, now: dateti
         test.partner_status = "evaluated"
         db.commit()
     except Exception:
+        logger.exception("Self-test evaluation failed (test %s)", test.id)
         db.rollback()
         test.partner_attempts = attempts
         test.partner_status = "pending" if attempts < MAX_ATTEMPTS else "no_evaluation"

@@ -20,7 +20,7 @@ from zaban.services.curriculum import band_code
 from zaban.services.help_content import GENDERS, LEVELS, facet_tree, tags_by_content
 from zaban.services.self_test import answer_test, finish_test, owned_test, start_test
 from zaban.services.curriculum import covered_topic_ids, path_topics
-from zaban.models import LearnerPhrase, LessonTopic, PhraseItem, TutorSession
+from zaban.models import LearnerPhrase, LessonTopic, PhraseItem, TutorSession, utcnow
 from zaban.web import _student_from_cookie
 
 # Learner-facing learning aids: the help content library and the self-test ("خودت رو محک بزن").
@@ -152,6 +152,8 @@ def _test_out(test: SelfTest, db: DBSession) -> dict:
         "ends_at": test.ends_at.isoformat(),
         "score": test.score,
         "result": test.result,
+        # Seconds left for a running test, so the page can count down and close it when the time is up.
+        "seconds_left": max(0, int((test.ends_at - utcnow()).total_seconds())) if test.status == "active" else 0,
         "messages": [{"role": m.role, "content": m.content} for m in messages],
     }
 

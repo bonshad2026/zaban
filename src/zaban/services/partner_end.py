@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session as DBSession
 from zaban.models import Guardian, Message, PhraseItem, SessionLogEntry, Student, Tenant, TutorSession, utcnow
 from zaban.services.ai_gateway import AIResult, complete
 from zaban.services.metering import record_usage
+from zaban.services.evaluations import record_evaluation
 from zaban.services.partner_levels import CRITERION_COLUMNS, apply_criteria, recent_evaluations
 from zaban.services.partner_notebook import NOTEBOOK_RULES, current_notebook, notebook_problems, save_notebook
 from zaban.services.partner_output import read_json_object
@@ -104,6 +105,9 @@ def _run(db: DBSession, student: Student, session: TutorSession, messages: list[
     history = recent_evaluations(db, student.id, session.id, window)
     changes = apply_criteria(db, student, session, summary["criteria"], history)
     session.evaluation = summary["summary"]
+    # Every lesson and free talk is kept in the one evaluation table. Its skill is speaking, measured by the five criteria.
+    record_evaluation(db, student.id, "free" if session.session_kind == "free" else "lesson", session.id, "speaking",
+                      summary["summary"], None, changes)
     max_words = int(partner_value(db, "partner_memory_max_words"))
     learner_turns = sum(1 for m in messages if m.role == "user")
     notebook = write_notebook(calls, student, db, _event_text(db, session, learner_turns, summary, changes), max_words)

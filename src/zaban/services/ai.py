@@ -10,6 +10,7 @@ class TutorReply:
     input_tokens: int
     output_tokens: int
     mode: str  # "live" when Claude answered, "offline" when no API key is configured
+    stop_reason: str | None = None
 
 
 def estimate_cost(input_tokens: int, output_tokens: int, prices: tuple[float, float] | None = None) -> float:
@@ -19,10 +20,12 @@ def estimate_cost(input_tokens: int, output_tokens: int, prices: tuple[float, fl
 
 
 def tutor_reply(system_prompt: str, messages: list[dict]) -> TutorReply:
-    result = complete(system_prompt, messages, max_tokens=300)
+    # The partner answers in one JSON object (reply, feedback, new phrase, next action). 300 tokens cut long answers short.
+    result = complete(system_prompt, messages, max_tokens=1200)
     return TutorReply(
         text=result.text,
         input_tokens=result.input_tokens,
         output_tokens=result.output_tokens,
         mode=result.mode,
+        stop_reason=result.stop_reason,
     )

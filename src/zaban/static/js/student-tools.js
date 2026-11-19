@@ -412,6 +412,136 @@
   function showTestRun(on) {
     Z.show($("testSetup"), !on);
     Z.show($("testRun"), on);
+    if (!on) {
+      stopTestClock();
+      stopTestMic();
+      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+    }
+  }
+
+  // Dictation for a self-test answer: the spoken words go into the answer box. Only the send button sends the answer.
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let testRecognizer = null;
+  let testTyped = "";
+
+  // The microphone is blue while it records, the same as in the lesson.
+  function setTestMicOn(on) {
+    $("testMicBtn").setAttribute("aria-pressed", String(on));
+    $("testMicBtn").classList.toggle("is-recording", on);
+  }
+
+  function stopTestMic() {
+    if (testRecognizer) testRecognizer.stop();
+  }
+
+  // The teacher's reply is spoken aloud, in the same accent voice as the lesson.
+  function speakReply(text) {
+    if (!("speechSynthesis" in window) || !text) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = Accents.current;
+    utterance.rate = 0.95;
+    const voice = Accents.voiceFor(Accents.current);
+    if (voice) utterance.voice = voice;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  // Speaks the newest reply of the teacher (the messages that are not the learner's).
+  function speakLatestReply(test) {
+    const reply = [...test.messages].reverse().find((m) => m.role !== "user");
+    if (reply) speakReply(reply.content);
+  }
+
+  // The clock of a running test. When the time is up, the test is closed and its evaluation is written.
+  let testClockTimer = null;
+  let testEndsAt = 0;
+
+  function stopTestClock() {
+    clearInterval(testClockTimer);
+    testClockTimer = null;
+  }
+
+  function startTestClock(secondsLeft) {
+    stopTestClock();
+    testEndsAt = Date.now() + secondsLeft * 1000;
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((testEndsAt - Date.now()) / 1000));
+      const minutes = String(Math.floor(left / 60)).padStart(2, "0");
+      const seconds = String(left % 60).padStart(2, "0");
+      $("testClock").textContent = Z.pick(`زمان باقی‌مانده: ${minutes}:${seconds}`, `Time left: ${minutes}:${seconds}`);
+      if (left === 0) {
+        stopTestClock();
+        closeTestForTime();
+      }
+    };
+    $("testClock").hidden = false;
+    tick();
+    if (testEndsAt > Date.now()) testClockTimer = setInterval(tick, 1000);
+  }
+
+  // The time is up: the learner sees a notice next to the answer box, the test is closed, and its evaluation is shown.
+  async function closeTestForTime() {
+    const id = testId;
+    if (!id) return;
+    stopTestMic();
+    $("testClock").hidden = true;
+    Z.show(document.querySelector("#testRun .composer"), false);
+    $("testTimeUp").textContent = Z.pick(
+      "زمان آزمون به پایان رسید و آزمون بسته شد. ارزیابی شما در حال نوشتن است.",
+      "The test time is over and the test is closed. Your evaluation is being written.",
+    );
+    Z.show($("testTimeUp"), true);
+    $("testTimeUp").scrollIntoView({ behavior: "smooth", block: "center" });
+    try {
+      const test = await Z.request("POST", `/v1/web/student/self-tests/${id}/finish`);
+      renderTest(test);
+      $("testTimeUp").textContent = Z.pick(
+        "زمان آزمون به پایان رسید و آزمون بسته شد. ارزیابی شما پایین صفحه است.",
+        "The test time is over and the test is closed. Your evaluation is below.",
+      );
+      $("testResult").scrollIntoView({ behavior: "smooth", block: "center" });
+    } catch (err) {
+      Z.showError($("testError"), err.message);
+    }
+  }
+
+  function toggleTestMic() {
+    if (testRecognizer) {
+      stopTestMic();
+      return;
+    }
+    Z.showError($("testError"), "");
+    if (!SpeechRec) {
+      Z.showError($("testError"), Z.tr("این مرورگر میکروفون را برای تبدیل گفتار به متن پشتیبانی نمی‌کند."));
+      return;
+    }
+    // The teacher stops talking when the learner starts to speak.
+    if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+    const rec = new SpeechRec();
+    rec.lang = "en-US";
+    rec.continuous = true;
+    rec.interimResults = true;
+    testTyped = $("testInput").value.trimEnd();
+    rec.onresult = (event) => {
+      const spoken = Array.from(event.results).map((r) => r[0].transcript).join(" ").trim();
+      $("testInput").value = `${testTyped ? `${testTyped} ` : ""}${spoken}`.trimStart();
+    };
+    rec.onerror = (event) => {
+      if (event.error === "not-allowed") Z.showError($("testError"), Z.tr("مرورگر اجازه‌ی استفاده از میکروفون را نداده است."));
+      else if (event.error !== "aborted" && event.error !== "no-speech") Z.showError($("testError"), Z.tr("میکروفون در دسترس نیست. می‌توانی تایپ کنی."));
+    };
+    rec.onend = () => {
+      testRecognizer = null;
+      setTestMicOn(false);
+    };
+    testRecognizer = rec;
+    setTestMicOn(true);
+    try {
+      rec.start();
+    } catch (_) {
+      testRecognizer = null;
+      setTestMicOn(false);
+    }
   }
 
   function renderTest(test) {
@@ -426,6 +556,13 @@
     $("testFinish").hidden = finished;
     Z.show($("testResult"), finished);
     if (finished) $("testResult").textContent = test.result || "";
+    // A running test counts down from the time the server still gives it. A finished one has no clock.
+    if (finished) {
+      stopTestClock();
+      $("testClock").hidden = true;
+    } else {
+      startTestClock(test.seconds_left);
+    }
     $("testChat").scrollTop = $("testChat").scrollHeight;
   }
 
@@ -462,6 +599,7 @@
   // Opens an earlier test with its whole conversation and its evaluation. A running test can be continued.
   async function openTest(id) {
     Z.showError($("testError"), "");
+    Z.show($("testTimeUp"), false);
     try {
       const test = await Z.request("GET", `/v1/web/student/self-tests/${id}`);
       renderTest(test);
@@ -473,24 +611,28 @@
   async function startTest() {
     Z.showError($("testError"), "");
     try {
+      Z.show($("testTimeUp"), false);
       const test = await Z.request("POST", "/v1/web/student/self-tests", {
         kind: $("testKind").value,
         skill: $("testSkill").value,
         minutes: Number($("testMinutes").value),
       });
       renderTest({ ...test, minutes: $("testMinutes").value });
+      speakLatestReply(test);
     } catch (err) {
       Z.showError($("testError"), err.message);
     }
   }
 
   async function sendAnswer() {
+    stopTestMic();
     const text = $("testInput").value.trim();
     if (!text || !testId) return;
     $("testInput").value = "";
     try {
       const test = await Z.request("POST", `/v1/web/student/self-tests/${testId}/messages`, { content: text });
       renderTest(test);
+      speakLatestReply(test);
     } catch (err) {
       Z.showError($("testError"), err.message);
     }
@@ -550,6 +692,7 @@
     });
     $("testStart").addEventListener("click", startTest);
     $("testSend").addEventListener("click", sendAnswer);
+    $("testMicBtn").addEventListener("click", toggleTestMic);
     $("testFinish").addEventListener("click", finishTest);
     $("testBack").addEventListener("click", () => {
       showTestRun(false);
