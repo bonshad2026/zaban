@@ -163,17 +163,44 @@
   function showSetup(kind) {
     Z.show($("setupBox"), kind === "lesson");
     Z.show($("freeSetupBox"), kind === "free");
+    if (kind === "free") loadTopicSuggestion();
     Z.show($("lessonBox"), kind === "running");
   }
 
   // Free conversation (section 4.1): the same chat, without a rhythm. The length is the one chosen in the list;
   // "no time limit" (0) sends no length, so the talk ends when the learner ends it.
+  // The partner's suggested topic. It fills the field when the field is empty, or when the learner asks for another one.
+  async function loadTopicSuggestion(force) {
+    if (!force && $("freeTopic").value.trim()) return;
+    try {
+      const data = await Z.request("GET", "/v1/web/student/free-topic");
+      $("freeTopic").value = data.suggestion;
+    } catch (_) { /* the field stays empty; the learner can type a topic */ }
+  }
+
+  // The learner says the topic. The browser's speech recognition fills the field with what was heard.
+  function speakTopic() {
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRec) return;
+    const rec = new SpeechRec();
+    rec.lang = Accents.current;
+    rec.interimResults = false;
+    rec.onresult = (event) => {
+      $("freeTopic").value = event.results[0][0].transcript.trim();
+    };
+    rec.start();
+  }
+
   async function startFree() {
     Z.showError($("freeStartError"), "");
     const minutes = Number($("freeMinutes").value);
+    const topic = $("freeTopic").value.trim();
+    const body = {};
+    if (minutes) body.duration_minutes = minutes;
+    if (topic) body.topic = topic;
     $("freeStartBtn").disabled = true;
     try {
-      const session = await Z.request("POST", `/v1/students/${me.id}/free-conversation`, minutes ? { duration_minutes: minutes } : undefined);
+      const session = await Z.request("POST", `/v1/students/${me.id}/free-conversation`, Object.keys(body).length ? body : undefined);
       lastKind = "free";
       showSetup("running");
       Lesson.start(session);
@@ -254,6 +281,10 @@
     Lesson.init({ onEnded: () => { showSetup(lastKind); } });
     $("startBtn").addEventListener("click", startLesson);
     $("freeStartBtn").addEventListener("click", startFree);
+    $("freeTopicNew").addEventListener("click", () => loadTopicSuggestion(true));
+    $("freeTopicVoice").addEventListener("click", speakTopic);
+    $("freeTopicVoice").hidden = !(window.SpeechRecognition || window.webkitSpeechRecognition);
+    $("freeTopic").placeholder = Z.pick("موضوعی که دوست داری درباره‌اش حرف بزنی", "The subject you want to talk about");
     document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => selectTab(tab.dataset.tab)));
 
     try {

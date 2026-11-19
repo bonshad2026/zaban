@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>آموزش من | گفتاریار</title>
-  <link rel="stylesheet" href="/static/css/app.css?v=4">
+  <link rel="stylesheet" href="/static/css/app.css?v=5">
 </head>
 <body>
   <!--site-header-->
@@ -47,6 +47,13 @@
         <div class="card" id="freeSetupBox" hidden>
           <h2 data-fa="گفتگوی آزاد" data-en="Free talk">گفتگوی آزاد</h2>
           <p class="muted" data-fa="بدون درس و بدون مرحله، با معلمت هر موضوعی را که دوست داری حرف بزن. مدت گفتگو را انتخاب کن و شروع کن." data-en="No lesson and no steps. Talk with your teacher about anything you like. Choose the length and start.">بدون درس و بدون مرحله، با معلمت هر موضوعی را که دوست داری حرف بزن. مدت گفتگو را انتخاب کن و شروع کن.</p>
+          <label for="freeTopic" data-fa="موضوع گفتگو" data-en="Topic">موضوع گفتگو</label>
+          <div class="topic-row">
+            <input id="freeTopic" type="text" maxlength="200">
+            <button id="freeTopicVoice" class="ghost" type="button" data-fa="با صدا" data-en="By voice">با صدا</button>
+            <button id="freeTopicNew" class="ghost" type="button" data-fa="پیشنهاد دیگر" data-en="Another suggestion">پیشنهاد دیگر</button>
+          </div>
+          <p class="muted" data-fa="موضوع پیشنهادی ما با گفتگوهای قبلی‌ات فرق دارد. می‌توانی موضوع خودت را بنویسی یا با صدا بگویی." data-en="Our suggestion is different from your earlier talks. You can type your own subject or say it.">موضوع پیشنهادی ما با گفتگوهای قبلی‌ات فرق دارد. می‌توانی موضوع خودت را بنویسی یا با صدا بگویی.</p>
           <label for="freeMinutes" data-fa="مدت گفتگو" data-en="Length">مدت گفتگو</label>
           <select id="freeMinutes">
             <option value="15" selected data-fa="۱۵ دقیقه" data-en="15 minutes">۱۵ دقیقه</option>
@@ -238,12 +245,12 @@
     </main>
   </div>
 
-  <script src="/static/js/common.js?v=4"></script>
-  <script src="/static/js/student-i18n.js?v=4"></script>
-  <script src="/static/js/accents.js?v=4"></script>
-  <script src="/static/js/lesson.js?v=4"></script>
-  <script src="/static/js/report-view.js?v=4"></script>
-  <script src="/static/js/student.js?v=4"></script>
-  <script src="/static/js/student-tools.js?v=4"></script>
+  <script src="/static/js/common.js?v=5"></script>
+  <script src="/static/js/student-i18n.js?v=5"></script>
+  <script src="/static/js/accents.js?v=5"></script>
+  <script src="/static/js/lesson.js?v=5"></script>
+  <script src="/static/js/report-view.js?v=5"></script>
+  <script src="/static/js/student.js?v=5"></script>
+  <script src="/static/js/student-tools.js?v=5"></script>
 </body>
 </html>

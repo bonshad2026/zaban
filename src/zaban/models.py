@@ -262,6 +262,8 @@ class TutorSession(Base):
     end_status: Mapped[str] = mapped_column(String(20), default="active")
     # lesson (has a rhythm and the curriculum moves on) or free conversation (section 4.1).
     session_kind: Mapped[str] = mapped_column(String(20), default="lesson")
+    # The topic of a free talk: the learner's own, or the one the partner suggested.
+    topic: Mapped[str | None] = mapped_column(String(200), nullable=True)
     # Which routine ran this lesson: old (the evaluation text and score) or new (the conversation partner, section 15.5).
     engine: Mapped[str] = mapped_column(String(10), default="old")
     # How many times the end routine has tried this session. After the last try it becomes no_evaluation.

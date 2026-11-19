@@ -892,3 +892,5 @@ dialog.account-dialog { overflow-y: auto; }
 
 /* The self-test evaluation keeps its headings and bullet lines. */
 #testResult { white-space: pre-line; }
+.topic-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.topic-row input { flex: 1 1 220px; min-width: 0; }

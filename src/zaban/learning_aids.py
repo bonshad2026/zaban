@@ -22,6 +22,7 @@ from zaban.services.help_content import GENDERS, LEVELS, facet_tree, tags_by_con
 from zaban.services.self_test import answer_test, finish_test, owned_test, start_test
 from zaban.services.curriculum import covered_topic_ids, path_topics
 from zaban.models import LearnerPhrase, LessonTopic, PhraseItem, TutorSession, utcnow
+from zaban.services.free_topics import suggest_topic
 from zaban.services.learner_analysis import ensure_analysis
 from zaban.web import _student_from_cookie
 
@@ -456,6 +457,12 @@ def partner_out(db: DBSession, student: Student) -> dict:
 def my_partner_progress(zaban_student: str | None = Cookie(default=None), db: DBSession = Depends(get_db)) -> dict:
     student = _student_from_cookie(db, zaban_student)
     return partner_out(db, student)
+
+
+@router.get("/free-topic")
+def free_topic_suggestion(zaban_student: str | None = Cookie(default=None), db: DBSession = Depends(get_db)) -> dict:
+    student = _student_from_cookie(db, zaban_student)
+    return {"suggestion": suggest_topic(db, student)}
 
 
 @router.get("/analysis")

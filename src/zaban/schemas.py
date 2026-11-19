@@ -46,6 +46,8 @@ class PlanCreate(BaseModel):
 class FreeConversationCreate(BaseModel):
     # The learner chooses how long the free talk lasts. None means no time limit: it ends when the learner ends it.
     duration_minutes: LessonMinutes | None = None
+    # The topic the learner typed or said. Empty means the partner's suggestion is used.
+    topic: str | None = Field(default=None, max_length=200)
 
 
 class SessionCreate(BaseModel):

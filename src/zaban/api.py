@@ -28,6 +28,7 @@ from zaban.services.partner_prompt import build_prompt, mode_part, sentence_seco
 from zaban.services.partner_rhythm import move as move_rhythm, segment_state, set_rhythm, start_rhythm
 from zaban.services.partner_turns import apply_turn
 from zaban.services.partner_budget import reserve_reached, warnings as budget_warnings
+from zaban.services.free_topics import suggest_topic
 from zaban.services.partner_end import finish_partner_session, retry_pending
 from zaban.models import LearnerDetails, PhraseItem, SessionLogEntry
 from zaban.services.learner_details import save_details
@@ -110,9 +111,16 @@ def _plan_out(plan: Plan) -> dict:
     }
 
 
+def _seconds_left(session: TutorSession, now) -> int | None:
+    # A free talk with no time limit has no countdown: its end time is only a placeholder.
+    if session.session_kind == "free" and not session.duration_minutes:
+        return None
+    return max(0, int((session.ends_at - now).total_seconds()))
+
+
 def _session_out(session: TutorSession, now) -> dict:
     is_active = session.status == "active"
-    seconds_left = max(0, int((session.ends_at - now).total_seconds())) if is_active else 0
+    seconds_left = _seconds_left(session, now) if is_active else 0
     return {
         "id": session.id,
         "status": session.status,
@@ -491,7 +499,7 @@ def send_message(
         db.commit()
         return {
             "reply": EMPTY_REPLY_NOTICE, "block": block, "guarded": None, "mode": reply.mode,
-            "seconds_left": max(0, int((session.ends_at - now).total_seconds())), "closed": False, "notice": None,
+            "seconds_left": _seconds_left(session, now), "closed": False, "notice": None,
             "partner": {"valid": False, "feedback": None, "new_phrase": None, "next_action": "continue"},
             "shadowing": None, "warnings": [], "rhythm": _rhythm_out(rhythm) if rhythm else None,
         }
@@ -521,7 +529,7 @@ def send_message(
     if closed and partner_lesson:
         # The end routine runs now, with the tokens kept back for it (section 13.7).
         finish_partner_session(db, session)
-    seconds_left = max(0, int((session.ends_at - now).total_seconds()))
+    seconds_left = _seconds_left(session, now)
     return {
         "reply": shown,
         "block": block,
@@ -583,6 +591,7 @@ def start_free_conversation(
         finish_if_due(old, now)
         if old.status == "active":
             raise HTTPException(status_code=409, detail="A lesson is already running")
+    topic = ((body.topic or "").strip() if body else "") or suggest_topic(db, student)
     plan = _active_plan(db, student)
     session = TutorSession(
         student_id=student.id,
@@ -592,11 +601,13 @@ def start_free_conversation(
         ends_at=now + timedelta(minutes=minutes) if minutes else now + timedelta(hours=24),
         session_kind="free",
         engine="new",
+        topic=topic,
     )
     db.add(session)
     db.commit()
     db.refresh(session)
     session.start_prompt = build_prompt(db, student, free_minutes=minutes)
+    session.start_prompt += f"\n\nThe topic of this free talk is: {topic}. Start from it. If the learner wants another subject, follow them."
     db.commit()
     return _session_out(session, now)
 
