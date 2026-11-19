@@ -376,6 +376,8 @@ ul.plain { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
 .pill:hover { border-color: var(--accent); color: var(--text); }
 .pill.gold { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
 .pill.gold:hover { background: var(--accent-dark); color: var(--on-accent); }
+/* Until the visitor is known, the header actions stay hidden, so the sign-in buttons do not flash on a member page. */
+.site-actions[data-state="loading"] { visibility: hidden; }
 .site-greeting { color: var(--muted); font-size: 13.5px; white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
 /* Profile photo in the header and the menu that opens from it */
 .account-menu { position: relative; }
@@ -905,3 +907,8 @@ dialog.account-dialog { overflow-y: auto; }
 #testResult { white-space: pre-line; }
 .topic-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .topic-row input { flex: 1 1 220px; min-width: 0; }
+.topic-field { position: relative; flex: 1 1 220px; min-width: 0; display: flex; }
+.topic-field input { width: 100%; padding-inline-end: 42px; }
+.topic-mic { position: absolute; inset-inline-end: 4px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; }
+.topic-mic:hover { background: var(--accent-soft); color: var(--accent-dark); }
+.topic-mic svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }

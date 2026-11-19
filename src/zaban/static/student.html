@@ -46,11 +46,15 @@
         <!-- Free talk: the learner sets the length and starts it. Nothing starts before this button is pressed. -->
         <div class="card" id="freeSetupBox" hidden>
           <h2 data-fa="گفتگوی آزاد" data-en="Free talk">گفتگوی آزاد</h2>
-          <p class="muted" data-fa="بدون درس و بدون مرحله، با معلمت هر موضوعی را که دوست داری حرف بزن. مدت گفتگو را انتخاب کن و شروع کن." data-en="No lesson and no steps. Talk with your teacher about anything you like. Choose the length and start.">بدون درس و بدون مرحله، با معلمت هر موضوعی را که دوست داری حرف بزن. مدت گفتگو را انتخاب کن و شروع کن.</p>
-          <label for="freeTopic" data-fa="موضوع گفتگو" data-en="Topic">موضوع گفتگو</label>
+          <p class="muted" data-fa="بدون درس و بدون مرحله، درباره هر موضوعی بدون محدودیت با معلمت حرف بزن. مدت گفتگو را انتخاب کن و شروع کن." data-en="No lesson and no steps. Talk with your teacher about any subject, with no limit. Choose the length and start.">بدون درس و بدون مرحله، درباره هر موضوعی بدون محدودیت با معلمت حرف بزن. مدت گفتگو را انتخاب کن و شروع کن.</p>
+          <label for="freeTopic" data-fa="موضوع گفتگو (موضوع پیشنهادی خود را وارد کنید)" data-en="Topic (enter your own suggested topic)">موضوع گفتگو (موضوع پیشنهادی خود را وارد کنید)</label>
           <div class="topic-row">
-            <input id="freeTopic" type="text" maxlength="200">
-            <button id="freeTopicVoice" class="ghost" type="button" data-fa="با صدا" data-en="By voice">با صدا</button>
+            <div class="topic-field">
+              <input id="freeTopic" type="text" maxlength="200">
+              <button id="freeTopicVoice" class="topic-mic" type="button" aria-label="صحبت کن">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3z"/><path d="M19 11a7 7 0 0 1-14 0M12 18v3"/></svg>
+              </button>
+            </div>
             <button id="freeTopicNew" class="ghost" type="button" data-fa="پیشنهاد دیگر" data-en="Another suggestion">پیشنهاد دیگر</button>
           </div>
           <p class="muted" data-fa="موضوع پیشنهادی ما با گفتگوهای قبلی‌ات فرق دارد. می‌توانی موضوع خودت را بنویسی یا با صدا بگویی." data-en="Our suggestion is different from your earlier talks. You can type your own subject or say it.">موضوع پیشنهادی ما با گفتگوهای قبلی‌ات فرق دارد. می‌توانی موضوع خودت را بنویسی یا با صدا بگویی.</p>

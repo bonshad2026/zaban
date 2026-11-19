@@ -749,7 +749,10 @@ const Z = (() => {
       me = await request("GET", "/v1/web/me");
       signedIn.push("student");
     } catch (_) { /* not signed in */ }
-    if (!signedIn.length) return;
+    if (!signedIn.length) {
+      box.dataset.state = "guest";
+      return;
+    }
     const greeting = me.name;
     const teaches = me.students || 0;
 
@@ -761,11 +764,10 @@ const Z = (() => {
     } catch (_) { /* the header still works without the photo */ }
 
     box.replaceChildren();
-    // Only the name, then the photo. The photo opens the account menu.
+    // The photo comes first and opens the account menu; the name follows it.
     const nameNode = el("span", "site-greeting", greeting);
-    box.appendChild(nameNode);
     const menu = buildAccountMenu(signedIn, profile.avatar);
-    box.appendChild(menu.wrap);
+    box.append(menu.wrap, nameNode);
     box.dataset.state = "member";
 
     onProfileSaved = (saved) => {
