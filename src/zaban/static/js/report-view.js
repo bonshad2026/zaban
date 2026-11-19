@@ -1,4 +1,7 @@
 (() => {
+  // The learner page loads student-i18n.js, which adds Z.tr and Z.pick. The teacher's page has only common.js, so these fall back to Persian text.
+  const tr = (fa) => (typeof Z.tr === "function" ? Z.tr(fa) : fa);
+  const pick = (fa, en) => (typeof Z.pick === "function" ? Z.pick(fa, en) : (document.documentElement.lang === "en" ? en : fa));
   // The report view of a learner. The learner page and a teacher's student profile both use it, so the reports look the same.
   // It shows the stats, the plan, the suggestion and the list of reports. A report opens its details in a dialog.
 
@@ -24,26 +27,26 @@
   function renderReport(box, report, detail, items) {
     box.replaceChildren();
     const level = detail.levels?.speaking;
-    const levelText = level ? `${level} (${Z.LEVEL_FA[level]})` : Z.tr("هنوز تعیین نشده");
+    const levelText = level ? `${level} (${Z.LEVEL_FA[level]})` : tr("هنوز تعیین نشده");
     const completed = report.sessions.filter((s) => s.status === "completed").length;
 
-    box.appendChild(Z.el("h2", null, Z.tr("گزارش یادگیری من")));
+    box.appendChild(Z.el("h2", null, tr("گزارش یادگیری من")));
     const stats = Z.el("div", "stats");
     stats.append(
-      stat(Z.tr("سطح من"), levelText),
-      stat(Z.tr("وضعیت من"), Z.STATUS_FA[report.status]),
-      stat(Z.tr("جلسه‌های کامل"), String(completed)),
+      stat(tr("سطح من"), levelText),
+      stat(tr("وضعیت من"), Z.STATUS_FA[report.status]),
+      stat(tr("جلسه‌های کامل"), String(completed)),
     );
     box.appendChild(stats);
 
     if (report.plan) {
-      box.appendChild(Z.el("h2", null, Z.tr("پیشرفت نسبت به برنامه")));
-      box.appendChild(bar(Z.tr("طبق برنامه"), report.planned_percent, true));
-      box.appendChild(bar(Z.tr("میزان یادگیری تو"), report.actual_percent, false));
-      box.appendChild(Z.el("p", "muted", Z.pick(`پایان برنامه: ${Z.fmtDate(report.plan.end_date)}`, `The plan ends: ${Z.fmtDate(report.plan.end_date)}`)));
+      box.appendChild(Z.el("h2", null, tr("پیشرفت نسبت به برنامه")));
+      box.appendChild(bar(tr("طبق برنامه"), report.planned_percent, true));
+      box.appendChild(bar(tr("میزان یادگیری تو"), report.actual_percent, false));
+      box.appendChild(Z.el("p", "muted", pick(`پایان برنامه: ${Z.fmtDate(report.plan.end_date)}`, `The plan ends: ${Z.fmtDate(report.plan.end_date)}`)));
     }
 
-    box.appendChild(Z.el("h2", null, Z.tr("پیشنهاد برای ادامه")));
+    box.appendChild(Z.el("h2", null, tr("پیشنهاد برای ادامه")));
     box.appendChild(Z.el("p", "suggestion", Z.SUGGESTION_FA[report.status]));
 
     box.appendChild(reportList(items));
@@ -56,21 +59,21 @@
   const REPORT_CRITERIA_FA = { range: "دامنه", accuracy: "دقت", fluency: "روانی", interaction: "تعامل", coherence: "انسجام" };
 
   function reportMeta(item) {
-    const duration = Z.pick(`${item.duration_minutes} دقیقه`, `${item.duration_minutes} min`);
-    return `${Z.fmtDateTime(item.date)} · ${duration} · ${Z.tr(REPORT_STATUS_FA[item.status] || item.status)}`;
+    const duration = pick(`${item.duration_minutes} دقیقه`, `${item.duration_minutes} min`);
+    return `${Z.fmtDateTime(item.date)} · ${duration} · ${tr(REPORT_STATUS_FA[item.status] || item.status)}`;
   }
 
   function reportList(items) {
     const wrap = Z.el("div", "report-list");
-    wrap.appendChild(Z.el("h2", null, Z.tr("گزارش‌های من")));
+    wrap.appendChild(Z.el("h2", null, tr("گزارش‌های من")));
     if (!items.length) {
-      wrap.appendChild(Z.el("p", "muted", Z.tr("هنوز گزارشی ثبت نشده است. از تب «جلسه» یا «خودت رو محک بزن» شروع کن.")));
+      wrap.appendChild(Z.el("p", "muted", tr("هنوز گزارشی ثبت نشده است. از تب «جلسه» یا «خودت رو محک بزن» شروع کن.")));
       return wrap;
     }
     const filters = Z.el("div", "report-filter");
     const rows = Z.el("div", "report-rows");
     const buttons = REPORT_KINDS.map(([kind, fa]) => {
-      const button = Z.el("button", "ghost", Z.tr(fa));
+      const button = Z.el("button", "ghost", tr(fa));
       button.type = "button";
       button.addEventListener("click", () => paint(kind));
       filters.appendChild(button);
@@ -81,7 +84,7 @@
       const shown = items.filter((item) => kind === "all" || item.type === kind);
       rows.replaceChildren();
       if (!shown.length) {
-        rows.appendChild(Z.el("p", "muted", Z.tr("در این بخش هنوز گزارشی نیست.")));
+        rows.appendChild(Z.el("p", "muted", tr("در این بخش هنوز گزارشی نیست.")));
         return;
       }
       shown.forEach((item) => rows.appendChild(reportRow(item)));
@@ -94,8 +97,8 @@
   function reportRow(item) {
     const row = Z.el("div", "report-row");
     const top = Z.el("div", "report-row-top");
-    top.append(Z.el("strong", null, item.title), Z.el("span", "report-type", Z.tr(REPORT_TYPE_FA[item.type])));
-    const open = Z.el("button", "ghost report-open", Z.tr("مشاهده جزئیات"));
+    top.append(Z.el("strong", null, item.title), Z.el("span", "report-type", tr(REPORT_TYPE_FA[item.type])));
+    const open = Z.el("button", "ghost report-open", tr("مشاهده جزئیات"));
     open.type = "button";
     open.addEventListener("click", () => openReport(item));
     row.append(top, Z.el("div", "muted", reportMeta(item)), open);
@@ -142,7 +145,7 @@
     const dialog = Z.el("dialog", "account-dialog account-dialog-wide");
     const title = Z.el("h2");
     const body = Z.el("div");
-    const close = Z.el("button", "ghost", Z.tr("بستن"));
+    const close = Z.el("button", "ghost", tr("بستن"));
     close.type = "button";
     close.addEventListener("click", () => dialog.close());
     const actions = Z.el("div", "dialog-actions");
@@ -158,19 +161,19 @@
     view.title.textContent = item.title;
     const body = view.body;
     body.replaceChildren();
-    body.appendChild(Z.el("p", "muted", `${Z.tr(REPORT_TYPE_FA[item.type])} · ${reportMeta(item)}`));
+    body.appendChild(Z.el("p", "muted", `${tr(REPORT_TYPE_FA[item.type])} · ${reportMeta(item)}`));
     if (item.score !== null) {
-      body.appendChild(Z.el("p", null, `${Z.tr("امتیاز")}: ${Math.round(item.score)}`));
+      body.appendChild(Z.el("p", null, `${tr("امتیاز")}: ${Math.round(item.score)}`));
     }
     const levels = Object.entries(item.levels).filter(([, value]) => value);
     if (levels.length) {
-      body.appendChild(Z.el("h3", null, Z.tr("پنج معیار گفتاری")));
+      body.appendChild(Z.el("h3", null, tr("پنج معیار گفتاری")));
       const list = Z.el("ul", "plain");
-      levels.forEach(([key, value]) => list.appendChild(Z.el("li", null, `${Z.tr(REPORT_CRITERIA_FA[key])}: ${value}`)));
+      levels.forEach(([key, value]) => list.appendChild(Z.el("li", null, `${tr(REPORT_CRITERIA_FA[key])}: ${value}`)));
       body.appendChild(list);
     }
-    body.appendChild(Z.el("h3", null, Z.tr("ارزیابی")));
-    body.appendChild(item.text ? evaluationBlocks(item.text) : Z.el("p", "muted", Z.tr("برای این گزارش هنوز ارزیابی متنی ثبت نشده است.")));
+    body.appendChild(Z.el("h3", null, tr("ارزیابی")));
+    body.appendChild(item.text ? evaluationBlocks(item.text) : Z.el("p", "muted", tr("برای این گزارش هنوز ارزیابی متنی ثبت نشده است.")));
     view.dialog.showModal();
   }
 
