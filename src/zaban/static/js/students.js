@@ -61,61 +61,32 @@
     Z.showError($("studentError"), "");
     body.replaceChildren(el("p", "muted", label("در حال بارگذاری…", "Loading…")));
     try {
-      const data = await Z.request("GET", `/v1/web/user/students/${current.id}/${view}`);
-      if (view === "report") renderReport(data);
-      else renderProgress(data);
+      if (view === "report") {
+        // The same report view as the learner's own «گزارش‌ها» page.
+        const [report, items] = await Promise.all([
+          Z.request("GET", `/v1/web/user/students/${current.id}/report`),
+          Z.request("GET", `/v1/web/user/students/${current.id}/items`),
+        ]);
+        if (!report.started) {
+          body.replaceChildren(el("p", "muted", label("این دانش‌آموز هنوز یادگیری را شروع نکرده است.", "This student has not started learning yet.")));
+          return;
+        }
+        ReportView.render(body, report, report, items.items);
+      } else {
+        const [progress, partner] = await Promise.all([
+          Z.request("GET", `/v1/web/user/students/${current.id}/progress`),
+          Z.request("GET", `/v1/web/user/students/${current.id}/partner`),
+        ]);
+        renderProgress(progress, partner);
+      }
     } catch (err) {
       body.replaceChildren();
       Z.showError($("studentError"), err.message);
     }
   }
 
-  function stat(labelText, value) {
-    const box = el("div", "stat");
-    box.append(el("div", "label", labelText), el("div", "value", value));
-    return box;
-  }
-
-  function sessionTitle(session) {
-    return session.lesson_title || label("گفتگوی آزاد با معلم", "Free talk with the teacher");
-  }
-
-  function renderReport(report) {
-    const body = $("studentBody");
-    body.replaceChildren();
-    if (!report.started) {
-      body.appendChild(el("p", "muted", label("این دانش‌آموز هنوز یادگیری را شروع نکرده است.", "This student has not started learning yet.")));
-      return;
-    }
-    const completed = report.sessions.filter((s) => s.status === "completed").length;
-    const stats = el("div", "stats");
-    stats.append(
-      stat(label("سطح گفتاری", "Speaking level"), report.levels?.speaking ? `${report.levels.speaking} (${Z.LEVEL_FA[report.levels.speaking]})` : label("هنوز تعیین نشده", "Not set yet")),
-      stat(label("وضعیت", "Status"), Z.STATUS_FA[report.status] || report.status),
-      stat(label("جلسه‌های کامل", "Completed lessons"), String(completed)),
-    );
-    body.appendChild(stats);
-    body.appendChild(el("p", "suggestion", Z.SUGGESTION_FA[report.status] || ""));
-    if (report.sessions.length === 0) {
-      body.appendChild(el("p", "muted", label("هنوز جلسه‌ای ثبت نشده است.", "No lessons yet.")));
-      return;
-    }
-    const list = el("div", "student-sessions");
-    report.sessions.forEach((session) => {
-      const row = el("article", "attempt");
-      const score = session.score === null ? label("نمره ثبت نشده", "No score") : label(`نمره: ${session.score} از ۱۰۰`, `Score: ${session.score} of 100`);
-      row.append(
-        el("strong", "", Z.fmtDateTime(session.started_at)),
-        el("p", "", sessionTitle(session)),
-        el("p", "muted", `${session.duration_minutes} ${label("دقیقه", "min")} — ${score} — ${Z.SESSION_FA[session.status] || session.status}`),
-      );
-      list.appendChild(row);
-    });
-    body.appendChild(list);
-  }
-
   // The learner's path, read only: a teacher can look at it and cannot change it.
-  function renderProgress(progress) {
+  function renderProgress(progress, partner) {
     const body = $("studentBody");
     body.replaceChildren();
     if (!progress.started) {
@@ -160,6 +131,32 @@
     }));
     body.append(track, detail);
     showDetail();
+    if (partner.started) renderPartner(body, partner);
+  }
+
+  // The conversation partner's part of the progress tab, the same as the learner sees it: skill levels, criteria and phrases.
+  const SKILL_NAMES = { listening: "شنیداری", reading: "خواندن", grammar: "دستور و واژگان", writing: "نوشتاری", speaking: "گفتاری" };
+  const PARTNER_CRITERIA = { range: "دامنه", accuracy: "دقت", fluency: "روانی", interaction: "تعامل", coherence: "انسجام" };
+  const PARTNER_PHRASE_STATUS = { seen: "دیده‌شده", used: "به‌کار رفته", mastered: "متسلط" };
+
+  function renderPartner(body, partner) {
+    const list = (items) => {
+      const ul = el("ul", "plain");
+      ul.append(...items);
+      return ul;
+    };
+    const skills = Object.entries(SKILL_NAMES).map(([key, name]) => el("li", "", `${label(name, key)}: ${partner.levels?.[key] || "A1"}`));
+    const criteria = Object.entries(PARTNER_CRITERIA).map(([key, name]) => el("li", "", `${label(name, key)}: ${partner.criteria[key] || "—"}`));
+    const phrases = partner.phrases.map((p) => el("li", "", `${p.text} — ${label(PARTNER_PHRASE_STATUS[p.status] || p.status, p.status)}`));
+    body.append(
+      el("h3", "", label("سطح مهارت‌ها", "Skill levels")),
+      list(skills),
+      el("h3", "", label("پنج معیار گفتاری", "Five speaking criteria")),
+      el("p", "muted", label("این سطح‌ها را گفتاریار بر اساس جلسه‌ها تغییر می‌دهد.", "The partner changes these levels after the lessons.")),
+      list(criteria),
+      el("h3", "", label("عبارت‌های من", "Phrases")),
+      list(phrases.length ? phrases : [el("li", "muted", label("هنوز عبارتی ثبت نشده است.", "No phrases yet."))]),
+    );
   }
 
   function lessonBody(lesson, total) {

@@ -129,10 +129,8 @@ def _test_item(t: SelfTest) -> dict:
     }
 
 
-@router.get("/students/{student_id}/reports/items")
-def report_items(student_id: str, auth: Auth = Depends(get_auth), db: DBSession = Depends(get_db)) -> dict:
+def report_items_out(db: DBSession, student: Student) -> dict:
     # One list for every kind of report: lessons, free talks and self-tests, newest first.
-    student = get_student_for_auth(db, auth, student_id)
     sessions = (
         db.query(TutorSession)
         .filter(TutorSession.student_id == student.id)
@@ -149,8 +147,15 @@ def report_items(student_id: str, auth: Auth = Depends(get_auth), db: DBSession 
     )
     items = [_session_item(db, s) for s in sessions] + [_test_item(t) for t in tests]
     items.sort(key=lambda item: item["date"], reverse=True)
-    db.commit()
     return {"items": items[:50]}
+
+
+@router.get("/students/{student_id}/reports/items")
+def report_items(student_id: str, auth: Auth = Depends(get_auth), db: DBSession = Depends(get_db)) -> dict:
+    student = get_student_for_auth(db, auth, student_id)
+    out = report_items_out(db, student)
+    db.commit()
+    return out
 
 
 @router.get("/students/{student_id}/reports/progress")

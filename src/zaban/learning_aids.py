@@ -411,10 +411,8 @@ def save_my_details(
     return {"details": details_out(db.get(LearnerDetails, student.id))}
 
 
-@router.get("/partner")
-def my_partner_progress(zaban_student: str | None = Cookie(default=None), db: DBSession = Depends(get_db)) -> dict:
+def partner_out(db: DBSession, student: Student) -> dict:
     # What the learner sees of the conversation partner: the five speaking criteria (view only) and the phrases with their status.
-    student = _student_from_cookie(db, zaban_student)
     rows = (
         db.query(LearnerPhrase, PhraseItem)
         .join(PhraseItem, PhraseItem.id == LearnerPhrase.phrase_id)
@@ -434,6 +432,12 @@ def my_partner_progress(zaban_student: str | None = Cookie(default=None), db: DB
         },
         "phrases": [{"text": item.text, "status": row.status} for row, item in rows],
     }
+
+
+@router.get("/partner")
+def my_partner_progress(zaban_student: str | None = Cookie(default=None), db: DBSession = Depends(get_db)) -> dict:
+    student = _student_from_cookie(db, zaban_student)
+    return partner_out(db, student)
 
 
 @router.get("/progress")

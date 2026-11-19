@@ -3,9 +3,9 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session as DBSession
 
 from zaban.db import get_db
-from zaban.learning_aids import _progress_out
+from zaban.learning_aids import _progress_out, partner_out
 from zaban.models import Guardian, Student
-from zaban.reports import _session_rows, _snapshot
+from zaban.reports import _session_rows, _snapshot, report_items_out
 from zaban.services.skill_levels import levels_out, speaking_level
 from zaban.web import _guardian_from_cookie, _self_profile
 
@@ -148,3 +148,34 @@ def student_report(
         **snapshot,
         "sessions": _session_rows(db, profile),
     }
+
+
+@router.get("/students/{guardian_id}/items")
+def student_items(
+    guardian_id: str,
+    zaban_student: str | None = Cookie(default=None),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    # The same report list the learner sees, for the teacher of this learner.
+    teacher = _guardian_from_cookie(db, zaban_student)
+    student = _student_for_teacher(db, teacher, guardian_id)
+    profile = _self_profile(db, student)
+    if profile is None:
+        return {"items": []}
+    out = report_items_out(db, profile)
+    db.commit()
+    return out
+
+
+@router.get("/students/{guardian_id}/partner")
+def student_partner(
+    guardian_id: str,
+    zaban_student: str | None = Cookie(default=None),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    teacher = _guardian_from_cookie(db, zaban_student)
+    student = _student_for_teacher(db, teacher, guardian_id)
+    profile = _self_profile(db, student)
+    if profile is None:
+        return {"started": False}
+    return {"started": True, **partner_out(db, profile)}
