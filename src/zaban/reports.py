@@ -58,7 +58,7 @@ def _snapshot(db: DBSession, student: Student) -> tuple[Plan | None, dict]:
 def _session_rows(db: DBSession, student: Student) -> list[dict]:
     sessions = (
         db.query(TutorSession)
-        .filter(TutorSession.student_id == student.id)
+        .filter(TutorSession.student_id == student.id, TutorSession.status != "cancelled")
         .order_by(TutorSession.started_at.desc())
         .limit(20)
         .all()
@@ -133,14 +133,14 @@ def report_items_out(db: DBSession, student: Student) -> dict:
     # One list for every kind of report: lessons, free talks and self-tests, newest first.
     sessions = (
         db.query(TutorSession)
-        .filter(TutorSession.student_id == student.id)
+        .filter(TutorSession.student_id == student.id, TutorSession.status != "cancelled")
         .order_by(TutorSession.started_at.desc())
         .limit(50)
         .all()
     )
     tests = (
         db.query(SelfTest)
-        .filter(SelfTest.student_id == student.id)
+        .filter(SelfTest.student_id == student.id, SelfTest.status != "cancelled")
         .order_by(SelfTest.created_at.desc())
         .limit(50)
         .all()

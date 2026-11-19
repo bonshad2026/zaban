@@ -888,8 +888,35 @@ const Z = (() => {
     items.forEach((node) => observer.observe(node));
   }
 
+  // A question with two answers. Only the yes button resolves true, so nothing is cancelled without a second click.
+  function confirmDialog(question, yesText, noText) {
+    return new Promise((resolve) => {
+      const dialog = el("dialog", "account-dialog");
+      const text = el("p", "", question);
+      const no = el("button", "ghost", noText);
+      no.type = "button";
+      const yes = el("button", "", yesText);
+      yes.type = "button";
+      const actions = el("div", "dialog-actions");
+      actions.append(no, yes);
+      dialog.append(text, actions);
+      document.body.appendChild(dialog);
+      const finish = (answer) => {
+        dialog.close();
+        resolve(answer);
+      };
+      yes.addEventListener("click", () => finish(true));
+      no.addEventListener("click", () => finish(false));
+      dialog.addEventListener("close", () => {
+        dialog.remove();
+        resolve(false);
+      });
+      dialog.showModal();
+    });
+  }
+
   return {
-    url, pagePath, request, friendly, parseUtc, locale, currentLang, fmtDate, fmtDateTime, el, show, showError, showDevCode, codeTimer, startResendWait, resumeResendWait, initLang, initTheme, initReveal,
+    url, pagePath, confirmDialog, request, friendly, parseUtc, locale, currentLang, fmtDate, fmtDateTime, el, show, showError, showDevCode, codeTimer, startResendWait, resumeResendWait, initLang, initTheme, initReveal,
     initSiteHeader, STATUS_FA, SUGGESTION_FA, LEVEL_FA, SESSION_FA,
   };
 })();

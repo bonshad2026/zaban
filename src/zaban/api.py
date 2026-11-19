@@ -647,6 +647,26 @@ def set_lesson_rhythm(
     return _rhythm_out(segment_state(session, now))
 
 
+@router.post("/sessions/{session_id}/cancel")
+def cancel_session(
+    session_id: str,
+    auth: Auth = Depends(get_auth),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    # The learner stops a lesson or a free talk before it ends. It is not counted, not evaluated and not kept in the reports.
+    session = _get_session_for_auth(db, auth, session_id)
+    get_student_for_auth(db, auth, session.student_id)
+    finish_if_due(session, utcnow())
+    if session.status != "active":
+        db.commit()
+        raise HTTPException(status_code=409, detail="This lesson is closed")
+    session.status = "cancelled"
+    session.ended_at = utcnow()
+    session.end_status = "no_evaluation"
+    db.commit()
+    return {"status": "cancelled"}
+
+
 @router.get("/sessions/{session_id}/summary")
 def lesson_summary(session_id: str, auth: Auth = Depends(get_auth), db: DBSession = Depends(get_db)) -> dict:
     # The end-of-lesson page (section 15.5): the summary, the five criteria and the phrases of this lesson.

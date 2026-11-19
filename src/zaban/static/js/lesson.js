@@ -53,6 +53,8 @@ const Lesson = (() => {
     $("sendBtn").disabled = !(phase === "recording" || (phase === "your_turn" && hasText));
 
     $("endBtn").disabled = phase === "ended" || phase === "idle";
+    $("cancelBtn").disabled = phase === "ended" || phase === "idle";
+    $("cancelBtn").textContent = S.free ? Z.pick("لغو گفتگو", "Cancel talk") : Z.pick("لغو جلسه", "Cancel lesson");
     $("composerHint").textContent = S.lastError || HINT[phase] || "";
   }
 
@@ -318,8 +320,12 @@ const Lesson = (() => {
     setPhase("waiting");
     if (showUser) bubble("user", text);
     $("msgInput").value = "";
-    const thinking = bubble("assistant", "…");
+    const thinking = bubble("assistant", "");
     thinking.classList.add("thinking");
+    const dots = Z.el("span", "typing-dots");
+    dots.setAttribute("aria-label", Z.tr("معلم در حال نوشتن است"));
+    dots.append(document.createElement("i"), document.createElement("i"), document.createElement("i"));
+    thinking.appendChild(dots);
     try {
       const reply = await Z.request("POST", `/v1/sessions/${S.sessionId}/messages`, { content: text });
       thinking.remove();
@@ -365,9 +371,8 @@ const Lesson = (() => {
     if (!SpeechRec || S.phase !== "your_turn") return;
     S.lastError = "";
     const rec = new SpeechRec();
-    const persian = $("persianMode").checked;
-    rec.lang = persian ? "fa-IR" : Accents.current;
-    $("msgInput").dir = persian ? "rtl" : "ltr";
+    rec.lang = Accents.current;
+    $("msgInput").dir = "ltr";
     rec.continuous = true;
     rec.interimResults = true;
     const typed = $("msgInput").value.trimEnd();
@@ -469,6 +474,31 @@ const Lesson = (() => {
     if (S.onEnded) S.onEnded();
   }
 
+  // Cancels the open lesson or free talk after a second confirmation. It is not counted, not evaluated and not kept in the reports.
+  async function cancelLesson() {
+    if (!S.sessionId) return;
+    const free = Boolean(S.free);
+    const question = free
+      ? Z.pick("آیا از لغو این گفتگو اطمینان دارید؟", "Are you sure you want to cancel this talk?")
+      : Z.pick("آیا از لغو این جلسه اطمینان دارید؟", "Are you sure you want to cancel this lesson?");
+    const yes = await Z.confirmDialog(question, Z.pick("بله، لغو کن", "Yes, cancel"), Z.pick("نه، ادامه می‌دهم", "No, keep going"));
+    if (!yes) return;
+    try {
+      await Z.request("POST", `/v1/sessions/${S.sessionId}/cancel`);
+    } catch (err) {
+      note(err.message);
+      return;
+    }
+    stopMeter();
+    if (canSpeak) window.speechSynthesis.cancel();
+    clearInterval(S.tickTimer);
+    S.sessionId = null;
+    setPhase("ended");
+    $("timeLeft").textContent = "";
+    note(free ? Z.tr("گفتگو لغو شد.") : Z.tr("جلسه لغو شد."));
+    if (S.onEnded) S.onEnded();
+  }
+
   // The end-of-lesson page: the summary, the five criteria and the phrases of this lesson (section 15.5).
   const CRITERIA_LABELS = { range: "دامنه", accuracy: "دقت", fluency: "روانی", interaction: "تعامل", coherence: "انسجام" };
   const PHRASE_STATUS = { seen: "دیده‌شده", used: "به‌کار رفته", mastered: "متسلط" };
@@ -540,6 +570,7 @@ const Lesson = (() => {
     $("micBtn").addEventListener("click", toggleMic);
     $("sendBtn").addEventListener("click", send);
     $("endBtn").addEventListener("click", () => endLesson(false));
+    $("cancelBtn").addEventListener("click", cancelLesson);
     $("helpUnderstood").addEventListener("click", () => {
       if (S.phase === "your_turn") ask("I did not understand. Please explain it again, more simply.", true);
     });

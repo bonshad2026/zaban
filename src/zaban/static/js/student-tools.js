@@ -558,6 +558,7 @@
     const finished = test.status === "finished";
     Z.show(document.querySelector("#testRun .composer"), !finished);
     $("testFinish").hidden = finished;
+    $("testCancel").hidden = finished;
     Z.show($("testResult"), finished);
     if (finished) $("testResult").textContent = test.result || "";
     // A running test counts down from the time the server still gives it. A finished one has no clock.
@@ -642,6 +643,25 @@
     }
   }
 
+  // Cancels the open test after a second confirmation. It is not evaluated and leaves the list and the reports.
+  async function cancelTest() {
+    if (!testId) return;
+    const yes = await Z.confirmDialog(
+      Z.pick("آیا از لغو این آزمون اطمینان دارید؟", "Are you sure you want to cancel this test?"),
+      Z.pick("بله، لغو کن", "Yes, cancel"),
+      Z.pick("نه، ادامه می‌دهم", "No, keep going"),
+    );
+    if (!yes) return;
+    try {
+      await Z.request("POST", `/v1/web/student/self-tests/${testId}/cancel`);
+      testId = null;
+      showTestRun(false);
+      loadTests();
+    } catch (err) {
+      Z.showError($("testError"), err.message);
+    }
+  }
+
   async function finishTest() {
     if (!testId) return;
     try {
@@ -698,6 +718,7 @@
     $("testSend").addEventListener("click", sendAnswer);
     $("testMicBtn").addEventListener("click", toggleTestMic);
     $("testFinish").addEventListener("click", finishTest);
+    $("testCancel").addEventListener("click", cancelTest);
     $("testBack").addEventListener("click", () => {
       showTestRun(false);
       loadTests();

@@ -168,7 +168,7 @@ def list_self_tests(
     student = _student_from_cookie(db, zaban_student)
     rows = (
         db.query(SelfTest)
-        .filter(SelfTest.student_id == student.id)
+        .filter(SelfTest.student_id == student.id, SelfTest.status != "cancelled")
         .order_by(SelfTest.created_at.desc())
         .limit(30)
         .all()
@@ -220,6 +220,23 @@ def answer_self_test(
     student = _student_from_cookie(db, zaban_student)
     test = answer_test(db, student, owned_test(db, student, test_id), body.content)
     return _test_out(test, db)
+
+
+@router.post("/self-tests/{test_id}/cancel")
+def cancel_self_test(
+    test_id: str,
+    zaban_student: str | None = Cookie(default=None),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    # The learner stops a test before it ends. It is not evaluated and not kept in the list or the reports.
+    student = _student_from_cookie(db, zaban_student)
+    test = owned_test(db, student, test_id)
+    if test.status != "active":
+        raise HTTPException(status_code=409, detail="This test is closed")
+    test.status = "cancelled"
+    test.partner_status = "no_evaluation"
+    db.commit()
+    return {"status": "cancelled"}
 
 
 @router.post("/self-tests/{test_id}/finish")
