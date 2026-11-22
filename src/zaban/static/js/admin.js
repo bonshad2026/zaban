@@ -1014,7 +1014,7 @@
       spec.choices.forEach((choice) => input.appendChild(option(choice, choice)));
     } else if (spec.kind === "text" || spec.kind === "mode_rules") {
       input = Z.el("textarea", "");
-      input.rows = 4;
+      input.rows = spec.key === "partner_evaluation_rules" ? 16 : 4;
       input.maxLength = 4000;
     } else {
       input = Z.el("input", "ltr-field");
@@ -1032,7 +1032,7 @@
   }
 
   // The rules, the level policy and the numbers are three tabs. Each one saves only its own keys.
-  const PARTNER_RULE_KEYS = ["partner_shared_rules", "partner_mode_rules", "partner_free_rules", "partner_notebook_rules"];
+  const PARTNER_RULE_KEYS = ["partner_shared_rules", "partner_mode_rules", "partner_free_rules", "partner_notebook_rules", "partner_evaluation_rules"];
   const PARTNER_POLICY_KEY = "partner_level_policy";
   const POLICY_FIELDS = ["sentence", "vocab", "question", "correction", "turn"];
   const POLICY_LABELS = ["جمله", "واژگان", "پرسش", "اصلاح", "نوبت"];

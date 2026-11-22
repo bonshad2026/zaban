@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>آموزش من | گفتاریار</title>
-  <link id="bsCss" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css" data-rtl="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css" data-ltr="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link id="bsCss" rel="stylesheet" href="/static/vendor/bootstrap/bootstrap.rtl.min.css" data-rtl="/static/vendor/bootstrap/bootstrap.rtl.min.css" data-ltr="/static/vendor/bootstrap/bootstrap.min.css">
   <link rel="stylesheet" href="/static/css/app.css?v=51">
 </head>
 <body>
@@ -41,8 +41,10 @@
             <option value="90" data-fa="۹۰ دقیقه" data-en="90 minutes">۹۰ دقیقه</option>
             <option value="0" data-fa="بدون زمان‌بندی" data-en="No time limit">بدون زمان‌بندی</option>
           </select>
-          <p><button id="startBtn" type="button" data-fa="شروع جلسه" data-en="Start lesson">شروع جلسه</button></p>
+          <p><button id="startBtn" type="button" data-fa="شروع جلسه" data-en="Start lesson">شروع جلسه</button>
+            <button id="lessonReportBtn" class="ghost" type="button" data-fa="گزارش جلسه" data-en="Lesson reports">گزارش جلسه</button></p>
           <p class="error" id="startError" hidden></p>
+          <div id="lessonReports" class="mt-4" hidden></div>
         </div>
 
         <!-- Free talk: the learner sets the length and starts it. Nothing starts before this button is pressed. -->
@@ -60,23 +62,34 @@
                 <div class="topic-meter" id="topicVoiceMeter" data-max="12" hidden aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
               </div>
             </div>
-            <button id="freeTopicNew" class="ghost" type="button" data-fa="پیشنهاد دیگر" data-en="Another suggestion">پیشنهاد دیگر</button>
+            <button id="freeTopicNew" class="ghost" type="button" data-fa="پیشنهاد ما" data-en="Our suggestion">پیشنهاد ما</button>
           </div>
           <p class="muted" data-fa="موضوع پیشنهادی ما با گفتگوهای قبلی‌ات فرق دارد. می‌توانی موضوع خودت را بنویسی یا با صدا بگویی." data-en="Our suggestion is different from your earlier talks. You can type your own subject or say it.">موضوع پیشنهادی ما با گفتگوهای قبلی‌ات فرق دارد. می‌توانی موضوع خودت را بنویسی یا با صدا بگویی.</p>
           <label for="freeMinutes" data-fa="مدت گفتگو" data-en="Length">مدت گفتگو</label>
           <select id="freeMinutes">
-            <option value="15" selected data-fa="۱۵ دقیقه" data-en="15 minutes">۱۵ دقیقه</option>
+            <option value="" disabled selected data-fa="یکی را انتخاب کنید" data-en="Choose one">یکی را انتخاب کنید</option>
+            <option value="0" data-fa="بدون زمان‌بندی" data-en="No time limit">بدون زمان‌بندی</option>
+            <option value="15" data-fa="۱۵ دقیقه" data-en="15 minutes">۱۵ دقیقه</option>
             <option value="30" data-fa="۳۰ دقیقه" data-en="30 minutes">۳۰ دقیقه</option>
             <option value="45" data-fa="۴۵ دقیقه" data-en="45 minutes">۴۵ دقیقه</option>
             <option value="60" data-fa="۶۰ دقیقه" data-en="60 minutes">۶۰ دقیقه</option>
             <option value="90" data-fa="۹۰ دقیقه" data-en="90 minutes">۹۰ دقیقه</option>
-            <option value="0" data-fa="بدون زمان‌بندی" data-en="No time limit">بدون زمان‌بندی</option>
           </select>
-          <p><button id="freeStartBtn" type="button" data-fa="شروع گفتگوی آزاد" data-en="Start free talk">شروع گفتگوی آزاد</button></p>
+          <p><button id="freeStartBtn" type="button" disabled data-fa="شروع گفتگوی آزاد" data-en="Start free talk">شروع گفتگوی آزاد</button>
+            <button id="freeReportBtn" class="ghost" type="button" data-fa="گزارش گفتگو" data-en="Talk reports">گزارش گفتگو</button></p>
           <p class="error" id="freeStartError" hidden></p>
+          <div id="freeReports" class="mt-4" hidden></div>
         </div>
 
         <div class="card lesson" id="lessonBox" hidden>
+          <dialog id="readyDialog" class="ready-dialog" aria-labelledby="readyTitle">
+            <h2 id="readyTitle" class="accent-title" data-fa="آماده‌ای؟" data-en="Ready?">آماده‌ای؟</h2>
+            <p class="muted" data-fa="این گفتگو هنوز شروع نشده است. وقتی آماده بودی، «شروع کنیم» را بزن." data-en="This talk has not started yet. Press Let's start when you are ready.">این گفتگو هنوز شروع نشده است. وقتی آماده بودی، «شروع کنیم» را بزن.</p>
+            <div class="dialog-actions">
+              <button id="readyCancel" class="ghost" type="button" data-fa="انصراف" data-en="Cancel">انصراف</button>
+              <button id="readyConfirm" type="button" data-fa="شروع کنیم" data-en="Let's start">شروع کنیم</button>
+            </div>
+          </dialog>
           <div class="lesson-top">
             <span class="chip" id="turnChip"></span>
             <span class="timer" id="timeLeft"></span>
@@ -201,15 +214,9 @@
       </section>
 
       <section id="tab-test" class="tool-section" hidden>
-        <div class="card">
-          <h2 class="accent-title" data-fa="آزمون‌ها" data-en="Tests">آزمون‌ها</h2>
-          <h2>آزمون‌های قبلی من</h2>
-          <p class="notice" id="testListNotice" hidden></p>
-          <div id="testList"></div>
-        </div>
         <div class="card" id="testSetup">
-          <h2>آزمون‌ها</h2>
-          <p class="muted">معلم از شما سؤال می‌پرسد و در پایان یک ارزیابی کوتاه می‌نویسد.</p>
+          <h2 class="accent-title" data-fa="آزمون‌ها" data-en="Tests">آزمون‌ها</h2>
+          <p class="muted">معلم از شما سؤال می‌پرسد و در پایان یک ارزیابی کوتاه می‌نویسد. نوع و مدت آزمون را انتخاب کنید و شروع کنید.</p>
           <label for="testKind">نوع آزمون</label>
           <select id="testKind">
             <option value="suggested" selected>پیشنهاد سیستم</option>
@@ -232,8 +239,10 @@
             <option value="20">۲۰ دقیقه</option>
             <option value="30">۳۰ دقیقه</option>
           </select>
-          <p><button type="button" id="testStart">شروع آزمون</button></p>
+          <p><button type="button" id="testStart">شروع آزمون</button>
+            <button type="button" id="testReportBtn" class="ghost">گزارش آزمون</button></p>
           <p class="error" id="testError" hidden></p>
+          <div id="testReports" class="mt-4" hidden></div>
         </div>
         <div class="card" id="testRun" hidden>
           <div class="lesson-top">
@@ -269,12 +278,12 @@
     </main>
   </div>
 
-  <script src="/static/js/common.js?v=22"></script>
+  <script src="/static/js/common.js?v=26"></script>
   <script src="/static/js/student-i18n.js?v=5"></script>
   <script src="/static/js/accents.js?v=5"></script>
-  <script src="/static/js/lesson.js?v=8"></script>
-  <script src="/static/js/report-view.js?v=5"></script>
-  <script src="/static/js/student.js?v=11"></script>
-  <script src="/static/js/student-tools.js?v=6"></script>
+  <script src="/static/js/lesson.js?v=10"></script>
+  <script src="/static/js/report-view.js?v=13"></script>
+  <script src="/static/js/student.js?v=17"></script>
+  <script src="/static/js/student-tools.js?v=12"></script>
 </body>
 </html>

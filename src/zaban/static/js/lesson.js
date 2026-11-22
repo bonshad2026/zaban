@@ -13,6 +13,7 @@ const Lesson = (() => {
     speaking: [Z.tr("معلم در حال صحبت است… لطفاً صبر کن"), "turn-niko"],
     ended: [Z.tr("جلسه تمام شد"), "turn-ended"],
     idle: ["", "turn-ended"],
+    ready: [Z.tr("جلسه آماده است. برای شروع، «شروع کنیم» را بزن"), "turn-you"],
   };
   const HINT = {
     recording: Z.tr("حرف بزن. هر وقت تمام شد، روی «ارسال» بزن."),
@@ -34,6 +35,13 @@ const Lesson = (() => {
     onEnded: null,
   };
 
+  // The window waits in the middle of the chat screen until the learner starts or cancels. Escape does not close it.
+  function syncReadyDialog(open) {
+    const dialog = $("readyDialog");
+    if (open && !dialog.open) dialog.showModal();
+    if (!open && dialog.open) dialog.close();
+  }
+
   function render() {
     const phase = S.phase;
     const writable = phase === "your_turn" || phase === "recording";
@@ -51,8 +59,9 @@ const Lesson = (() => {
     const hasText = $("msgInput").value.trim().length > 0;
     $("sendBtn").disabled = !(phase === "recording" || (phase === "your_turn" && hasText));
 
-    $("endBtn").disabled = phase === "ended" || phase === "idle";
-    $("cancelBtn").disabled = phase === "ended" || phase === "idle";
+    $("endBtn").disabled = phase === "ended" || phase === "idle" || phase === "ready";
+    $("cancelBtn").disabled = phase === "ended" || phase === "idle" || phase === "ready";
+    syncReadyDialog(phase === "ready");
     $("cancelBtn").textContent = S.free ? Z.pick("لغو گفتگو", "Cancel talk") : Z.pick("لغو جلسه", "Cancel lesson");
     $("composerHint").textContent = S.lastError || HINT[phase] || "";
   }
@@ -383,7 +392,8 @@ const Lesson = (() => {
       render();
     };
     rec.onerror = (event) => {
-      if (event.error === "not-allowed") S.lastError = Z.tr("مرورگر اجازه‌ی استفاده از میکروفون را نداده است.");
+      if (event.error === "network") S.lastError = Z.tr("اینترنت شما قطع است. وضعیت اتصال اینترنت خود را بررسی کنید و دوباره تلاش کنید.");
+      else if (event.error === "not-allowed") S.lastError = Z.tr("مرورگر اجازه‌ی استفاده از میکروفون را نداده است.");
       else if (event.error === "no-speech") S.lastError = Z.tr("صدایی شنیده نشد. دوباره میکروفون را بزن.");
       else if (event.error !== "aborted") S.lastError = Z.tr("میکروفون در دسترس نیست. می‌توانی تایپ کنی.");
     };
@@ -502,13 +512,35 @@ const Lesson = (() => {
   }
 
   // Starts a fresh lesson. The server has already created the session.
+  // The session is created, and the screen shows it as ready. Nothing is said until the learner presses "شروع کنیم".
   function start(session) {
     S.sessionId = session.id;
     S.askedTimeUp = false;
     S.lastError = "";
     $("chat").innerHTML = "";
     showClock(session);
+    setPhase("ready");
+  }
+
+  function begin() {
+    if (S.phase !== "ready") return;
     ask(OPENING, false);
+  }
+
+  // The learner changes their mind before the talk begins. The session is cancelled and the setup card comes back.
+  async function cancelReady() {
+    if (S.phase !== "ready" || !S.sessionId) return;
+    try {
+      await Z.request("POST", `/v1/sessions/${S.sessionId}/cancel`);
+    } catch (err) {
+      note(err.message);
+      return;
+    }
+    const wasFree = Boolean(S.free);
+    S.sessionId = null;
+    clearInterval(S.tickTimer);
+    setPhase("idle");
+    if (S.onEnded) S.onEnded(wasFree);
   }
 
   // A lesson and a free talk with a length show the clock. A free talk with no time limit shows no clock; it ends when the learner ends it.
@@ -542,6 +574,9 @@ const Lesson = (() => {
       Z.show($("voiceNotice"), true);
     }
     $("micBtn").addEventListener("click", toggleMic);
+    $("readyConfirm").addEventListener("click", begin);
+    $("readyDialog").addEventListener("cancel", (event) => event.preventDefault());
+    $("readyCancel").addEventListener("click", cancelReady);
     $("sendBtn").addEventListener("click", send);
     $("endBtn").addEventListener("click", () => endLesson(false));
     $("cancelBtn").addEventListener("click", cancelLesson);
@@ -553,5 +588,5 @@ const Lesson = (() => {
     render();
   }
 
-  return { init, start, resume, isActive: () => S.sessionId !== null };
+  return { init, start, begin, cancelReady, resume, isActive: () => S.sessionId !== null };
 })();

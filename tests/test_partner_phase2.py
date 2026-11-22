@@ -41,9 +41,9 @@ def _summary(**criteria: str) -> str:
 
 
 def _fake_model(summary: str, notebook: str):
-    # The routine makes two kinds of calls: the summary (its instructions start with "You judge") and the notebook.
+    # The routine makes two kinds of calls: the summary (its instructions name the judge: "ارزیاب مهارت گفتاری") and the notebook.
     def complete(system, messages, max_tokens=300):
-        text = summary if system.startswith("You judge") else notebook
+        text = summary if "ارزیاب مهارت گفتاری" in system else notebook
         return AIResult(text=text, input_tokens=10, output_tokens=5, mode="live")
 
     return complete
@@ -64,7 +64,7 @@ def _lesson(db, student: Student, user_turns: int = 3, ended_days_ago: int = 0) 
     now = utcnow()
     session = TutorSession(
         student_id=student.id, duration_minutes=10, started_at=now, ends_at=now + timedelta(minutes=10),
-        status="completed", ended_at=now - timedelta(days=ended_days_ago), engine="new",
+        status="completed", ended_at=now - timedelta(days=ended_days_ago),
     )
     db.add(session)
     db.flush()
@@ -199,15 +199,6 @@ def test_short_lesson_gets_no_evaluation(client, monkeypatch):
         assert session.eval_range is None and db.get(LearnerMemory, student.id) is None
 
 
-def test_old_engine_lessons_are_not_touched(client, monkeypatch):
-    monkeypatch.setattr(partner_end, "complete", _fake_model(_summary(), VALID_NOTEBOOK))
-    with SessionLocal() as db:
-        student = _student(db)
-        session = _lesson(db, student)
-        session.engine = "old"
-        db.commit()
-        assert finish_partner_session(db, session) == "active"
-
 
 # ---- token budget (section 13.7) ----
 
@@ -279,16 +270,6 @@ def test_admin_criteria_must_be_levels(client):
     assert client.post(url, json={"values": {"range": "B2"}}).status_code == 200
     assert client.get(f"/v1/admin/api/learners/{student_id}/partner").json()["criteria"]["range"] == "B2"
 
-
-def test_admin_reprocess_refuses_old_engine_lessons(client):
-    _admin(client)
-    with SessionLocal() as db:
-        student = _student(db)
-        session = _lesson(db, student)
-        session.engine = "old"
-        db.commit()
-        session_id = session.id
-    assert client.post(f"/v1/admin/api/sessions/{session_id}/reprocess").status_code == 400
 
 
 def test_admin_adds_a_reviewed_phrase_to_the_library(client):

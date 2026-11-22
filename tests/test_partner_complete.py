@@ -50,7 +50,7 @@ def test_time_up_leaves_the_lesson_open_until_the_learner_decides(client):
         now = utcnow()
         lesson = TutorSession(
             student_id=student.id, duration_minutes=10, started_at=now - _td(minutes=11), ends_at=now - _td(minutes=1),
-            status="active", engine="new",
+            status="active",
         )
         db.add(lesson)
         db.commit()
@@ -84,7 +84,7 @@ def test_lesson_summary_shows_the_criteria_and_the_phrases_of_the_lesson(client)
         now = utcnow()
         lesson = TutorSession(
             student_id=student.id, duration_minutes=10, started_at=now, ends_at=now + timedelta(minutes=10),
-            status="completed", engine="new", end_status="evaluated", evaluation="Good lesson.",
+            status="completed", end_status="evaluated", evaluation="Good lesson.",
             eval_range="B1", eval_accuracy="A2", eval_fluency="A2", eval_interaction="B1", eval_coherence="A2",
         )
         db.add(lesson)
@@ -231,7 +231,7 @@ def test_a_simulated_trial_learner_moves_up_and_the_notebook_follows(client, mon
     notebook = "\n\n".join(f"## {heading}\nShort note." for heading in NOTEBOOK_HEADINGS)
 
     def fake(system, messages, max_tokens=300):
-        if system.startswith("You judge"):
+        if "ارزیاب مهارت گفتاری" in system:
             body = _json.dumps({"criteria": {"range": "B1", "accuracy": "B1", "fluency": "A2", "interaction": "B1", "coherence": "A2"}, "summary": "Good progress."})
         else:
             body = notebook
@@ -250,7 +250,7 @@ def test_a_simulated_trial_learner_moves_up_and_the_notebook_follows(client, mon
             now = utcnow()
             lesson_row = _Lesson(student_id=student_id, duration_minutes=10, started_at=now - timedelta(days=days_ago),
                                  ends_at=now - timedelta(days=days_ago) + timedelta(minutes=10), status="completed",
-                                 ended_at=now - timedelta(days=days_ago), engine="new")
+                                 ended_at=now - timedelta(days=days_ago))
             db.add(lesson_row)
             db.flush()
             for turn in range(3):

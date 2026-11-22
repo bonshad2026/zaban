@@ -5,7 +5,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
 
 from zaban.base import prefix_html
 from fastapi.staticfiles import StaticFiles
@@ -114,6 +114,16 @@ async def static_files_revalidate(request, call_next):
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/sw.js")
+def service_worker() -> FileResponse:
+    # The worker is served from the root, so it can keep every page working offline (see static/sw.js).
+    return FileResponse(
+        STATIC_DIR / "sw.js",
+        media_type="application/javascript",
+        headers={"Service-Worker-Allowed": "/", "Cache-Control": "no-cache"},
+    )
 
 
 def _contact_block() -> str:

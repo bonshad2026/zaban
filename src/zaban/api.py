@@ -406,7 +406,6 @@ def start_session(
         duration_minutes=body.duration_minutes,
         started_at=now,
         ends_at=now + timedelta(minutes=body.duration_minutes),
-        engine="new",
     )
     db.add(session)
     db.commit()
@@ -455,12 +454,10 @@ def send_message(
     # The adult who pays for this learner must still have a plan with tokens left. If not, the lesson closes here.
     owner_id = student.self_owner_id
     owner = db.get(Guardian, owner_id) if owner_id else None
-    partner_lesson = session.engine == "new"
-    if owner is not None and (not has_active_plan(owner) or (partner_lesson and reserve_reached(db, owner))):
+    if owner is not None and (not has_active_plan(owner) or reserve_reached(db, owner)):
         finish_session(session, now)
         db.commit()
-        if partner_lesson:
-            finish_partner_session(db, session)
+        finish_partner_session(db, session)
         return {"reply": PLAN_USED_NOTICE, "block": None, "guarded": None, "mode": "closed", "seconds_left": 0,
                 "closed": True, "notice": PLAN_USED_NOTICE, "warnings": []}
 
@@ -522,11 +519,11 @@ def send_message(
     if owner is not None:
         charge_plan_tokens(db, owner, reply.input_tokens + reply.output_tokens)
         # When the last tokens are used, the lesson ends after this reply.
-        closed = not has_active_plan(owner) or (partner_lesson and reserve_reached(db, owner))
+        closed = not has_active_plan(owner) or reserve_reached(db, owner)
     if closed:
         finish_session(session, now)
     db.commit()
-    if closed and partner_lesson:
+    if closed:
         # The end routine runs now, with the tokens kept back for it (section 13.7).
         finish_partner_session(db, session)
     seconds_left = _seconds_left(session, now)
@@ -540,7 +537,7 @@ def send_message(
         "notice": PLAN_USED_NOTICE if closed else None,
         "partner": partner,
         "shadowing": shadowing,
-        "warnings": budget_warnings(db, owner, now) if partner_lesson else [],
+        "warnings": budget_warnings(db, owner, now),
         "rhythm": _rhythm_out(rhythm) if rhythm else None,
     }
 
@@ -600,7 +597,6 @@ def start_free_conversation(
         started_at=now,
         ends_at=now + timedelta(minutes=minutes) if minutes else now + timedelta(hours=24),
         session_kind="free",
-        engine="new",
         topic=topic,
     )
     db.add(session)
@@ -615,7 +611,7 @@ def start_free_conversation(
 @router.get("/sessions/{session_id}/rhythm")
 def get_rhythm(session_id: str, auth: Auth = Depends(get_auth), db: DBSession = Depends(get_db)) -> dict:
     session = _get_session_for_auth(db, auth, session_id)
-    if session.engine != "new" or session.session_kind == "free":
+    if session.session_kind == "free":
         return {"rhythm": None}
     return _rhythm_out(segment_state(session, utcnow()))
 
@@ -706,7 +702,7 @@ def continue_lesson(session_id: str, auth: Auth = Depends(get_auth), db: DBSessi
     # The time of a lesson ran out and the learner chose to go on without a time limit (section 15.5).
     session = _get_session_for_auth(db, auth, session_id)
     now = utcnow()
-    if session.engine != "new" or session.status != "completed" or session.end_status in ("evaluated", "no_evaluation"):
+    if session.status != "completed" or session.end_status in ("evaluated", "no_evaluation"):
         raise HTTPException(status_code=409, detail="This lesson cannot continue")
     student = db.get(Student, session.student_id)
     owner = db.get(Guardian, student.self_owner_id) if student.self_owner_id else None

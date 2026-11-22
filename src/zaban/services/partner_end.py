@@ -18,13 +18,8 @@ from zaban.services.partner_settings import partner_value
 
 # After this many failed tries the lesson is kept without an evaluation (section 13.7).
 MAX_ATTEMPTS = 3
-SUMMARY_INSTRUCTIONS = (
-    "You judge one English lesson for a learner. Reply with one JSON object and nothing else:\n"
-    '{"criteria": {"range": "<CEFR level A1 to C2>", "accuracy": "...", "fluency": "...", "interaction": "...", "coherence": "..."}, '
-    '"summary": "<3 to 5 sentences in English about this lesson>"}\n'
-    "Judge each criterion for this lesson only: range (vocabulary), accuracy (grammar and errors), fluency (speed and flow), "
-    "interaction (taking turns, asking and answering), coherence (linking sentences). Do not write personal details."
-)
+# The judge's reply: the criteria and a Persian summary with its strengths, weaknesses and next steps. The text is set in the admin panel.
+JUDGE_MAX_TOKENS = 1200
 
 
 class EndError(Exception):
@@ -101,7 +96,7 @@ def _event_text(db: DBSession, session: TutorSession, learner_turns: int, summar
 def _run(db: DBSession, student: Student, session: TutorSession, messages: list[Message], now: datetime) -> None:
     owner = db.get(Guardian, student.self_owner_id) if student.self_owner_id else None
     calls = Calls(db, db.get(Tenant, student.tenant_id), session.id)
-    summary = read_summary(calls(SUMMARY_INSTRUCTIONS, transcript(messages), 600).text)
+    summary = read_summary(calls(partner_value(db, "partner_evaluation_rules"), transcript(messages), JUDGE_MAX_TOKENS).text)
     window = max(int(partner_value(db, "partner_level_up_sessions")), int(partner_value(db, "partner_level_down_sessions")))
     history = recent_evaluations(db, student.id, session.id, window)
     changes = apply_criteria(db, student, session, summary["criteria"], history)
@@ -120,9 +115,9 @@ def _run(db: DBSession, student: Student, session: TutorSession, messages: list[
 
 
 def finish_partner_session(db: DBSession, session: TutorSession, now: datetime | None = None) -> str:
-    # Runs the routine once for a finished lesson of the new engine. Safe to call again: a finished lesson is skipped.
+    # Runs the routine once for a finished lesson. Safe to call again: a finished lesson is skipped.
     now = now or utcnow()
-    if session.engine != "new" or session.status != "completed" or session.end_status in ("evaluated", "no_evaluation"):
+    if session.status != "completed" or session.end_status in ("evaluated", "no_evaluation"):
         return session.end_status
     student = db.get(Student, session.student_id)
     messages = db.query(Message).filter(Message.session_id == session.id).order_by(Message.id).all()
@@ -149,7 +144,6 @@ def retry_pending(db: DBSession, student_id: str) -> None:
     # Lessons that ended by time without the learner's end (end_status active) are finished here too.
     pending = db.query(TutorSession).filter(
         TutorSession.student_id == student_id,
-        TutorSession.engine == "new",
         TutorSession.status == "completed",
         TutorSession.end_status.in_(["pending", "active"]),
     ).all()

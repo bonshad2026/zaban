@@ -180,9 +180,10 @@ const Z = (() => {
     try {
       res = await fetch(url(path), options);
     } catch (_) {
+      // Without a connection the request never reaches the server. The page shows this text where its message goes.
       throw new Error(isEnglish()
-        ? "Could not reach the server. Please check your internet connection."
-        : "اتصال به سرور برقرار نشد. اینترنت یا اتصال سیستم را بررسی کنید.");
+        ? "You are offline. Check your internet connection and try again."
+        : "اینترنت شما قطع است. وضعیت اتصال اینترنت خود را بررسی کنید و دوباره تلاش کنید.");
     }
     if (res.status === 204) return null;
     const data = await res.json().catch(() => ({}));
@@ -1009,11 +1010,15 @@ const Z = (() => {
 
   // Level bars for a microphone: while it listens, the bars in `box` move with the sound it hears.
   // Without the bars the recording still works, because the blue microphone already shows that it is on.
+  // On a touch screen the bars are left out: a second microphone stream stops the phone's speech recognition from hearing anything.
+  const TOUCH_SCREEN = window.matchMedia("(pointer: coarse)").matches;
+
   function levelMeter(box) {
     let run = 0;
     let stopper = null;
     return {
       async start() {
+        if (TOUCH_SCREEN) return;
         const current = ++run;
         const bars = box.querySelectorAll("span");
         box.hidden = false;
@@ -1218,3 +1223,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }).observe(document.body, { childList: true, subtree: true });
   });
 })();
+
+// The site keeps its look without the internet: the worker keeps the pages and styles (see static/sw.js).
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register(Z.url("/sw.js")).catch(() => { /* the site works online without it */ });
+  });
+}

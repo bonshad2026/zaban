@@ -287,7 +287,6 @@ def read_learner_partner(student_id: str, db: DBSession = Depends(get_db)) -> di
             {
                 "id": s.id,
                 "started_at": s.started_at.isoformat(),
-                "engine": s.engine,
                 "end_status": s.end_status,
                 "end_attempts": s.end_attempts,
                 "evaluation": s.evaluation or "",
@@ -338,8 +337,6 @@ def reprocess_lesson(session_id: str, db: DBSession = Depends(get_db)) -> dict:
     session = db.get(TutorSession, session_id)
     if session is None:
         raise HTTPException(status_code=404, detail="Lesson not found")
-    if session.engine != "new":
-        raise HTTPException(status_code=400, detail="Only lessons of the conversation partner can be processed again")
     return {"end_status": reprocess_session_end(db, session)}
 
 

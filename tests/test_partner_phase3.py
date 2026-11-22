@@ -208,7 +208,7 @@ def test_free_conversation_has_no_time_and_uses_the_free_rules(client, monkeypat
     assert client.get(f"/v1/sessions/{session_id}/rhythm", headers=DEMO).json() == {"rhythm": None}
     with SessionLocal() as db:
         session = db.get(TutorSession, session_id)
-        assert session.session_kind == "free" and session.engine == "new"
+        assert session.session_kind == "free"
     with SessionLocal() as db:
         set_setting(db, "partner_free_rules", "")
         db.commit()

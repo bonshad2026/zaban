@@ -26,4 +26,4 @@ dev = [
 where = ["src"]
 
 [tool.setuptools.package-data]
-zaban = ["static/*.html", "static/css/*", "static/js/*", "static/img/*", "static/partials/*", "seed_media/help/*"]
+zaban = ["static/*.html", "static/*.js", "static/css/*", "static/js/*", "static/img/*", "static/partials/*", "static/vendor/*/*", "seed_media/help/*"]

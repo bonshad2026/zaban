@@ -126,14 +126,17 @@
 
   function renderReport(box, data) {
     box.classList.add("report-stack");
-    const blocks = [statusBlock(data.progress, data.onShowProgress), levelBlock(data.partner), reportList(data.items)];
+    const blocks = [statusBlock(data.progress, data.onShowProgress), levelBlock(data.partner)];
+    // The teacher's page still shows every report in one list. The learner's own report tab does not.
+    if (data.items) blocks.push(reportList({ kind: "all", items: data.items }));
     // Only the learner's own page has an analysis; a teacher's view leaves it out.
     if (data.analysis !== undefined) blocks.unshift(analysisBar(data.analysis));
     box.replaceChildren(...blocks);
   }
 
-  // Every report in one list: lessons, free talks and self-tests. The filter shows one kind; a row opens its details.
-  const REPORT_KINDS = [["all", "همه"], ["lesson", "جلسه"], ["test", "آزمون"], ["talk", "گفتگو"]];
+  // The reports of one kind (lesson, talk or test) are listed inside the card that starts that kind. A row opens its details.
+  const REPORT_LIST_TITLES = { lesson: "گزارش جلسه‌ها", talk: "گزارش گفتگوها", test: "گزارش آزمون‌ها" };
+  const REPORT_TYPE_CHOICES = [["all", "همه"], ["lesson", "جلسه"], ["test", "آزمون"], ["talk", "گفتگو"]];
   const REPORT_TYPE_FA = { lesson: "جلسه", test: "آزمون", talk: "گفتگو" };
   const REPORT_STATUS_FA = { completed: "کامل شد", finished: "کامل شد", active: "در حال انجام", expired: "تمام شد" };
   const REPORT_CRITERIA_FA = { range: "دامنه", accuracy: "دقت", fluency: "روانی", interaction: "تعامل", coherence: "انسجام" };
@@ -197,42 +200,98 @@
 
   const CALENDAR_ICON = '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>';
 
-  // A date filter field. English uses the calendar input (Gregorian). Persian takes a Jalali date, typed or picked from the calendar icon.
-  function dateField(text, onChange) {
+  // The date range filter: one box that takes a range, typed or picked from the calendar, with a × inside that clears it.
+  // Persian takes Jalali dates; English takes two calendar inputs (Gregorian). onChange(from, to) gets ISO dates, "" when cleared.
+  function isoOf(jalali) {
+    const date = jalali ? jalaliToDate(jalali.y, jalali.m, jalali.d) : null;
+    return date ? date.toISOString().slice(0, 10) : "";
+  }
+
+  function dateRange(onChange) {
     const field = Z.el("div", "report-date");
-    const caption = Z.el("span", "", text);
-    const input = Z.el("input");
-    input.setAttribute("aria-label", text);
-    const error = Z.el("span", "error", tr("تاریخ را به شکل ۱۴۰۵/۰۱/۰۱ وارد کنید."));
-    error.hidden = true;
+    field.append(Z.el("span", "", tr("تاریخ")));
+    const wrap = Z.el("div", "report-input report-range");
+    const clear = Z.el("button", "report-date-clear", "×");
+    clear.type = "button";
+    clear.setAttribute("aria-label", tr("پاک کردن تاریخ"));
+
     if (english()) {
-      input.type = "date";
-      input.addEventListener("change", () => onChange(input.value));
-      field.append(caption, input, error);
-      return { field, input };
+      const from = Z.el("input");
+      from.type = "date";
+      from.setAttribute("aria-label", tr("از تاریخ"));
+      const to = Z.el("input");
+      to.type = "date";
+      to.setAttribute("aria-label", tr("تا تاریخ"));
+      const emit = () => onChange(from.value, to.value);
+      from.addEventListener("change", emit);
+      to.addEventListener("change", emit);
+      clear.addEventListener("click", () => {
+        from.value = "";
+        to.value = "";
+        emit();
+      });
+      wrap.append(from, Z.el("span", "muted", "–"), to, clear);
+      field.append(wrap);
+      return field;
     }
+
+    const input = Z.el("input");
     input.type = "text";
     input.inputMode = "numeric";
-    input.placeholder = "۱۴۰۵/۰۱/۰۱";
-    const wrap = Z.el("div", "report-input");
+    input.placeholder = tr("از تاریخ تا تاریخ");
+    input.setAttribute("aria-label", tr("بازه‌ی تاریخ"));
     const toggle = Z.el("button", "report-cal-btn");
     toggle.type = "button";
     toggle.setAttribute("aria-label", tr("تقویم"));
     toggle.title = tr("تقویم");
     toggle.innerHTML = CALENDAR_ICON;
-    wrap.append(input, toggle);
+    const error = Z.el("span", "error", tr("تاریخ را به شکل ۱۴۰۵/۰۱/۰۱ وارد کنید."));
+    error.hidden = true;
     const panel = Z.el("div", "report-calendar");
     panel.hidden = true;
-    field.append(caption, wrap, error, panel);
+    wrap.append(input, clear, toggle);
+    field.append(wrap, error, panel);
 
-    // The month shown in the calendar. It starts at the typed date, or at today.
+    // The chosen range in Jalali dates. A drag over the calendar picks the whole range at once, from the day it starts on to the day it ends on.
+    let range = { start: null, end: null };
     let shown = null;
+    // The first day clicked is the anchor; the second click ends the range, whichever of the two is earlier.
+    let anchor = null;
+    const order = (d) => d.y * 10000 + d.m * 100 + d.d;
 
-    function pick(y, m, d) {
-      input.value = formatJalali(y, m, d);
-      error.hidden = true;
+    function show() {
+      const { start, end } = range;
+      if (!start) input.value = "";
+      else if (order(start) === order(end)) input.value = formatJalali(start.y, start.m, start.d);
+      else input.value = `${formatJalali(start.y, start.m, start.d)} تا ${formatJalali(end.y, end.m, end.d)}`;
+    }
+
+    function emit() {
+      onChange(isoOf(range.start), isoOf(range.end));
+    }
+
+    // Writes the range into the box, sends it to the list and closes the calendar.
+    function finish() {
+      show();
+      emit();
       panel.hidden = true;
-      onChange(jalaliToIso(input.value));
+    }
+
+    function dayOf(cell) {
+      const key = Number(cell.dataset.key);
+      return { y: Math.floor(key / 10000), m: Math.floor((key % 10000) / 100), d: key % 100 };
+    }
+
+    // Highlights the days inside the range and marks its two ends.
+    function paintDays() {
+      const { start, end } = range;
+      panel.querySelectorAll("[data-key]").forEach((cell) => {
+        const key = Number(cell.dataset.key);
+        const inside = start && end && key >= order(start) && key <= order(end);
+        const edge = (start && key === order(start)) || (end && key === order(end));
+        cell.classList.toggle("is-in-range", Boolean(inside));
+        cell.setAttribute("aria-pressed", String(Boolean(edge)));
+      });
     }
 
     function shiftMonth(delta) {
@@ -245,7 +304,6 @@
     }
 
     function renderPanel() {
-      const chosen = parseJalali(input.value);
       panel.replaceChildren();
       const head = Z.el("div", "report-cal-head");
       const prev = Z.el("button", "ghost report-cal-nav", "‹");
@@ -268,80 +326,128 @@
       for (let d = 1; d <= days; d += 1) {
         const cell = Z.el("button", "report-cal-day", String(d));
         cell.type = "button";
-        const selected = chosen && chosen.y === shown.y && chosen.m === shown.m && chosen.d === d;
-        cell.setAttribute("aria-pressed", String(Boolean(selected)));
-        cell.addEventListener("click", () => pick(shown.y, shown.m, d));
+        cell.dataset.key = String(order({ y: shown.y, m: shown.m, d }));
         grid.appendChild(cell);
       }
+      // The grid is redrawn on each month, so its click handler is added here.
+      grid.addEventListener("click", (event) => {
+        const cell = event.target.closest("[data-key]");
+        if (!cell) return;
+        const day = dayOf(cell);
+        if (!anchor) {
+          anchor = day;
+          range = { start: day, end: day };
+          paintDays();
+          return;
+        }
+        range = order(anchor) <= order(day) ? { start: anchor, end: day } : { start: day, end: anchor };
+        anchor = null;
+        finish();
+      });
       panel.append(head, grid);
+      paintDays();
     }
 
-    toggle.addEventListener("click", () => {
-      const chosen = parseJalali(input.value);
+    // A typed range such as ۱۴۰۵/۰۱/۰۱ تا ۱۴۰۵/۰۱/۳۰ is read when the box is left. Empty clears it.
+    input.addEventListener("change", () => {
+      const pieces = input.value.split(/\s*(?:تا|-|–)\s*/).map((piece) => piece.trim()).filter(Boolean);
+      if (!pieces.length) {
+        range = { start: null, end: null };
+        error.hidden = true;
+        emit();
+        return;
+      }
+      const dates = pieces.map(parseJalali);
+      const valid = dates.length <= 2 && dates.every((d) => d && jalaliToDate(d.y, d.m, d.d));
+      error.hidden = valid;
+      if (!valid) return;
+      const [a, b] = dates.length === 1 ? [dates[0], dates[0]] : dates;
+      range = order(a) <= order(b) ? { start: a, end: b } : { start: b, end: a };
+      show();
+      emit();
+    });
+
+    // The × only clears the range: it does not open the calendar.
+    clear.addEventListener("click", (event) => {
+      event.stopPropagation();
+      range = { start: null, end: null };
+      anchor = null;
+      show();
+      error.hidden = true;
+      panel.hidden = true;
+      emit();
+    });
+
+    // The calendar opens from the box itself, or from its calendar button. Picking a day inside it closes it.
+    function openPanel() {
       const now = jalaliOf(new Date());
-      shown = chosen && chosen !== "" ? { y: chosen.y, m: chosen.m } : { y: now.y, m: now.m };
+      const base = range.start || now;
+      shown = { y: base.y, m: base.m };
+      anchor = null;
       renderPanel();
-      panel.hidden = !panel.hidden;
+      panel.hidden = false;
+    }
+    toggle.addEventListener("click", () => {
+      if (panel.hidden) openPanel();
+      else panel.hidden = true;
+    });
+    input.addEventListener("click", () => {
+      if (panel.hidden) openPanel();
     });
     document.addEventListener("click", (event) => {
       if (!field.contains(event.target)) panel.hidden = true;
     });
-    input.addEventListener("change", () => {
-      const iso = jalaliToIso(input.value);
-      error.hidden = iso !== null;
-      if (iso !== null) onChange(iso);
-    });
-    return { field, input };
+    return field;
   }
 
-  function reportList(items) {
+  // The list of reports. kind is "lesson", "talk" or "test" for the card that starts it, which has no type filter and no type tag.
+  // kind "all" (the teacher's page) lists every kind and has a type filter. onBack, when given, returns to the card.
+  function reportList({ kind, items, onBack, studentId, onResume, onReload }) {
     const wrap = Z.el("section", "report-block report-list");
-    wrap.appendChild(Z.el("h2", null, tr("گزارش‌های من")));
+    const head = Z.el("div", "d-flex justify-content-between align-items-center gap-2 flex-wrap");
+    head.appendChild(Z.el("h2", null, tr(REPORT_LIST_TITLES[kind] || "گزارش‌ها")));
+    if (onBack) {
+      const close = Z.el("button", "btn-close");
+      close.type = "button";
+      close.setAttribute("aria-label", tr("بستن"));
+      close.addEventListener("click", onBack);
+      head.appendChild(close);
+    }
+    wrap.appendChild(head);
     if (!items.length) {
-      wrap.appendChild(Z.el("p", "muted", tr("هنوز گزارشی ثبت نشده است. از تب «جلسه» یا «آزمون‌ها» شروع کن.")));
+      wrap.appendChild(Z.el("p", "muted", tr(kind === "all" ? "هنوز گزارشی ثبت نشده است." : "گزارشی برای شما ثبت نشده است.")));
       return wrap;
     }
-    const state = { kind: "all", from: "", to: "", size: PAGE_SIZES[0], page: 1 };
+    const state = { type: "all", from: "", to: "", size: PAGE_SIZES[0], page: 1 };
+    // The buttons that change a report need the learner's id and the page's own actions. The teacher's page has none.
+    const ctx = studentId ? { studentId, onResume, onReload } : null;
 
-    const filters = Z.el("div", "report-filter");
-    const typeButtons = REPORT_KINDS.map(([kind, fa]) => {
-      const button = Z.el("button", "ghost", tr(fa));
-      button.type = "button";
-      button.addEventListener("click", () => {
-        state.kind = kind;
-        state.page = 1;
-        paint();
+    const typeButtons = [];
+    if (kind === "all") {
+      const filters = Z.el("div", "report-filter");
+      REPORT_TYPE_CHOICES.forEach(([type, fa]) => {
+        const button = Z.el("button", "ghost", tr(fa));
+        button.type = "button";
+        button.addEventListener("click", () => {
+          state.type = type;
+          state.page = 1;
+          paint();
+        });
+        filters.appendChild(button);
+        typeButtons.push([type, button]);
       });
-      filters.appendChild(button);
-      return [kind, button];
-    });
+      wrap.appendChild(filters);
+    }
 
-    const dates = Z.el("div", "report-dates");
-    const from = dateField(tr("از تاریخ"), (value) => {
-      state.from = value;
+    // One line: the date range, then the number of items per page.
+    const bar = Z.el("div", "report-bar");
+    const range = dateRange((from, to) => {
+      state.from = from;
+      state.to = to;
       state.page = 1;
       paint();
     });
-    const to = dateField(tr("تا تاریخ"), (value) => {
-      state.to = value;
-      state.page = 1;
-      paint();
-    });
-    const clear = Z.el("button", "ghost", tr("پاک کردن تاریخ"));
-    clear.type = "button";
-    clear.addEventListener("click", () => {
-      state.from = "";
-      state.to = "";
-      from.input.value = "";
-      to.input.value = "";
-      state.page = 1;
-      paint();
-    });
-    dates.append(from.field, to.field, clear);
-
-    const rows = Z.el("div", "report-rows");
-
-    const sizeField = Z.el("label", "report-size", tr("تعداد در هر صفحه"));
+    const sizeField = Z.el("label", "report-size", tr("تعداد آیتم"));
     const sizeSelect = Z.el("select");
     PAGE_SIZES.forEach((size) => {
       const option = Z.el("option", "", String(size));
@@ -354,7 +460,9 @@
       paint();
     });
     sizeField.appendChild(sizeSelect);
-    dates.appendChild(sizeField);
+    bar.append(range, sizeField);
+
+    const rows = Z.el("div", "report-rows");
     const pager = Z.el("div", "report-pager");
     const prev = Z.el("button", "ghost", tr("قبلی"));
     prev.type = "button";
@@ -371,11 +479,11 @@
     const info = Z.el("span", "muted");
     pager.append(prev, info, next);
 
-    wrap.append(filters, dates, rows, pager);
+    wrap.append(bar, rows, pager);
 
     // A report matches when its type is chosen (or all) and its date is inside the range, if one is set.
     function matches(item) {
-      if (state.kind !== "all" && item.type !== state.kind) return false;
+      if (state.type !== "all" && item.type !== state.type) return false;
       const when = Z.parseUtc(item.date);
       if (state.from && when < new Date(`${state.from}T00:00:00`)) return false;
       if (state.to && when > new Date(`${state.to}T23:59:59.999`)) return false;
@@ -383,16 +491,16 @@
     }
 
     function paint() {
-      typeButtons.forEach(([kind, button]) => button.setAttribute("aria-pressed", String(kind === state.kind)));
+      typeButtons.forEach(([type, button]) => button.setAttribute("aria-pressed", String(type === state.type)));
       const shown = items.filter(matches);
       const pages = Math.max(1, Math.ceil(shown.length / state.size));
       state.page = Math.min(Math.max(1, state.page), pages);
       const start = (state.page - 1) * state.size;
       rows.replaceChildren();
       if (!shown.length) {
-        rows.appendChild(Z.el("p", "muted", tr("در این بازه و این نوع گزارشی نیست.")));
+        rows.appendChild(Z.el("p", "muted", tr("در این بازه گزارشی نیست.")));
       }
-      shown.slice(start, start + state.size).forEach((item) => rows.appendChild(reportRow(item)));
+      shown.slice(start, start + state.size).forEach((item) => rows.appendChild(reportRow(item, kind === "all", ctx)));
       info.textContent = pick(`صفحه ${state.page} از ${pages}`, `Page ${state.page} of ${pages}`);
       prev.disabled = state.page <= 1;
       next.disabled = state.page >= pages;
@@ -402,15 +510,103 @@
     return wrap;
   }
 
-  function reportRow(item) {
+  const REPORT_STATE_FA = { active: "در حال انجام", completed: "کامل شده", unevaluated: "ارزیابی نشده" };
+  const RESUME_FA = { lesson: "تکمیل جلسه", talk: "تکمیل گفتگو", test: "تکمیل آزمون" };
+  const EVALUATE_NOTICE = {
+    impossible: "متاسفانه برای این مورد امکان ارزیابی وجود ندارد. پیام کافی برای ارزیابی ثبت نشده است.",
+    plan: "توکن‌های پلن شما برای ارزیابی کافی نیست. برای ادامه، پلن خود را تمدید کنید.",
+    failed: "ارزیابی انجام نشد. اتصال اینترنت را بررسی کنید و دوباره تلاش کنید.",
+  };
+
+  // A short message in the details window, for example when a report cannot be evaluated.
+  function showNotice(text) {
+    const view = detailsDialog();
+    view.title.textContent = tr("ارزیابی");
+    view.body.replaceChildren(Z.el("p", null, tr(text)));
+    view.dialog.showModal();
+  }
+
+  // Makes the evaluation of an unevaluated report now. When it is written, the list is reloaded and the evaluation opens.
+  async function evaluateItem(item, button, ctx) {
+    const label = button.textContent;
+    button.disabled = true;
+    button.textContent = tr("در حال ارزیابی…");
+    try {
+      const data = await Z.request("POST", `/v1/students/${ctx.studentId}/reports/${item.type}/${item.id}/evaluate`);
+      if (data.state === "completed") {
+        const items = await ctx.onReload();
+        openReport(items.find((row) => row.id === item.id) || item);
+      } else {
+        showNotice(EVALUATE_NOTICE[data.state] || EVALUATE_NOTICE.failed);
+      }
+    } catch (err) {
+      showNotice(err.message);
+    } finally {
+      button.disabled = false;
+      button.textContent = label;
+    }
+  }
+
+  // One report row: its state, and the buttons that fit the state. The conversation button is there whenever the list can load it.
+  // The type tag is shown only where the list holds every kind. Without a context (the teacher's page) only the evaluation opens.
+  function reportRow(item, showType, ctx) {
     const row = Z.el("div", "report-row");
     const top = Z.el("div", "report-row-top");
-    top.append(Z.el("strong", null, item.title), Z.el("span", "report-type", tr(REPORT_TYPE_FA[item.type])));
-    const open = Z.el("button", "ghost report-open", tr("مشاهده جزئیات"));
-    open.type = "button";
-    open.addEventListener("click", () => openReport(item));
-    row.append(top, Z.el("div", "muted", reportMeta(item)), open);
+    top.append(Z.el("strong", null, item.title));
+    if (showType) top.append(Z.el("span", "report-type", tr(REPORT_TYPE_FA[item.type])));
+    top.append(Z.el("span", "report-type", tr(REPORT_STATE_FA[item.state] || "")));
+    const actions = Z.el("div", "d-flex flex-wrap gap-2");
+    if (!ctx) {
+      const evaluation = Z.el("button", "ghost report-open", tr("ارزیابی"));
+      evaluation.type = "button";
+      evaluation.addEventListener("click", () => openReport(item));
+      actions.appendChild(evaluation);
+    } else if (item.state === "active") {
+      const resume = Z.el("button", "report-open", tr(RESUME_FA[item.type]));
+      resume.type = "button";
+      resume.addEventListener("click", () => ctx.onResume(item));
+      actions.appendChild(resume);
+    } else if (item.state === "unevaluated") {
+      const evaluate = Z.el("button", "report-open", tr("ارزیابی"));
+      evaluate.type = "button";
+      evaluate.addEventListener("click", () => evaluateItem(item, evaluate, ctx));
+      actions.appendChild(evaluate);
+    } else {
+      const evaluation = Z.el("button", "ghost report-open", tr("ارزیابی"));
+      evaluation.type = "button";
+      evaluation.addEventListener("click", () => openReport(item));
+      actions.appendChild(evaluation);
+    }
+    if (ctx) {
+      const transcript = Z.el("button", "ghost report-open", tr("اصل گفتگو"));
+      transcript.type = "button";
+      transcript.addEventListener("click", () => openTranscript(item, ctx.studentId));
+      actions.appendChild(transcript);
+    }
+    row.append(top, Z.el("div", "muted", reportMeta(item)), actions);
     return row;
+  }
+
+  // The conversation of one report, as the learner and the teacher wrote it. It opens in the same details window.
+  async function openTranscript(item, studentId) {
+    const view = detailsDialog();
+    view.title.textContent = item.title;
+    view.body.replaceChildren(Z.el("p", "muted", tr("در حال بارگذاری گفتگو…")));
+    view.dialog.showModal();
+    try {
+      const data = await Z.request("GET", `/v1/students/${studentId}/reports/${item.type}/${item.id}/messages`);
+      if (!data.messages.length) {
+        view.body.replaceChildren(Z.el("p", "muted", tr("برای این گزارش گفتگویی ذخیره نشده است.")));
+        return;
+      }
+      view.body.replaceChildren(...data.messages.map((message) => {
+        const line = Z.el("p", null);
+        line.append(Z.el("strong", null, `${tr(message.role === "user" ? "شما" : "معلم")}: `), document.createTextNode(message.content));
+        return line;
+      }));
+    } catch (err) {
+      view.body.replaceChildren(Z.el("p", "error", err.message));
+    }
   }
 
   // The stored evaluation is plain text: headings end with a colon, and the points under them are bullet or numbered lines.
@@ -485,5 +681,10 @@
     view.dialog.showModal();
   }
 
-  window.ReportView = { render: renderReport };
+  // Fills `box` with the list of one kind. The caller shows the box and hides it again through onBack.
+  function renderReportList(box, data) {
+    box.replaceChildren(reportList(data));
+  }
+
+  window.ReportView = { render: renderReport, list: renderReportList };
 })();

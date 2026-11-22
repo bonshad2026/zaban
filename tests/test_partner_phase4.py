@@ -40,7 +40,7 @@ def _summary(**criteria: str) -> str:
 
 def _fake_partner(summary: str, notebook: str):
     def complete(system, messages, max_tokens=300):
-        text = summary if system.startswith("You judge") else notebook
+        text = summary if "ارزیاب مهارت گفتاری" in system else notebook
         return AIResult(text=text, input_tokens=10, output_tokens=5, mode="live")
 
     return complete

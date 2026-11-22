@@ -29,10 +29,7 @@
       loadHelp();
     }
     if (name === "payments") loadPayments();
-    if (name === "test") {
-      showTestRun(false);
-      loadTests();
-    }
+    if (name === "test") showTestRun(false);
   }
 
   function nullIfEmpty(value) {
@@ -575,35 +572,6 @@
     $("testChat").scrollTop = $("testChat").scrollHeight;
   }
 
-  const KIND_LABELS = { qa: Z.tr("سؤال و جواب"), conversation: Z.tr("مکالمه"), mixed: Z.tr("ترکیبی"), suggested: Z.tr("پیشنهاد سیستم") };
-  const SKILL_LABELS = { writing: Z.tr("نوشتن"), listening: Z.tr("شنیداری"), speaking: Z.tr("گفتاری"), mixed: Z.tr("چند مهارت") };
-
-  async function loadTests() {
-    try {
-      const rows = await Z.request("GET", "/v1/web/student/self-tests");
-      const list = $("testList");
-      list.replaceChildren();
-      Z.show($("testListNotice"), rows.length === 0);
-      $("testListNotice").textContent = rows.length === 0 ? Z.tr("هنوز آزمونی نداده‌اید. از پایین شروع کنید.") : "";
-      rows.forEach((t) => {
-        const card = el("article", "help-item");
-        const status = t.status === "finished" ? Z.tr("تمام شده") : Z.tr("در حال انجام");
-        const view = el("button", "ghost", t.status === "finished" ? Z.tr("مشاهده‌ی آزمون") : Z.tr("ادامه‌ی آزمون"));
-        view.type = "button";
-        view.addEventListener("click", () => openTest(t.id));
-        card.append(
-          el("h3", "", `${KIND_LABELS[t.kind] || t.kind} — ${SKILL_LABELS[t.skill] || t.skill}`),
-          el("p", "muted", Z.pick(`${Z.fmtDateTime(t.created_at)} — ${t.minutes} دقیقه — سطح ${t.level || "؟"} — ${status}`, `${Z.fmtDateTime(t.created_at)} — ${t.minutes} min — level ${t.level || "?"} — ${status}`)),
-          el("p", "muted", t.status === "finished" ? scoreText(t.score) : ""),
-          el("p", "", t.result || Z.tr("ارزیابی هنوز نوشته نشده است.")),
-          view,
-        );
-        list.appendChild(card);
-      });
-    } catch (err) {
-      Z.showError($("testListNotice"), err.message);
-    }
-  }
 
   // Opens an earlier test with its whole conversation and its evaluation. A running test can be continued.
   async function openTest(id) {
@@ -613,7 +581,32 @@
       const test = await Z.request("GET", `/v1/web/student/self-tests/${id}`);
       renderTest(test);
     } catch (err) {
-      Z.showError($("testListNotice"), err.message);
+      Z.showError($("testError"), err.message);
+    }
+  }
+
+  // The test reports open inside the test card, like the lesson and talk reports. "بستن" hides them again.
+  // A running test resumes from its row; an unevaluated one is evaluated there, and the list reloads.
+  async function showTestReports() {
+    const box = $("testReports");
+    box.hidden = false;
+    box.replaceChildren(Z.el("p", "muted", Z.tr("در حال بارگذاری گزارش…")));
+    const back = () => { box.hidden = true; box.replaceChildren(); };
+    try {
+      const me = await Z.request("GET", "/v1/web/me");
+      const data = await Z.request("GET", `/v1/students/${me.id}/reports/items?kind=test`);
+      ReportView.list(box, {
+        kind: "test",
+        items: data.items,
+        onBack: back,
+        studentId: me.id,
+        onResume: (item) => openTest(item.id),
+        onReload: showTestReports,
+      });
+      return data.items;
+    } catch (err) {
+      box.replaceChildren(Z.el("p", "error", err.message));
+      return [];
     }
   }
 
@@ -660,7 +653,6 @@
       await Z.request("POST", `/v1/web/student/self-tests/${testId}/cancel`);
       testId = null;
       showTestRun(false);
-      loadTests();
     } catch (err) {
       Z.showError($("testError"), err.message);
     }
@@ -671,7 +663,6 @@
     try {
       const test = await Z.request("POST", `/v1/web/student/self-tests/${testId}/finish`);
       renderTest(test);
-      loadTests();
     } catch (err) {
       Z.showError($("testError"), err.message);
     }
@@ -719,13 +710,11 @@
       if (progress && progress.program) renderPath();
     });
     $("testStart").addEventListener("click", startTest);
+    $("testReportBtn").addEventListener("click", showTestReports);
     $("testSend").addEventListener("click", sendAnswer);
     $("testMicBtn").addEventListener("click", toggleTestMic);
     $("testFinish").addEventListener("click", finishTest);
     $("testCancel").addEventListener("click", cancelTest);
-    $("testBack").addEventListener("click", () => {
-      showTestRun(false);
-      loadTests();
-    });
+    $("testBack").addEventListener("click", () => showTestRun(false));
   });
 })();

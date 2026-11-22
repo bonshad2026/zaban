@@ -163,20 +163,25 @@
   function showSetup(kind) {
     Z.show($("setupBox"), kind === "lesson");
     Z.show($("freeSetupBox"), kind === "free");
-    if (kind === "free") loadTopicSuggestion();
     Z.show($("lessonBox"), kind === "running");
   }
 
   // Free conversation (section 4.1): the same chat, without a rhythm. The length is the one chosen in the list;
   // "no time limit" (0) sends no length, so the talk ends when the learner ends it.
-  // The partner's suggested topic. It fills the field when the field is empty, or when the learner asks for another one.
-  async function loadTopicSuggestion(force) {
-    if (force) endTopicMic(true); // another suggestion replaces what the learner was saying
-    if (!force && $("freeTopic").value.trim()) return;
+  // The start button stays off until both a length and a topic are chosen. A learner without an active plan never gets it on.
+  function updateFreeStart() {
+    const ready = $("freeMinutes").value !== "" && $("freeTopic").value.trim() !== "";
+    $("freeStartBtn").disabled = !ready || me?.has_active_plan === false;
+  }
+
+  // The partner's suggested topic, filled in only when the learner presses "پیشنهاد ما". Nothing is filled in by itself.
+  async function loadTopicSuggestion() {
+    endTopicMic(true); // the suggestion replaces what the learner was saying
     try {
       const data = await Z.request("GET", "/v1/web/student/free-topic");
       $("freeTopic").value = data.suggestion;
     } catch (_) { /* the field stays empty; the learner can type a topic */ }
+    updateFreeStart();
   }
 
   // The learner says the topic. The suggestion leaves the field at once, and the words spoken take its place as they are heard.
@@ -208,12 +213,14 @@
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRec) return;
     $("freeTopic").value = "";
+    updateFreeStart();
     const rec = new SpeechRec();
     rec.lang = Accents.current;
     rec.continuous = true;
     rec.interimResults = true;
     rec.onresult = (event) => {
       $("freeTopic").value = Array.from(event.results).map((r) => r[0].transcript).join(" ").trim();
+      updateFreeStart();
     };
     rec.onend = () => {
       if (topicRec === rec) endTopicMic(false);
@@ -233,21 +240,24 @@
 
   async function startFree() {
     Z.showError($("freeStartError"), "");
+    if (!$("freeMinutes").value || !$("freeTopic").value.trim()) {
+      Z.showError($("freeStartError"), Z.tr("لطفاً موضوع گفتگو و مدت آن را انتخاب کنید."));
+      return;
+    }
     const minutes = Number($("freeMinutes").value);
     const topic = $("freeTopic").value.trim();
-    const body = {};
+    const body = { topic };
     if (minutes) body.duration_minutes = minutes;
-    if (topic) body.topic = topic;
     $("freeStartBtn").disabled = true;
     try {
-      const session = await Z.request("POST", `/v1/students/${me.id}/free-conversation`, Object.keys(body).length ? body : undefined);
+      const session = await Z.request("POST", `/v1/students/${me.id}/free-conversation`, body);
       lastKind = "free";
       showSetup("running");
       Lesson.start(session);
     } catch (err) {
       showStartError($("freeStartError"), err);
     } finally {
-      $("freeStartBtn").disabled = false;
+      updateFreeStart();
     }
   }
 
@@ -283,21 +293,50 @@
     }
   }
 
+  // The reports of one kind open inside the card that starts that kind. "بستن" hides them again.
+  // A running report resumes here; an unevaluated one is evaluated from its row, and the list reloads.
+  async function resumeReport() {
+    const data = await Z.request("GET", `/v1/students/${me.id}/sessions/active`);
+    if (!data.session) return;
+    lastKind = data.session.session_kind === "free" ? "free" : "lesson";
+    showSetup("running");
+    Lesson.resume(data.session);
+  }
+
+  async function showReportList(kind, box) {
+    box.hidden = false;
+    box.replaceChildren(Z.el("p", "muted", Z.tr("در حال بارگذاری گزارش…")));
+    const back = () => { box.hidden = true; box.replaceChildren(); };
+    try {
+      const data = await Z.request("GET", `/v1/students/${me.id}/reports/items?kind=${kind}`);
+      ReportView.list(box, {
+        kind,
+        items: data.items,
+        onBack: back,
+        studentId: me.id,
+        onResume: resumeReport,
+        onReload: () => showReportList(kind, box),
+      });
+      return data.items;
+    } catch (err) {
+      box.replaceChildren(Z.el("p", "error", err.message));
+      return [];
+    }
+  }
+
   async function loadReport() {
     const box = $("reportBox");
     box.innerHTML = "";
     box.appendChild(Z.el("p", "muted", Z.tr("در حال بارگذاری گزارش…")));
     try {
-      const [progress, partner, items, analysis] = await Promise.all([
+      const [progress, partner, analysis] = await Promise.all([
         Z.request("GET", "/v1/web/student/progress"),
         Z.request("GET", "/v1/web/student/partner"),
-        Z.request("GET", `/v1/students/${me.id}/reports/items`),
         Z.request("GET", "/v1/web/student/analysis"),
       ]);
       ReportView.render($("reportBox"), {
         progress,
         partner,
-        items: items.items,
         analysis,
         // The full progress view is the progress tab, which stays as it is for now.
         onShowProgress: () => document.querySelector('.tab[data-tab="progress"]').click(),
@@ -335,10 +374,15 @@
     Lesson.init({ onEnded: (wasFree) => { showSetup(wasFree ? "free" : "lesson"); } });
     $("startBtn").addEventListener("click", startLesson);
     $("freeStartBtn").addEventListener("click", startFree);
-    $("freeTopicNew").addEventListener("click", () => loadTopicSuggestion(true));
+    $("freeTopicNew").addEventListener("click", loadTopicSuggestion);
+    $("lessonReportBtn").addEventListener("click", () => showReportList("lesson", $("lessonReports")));
+    $("freeReportBtn").addEventListener("click", () => showReportList("talk", $("freeReports")));
     $("freeTopicVoice").addEventListener("click", speakTopic);
     $("freeTopicVoice").hidden = !(window.SpeechRecognition || window.webkitSpeechRecognition);
     $("freeTopic").placeholder = Z.pick("موضوعی که دوست داری درباره‌اش حرف بزنی", "The subject you want to talk about");
+    $("freeTopic").addEventListener("input", updateFreeStart);
+    $("freeMinutes").addEventListener("change", updateFreeStart);
+    updateFreeStart();
     document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => selectTab(tab.dataset.tab)));
 
     try {

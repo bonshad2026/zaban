@@ -42,6 +42,7 @@ This file is for any coding agent (Claude, Codex, or others). It states the proj
 | Conversation partner (modes, learner profile, level policy, output contract, teacher notebook, build plan) | `docs/conversation-partner.md` v0.7 (design v0.7, built in phases 0 to 7; status per phase in section 15, open checks in section 15.11), sample prompts in `docs/prompt-example.html`. Test plan for a tester: `docs/po-test-plan.md` |
 | Database columns added after first release | `ADDED_COLUMNS` in `src/zaban/db.py` |
 | Service settings (SMS, payment, AI, prices, contact) | `src/zaban/services/settings_store.py`, admin panel `static/admin.html` and `static/js/admin.js`, endpoints in `src/zaban/admin_ops.py` |
+| Deployment and server variables | `docs/deployment.md` |
 | Header, profile menu, language and theme | `static/partials/header.html`, `static/css/app.css` (end of file), `static/js/common.js` (`initSiteHeader`, `initLang`, `initTheme`) |
 | Port usage on this computer | `docs/ports.md` |
 | Pages, admin menu, data and open items | `docs/site-map.md` |

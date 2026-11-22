@@ -186,3 +186,7 @@ This deletes local data. Do not do it on a production database. Use proper migra
 - **Background image** is a built-in SVG under a dark overlay. Replace it with a photo only after confirming its license.
 - **Passwords and codes**: passwords are hashed with PBKDF2. SMS codes are stored only as HMAC hashes, expire after 5 minutes, and allow 5 tries. A learner's password can be changed by the tenant (customer) that created the learner.
 - **Adult accounts** are created by the first sign-in with a name. Tenant selection uses the first active tenant, so one tenant per site is assumed.
+
+## Deployment
+
+The steps for whoever deploys the site, with the variables and the checks, are in [docs/deployment.md](docs/deployment.md).

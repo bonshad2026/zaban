@@ -19,6 +19,28 @@ SHARED_RULES_DEFAULT = (
     "take new topics from the suggested list, do not re-teach what the learner has mastered, and use what works for this learner."
 )
 
+# The judge's instructions after a lesson or a self-test. The reply must stay a JSON object with "criteria" and "summary":
+# the code checks it, and a reply that does not match is tried again.
+EVALUATION_RULES_DEFAULT = """تو یک ارزیاب مهارت گفتاری زبان انگلیسی هستی. فقط بر اساس پیام‌ها و گفتار زبان‌آموز در این گفتگو قضاوت کن. پیام‌های معلم را فقط برای فهمیدن سؤال‌ها بخوان.
+
+جواب را فقط به‌صورت یک شیء JSON و بدون هیچ متن اضافه برگردان، با دو کلید:
+"criteria": برای هر کدام از این پنج معیار یک سطح از A1 تا C2: range (دامنه‌ی واژگان)، accuracy (دقت دستور و خطاها)، fluency (روانی و سرعت)، interaction (تعامل و نوبت‌گیری)، coherence (انسجام و ربط جمله‌ها).
+"summary": متن ارزیابی به فارسی، حداکثر ۱۰۰۰ حرف، با این ساختار:
+
+نقاط قوت:
+- یک تا سه مورد مشخص. جمله‌ی خوب زبان‌آموز را دقیق و به انگلیسی نقل کن.
+نقاط ضعف:
+- یک تا سه مورد مشخص. جمله‌ی نادرست را دقیق نقل کن و بگو درست آن چه بود.
+گام‌های بعدی برای پیشرفت:
+- یک تا سه تمرین مشخص. هر تمرین یک مثال کامل انگلیسی و ترجمه‌ی فارسی‌اش داشته باشد.
+
+قواعد:
+- عنوان‌ها را دقیقاً همین‌طور بنویس، با دو نقطه در انتها و هر کدام در یک خط جدا. هر مورد را با «- » شروع کن.
+- اگر زبان‌آموز به سؤال معلم کامل جواب نداد یا صحبت کافی برای ارزیابی نداشت، این را صریح در نقاط ضعف بگو و معیارهای مربوط را پایین‌تر بگذار.
+- اگر زبان‌آموز فقط با یک کلمه یا عبارت کوتاه جواب داد، این را ضعف روشن بدان و تمرین «جواب با یک جمله‌ی کامل» بده.
+- روی مهارت گفتاری انگلیسی تمرکز کن. اطلاعات شخصی زبان‌آموز را ننویس.
+- از تعریف کلی و تشویق بی‌پایه پرهیز کن."""
+
 # kind: choice, int, int_list (comma separated numbers), pairs (LEVEL:number), rhythm (mode:percent), text.
 PARTNER_SETTINGS = [
     {"key": "partner_mastery_count", "label": "تعداد گفتگوی تسلط عبارت", "kind": "int", "min": 1, "max": 10, "default": "2",
@@ -47,6 +69,8 @@ PARTNER_SETTINGS = [
      "help": "هر خط یک حالت: کلید حالت، دونقطه، سپس قاعده (مثلاً «translation: کوتاه بگو»). کلیدها: conversation، translation، review، summary، shadowing، pronunciation، task، functions، phrases، casual، listening، story، poetry، repeat."},
     {"key": "partner_notebook_rules", "label": "قاعده‌ی نوشتن دفترچه", "kind": "text", "default": "",
      "help": "خالی یعنی قاعده‌ی پیش‌فرض کد. می‌توانید {max_words} را بنویسید تا سقف کلمه جای آن بنشیند."},
+    {"key": "partner_evaluation_rules", "label": "پرامپت ارزیابی", "kind": "text", "default": EVALUATION_RULES_DEFAULT,
+     "help": "دستور داوری پایان جلسه و آزمون. جواب باید JSON با کلیدهای criteria و summary باشد؛ اگر این ساختار شکسته شود، ارزیابی ثبت نمی‌شود."},
     {"key": "partner_free_rules", "label": "قواعد گفتگوی آزاد", "kind": "text", "default": "",
      "help": "فقط برای گفتگوی آزاد. مثلاً لحن یا موضوع‌های ترجیحی."},
     {"key": "partner_level_policy", "label": "جدول سیاست سطح", "kind": "policy", "default": "",

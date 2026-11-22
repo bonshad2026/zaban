@@ -7,7 +7,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session as DBSession
 
 from zaban.models import Guardian, SelfTest, Student, Tenant, utcnow
-from zaban.services.partner_end import MAX_ATTEMPTS, SUMMARY_INSTRUCTIONS, Calls, read_summary, transcript, write_notebook
+from zaban.services.partner_end import JUDGE_MAX_TOKENS, MAX_ATTEMPTS, Calls, read_summary, transcript, write_notebook
 from zaban.services.evaluations import record_evaluation
 from zaban.services.skill_levels import apply_scored_skill
 from zaban.services.partner_levels import apply_criteria, recent_evaluations
@@ -40,7 +40,7 @@ def run_test_update(db: DBSession, student: Student, test: SelfTest, now: dateti
         criteria = None
         changes: dict = {}
         if test.skill in CRITERIA_SKILLS:
-            criteria = read_summary(calls(SUMMARY_INSTRUCTIONS, transcript(test.messages), 600).text)["criteria"]
+            criteria = read_summary(calls(partner_value(db, "partner_evaluation_rules"), transcript(test.messages), JUDGE_MAX_TOKENS).text)["criteria"]
             window = max(int(partner_value(db, "partner_level_up_sessions")), int(partner_value(db, "partner_level_down_sessions")))
             history = recent_evaluations(db, student.id, test.id, window)
             changes = apply_criteria(db, student, test, criteria, history)
