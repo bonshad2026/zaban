@@ -845,20 +845,23 @@ const Z = (() => {
     // Only one item is current at a time: free talk is its own entry, and the learning tabs follow the page's active tab.
     const onFreeTalk = onLearnerPage && new URLSearchParams(pageUrl().search).get("free") === "1";
     const learnerItem = (tab, fa, en) => ({
-      href: tab === "lesson" ? "/student" : `/student?tab=${tab}`,
+      // Every entry names its tab. The side menu is drawn in the shell page, so a click here moves the frame to the
+      // page's address; without ?tab the learner page would open its first tab (the dashboard) instead of this one.
+      href: `/student?tab=${tab}`,
       fa,
       en,
       tab,
-      active: onLearnerPage && !onFreeTalk && (tool || "lesson") === tab,
+      active: onLearnerPage && !onFreeTalk && (tool || "report") === tab,
       startOwn: !learnerSignedIn,
     });
     // The side menu, in this order. A divider line separates the groups, and the teachers' group sits between two lines.
     const divider = { divider: true };
+    // The dashboard is the first entry: it is the page that opens when the learner area opens.
+    items.push({ ...learnerItem("report", "داشبورد", "Dashboard"), primary: true });
     items.push({ ...learnerItem("lesson", "جلسه", "Lesson"), primary: true });
     // Free conversation (section 4.1) opens on the learner page, in the same chat, without a time limit.
     items.push({ href: "/student?free=1", fa: "گفتگوی آزاد", en: "Free talk", active: onFreeTalk, primary: true });
     items.push({ ...learnerItem("test", "آزمون‌ها", "Tests"), primary: true });
-    items.push({ ...learnerItem("report", "گزارش‌ها", "Reports"), primary: true });
     items.push(learnerItem("accent", "لهجه", "Accent"));
     items.push({ href: "/learning-info", fa: "اطلاعات آموزشی", en: "Learning details", active: path === "/learning-info" });
     items.push(divider);
@@ -927,7 +930,7 @@ const Z = (() => {
     const tabs = onLearnerPage && !onFreeTalk ? document.querySelector("#appView .tabs") : null;
     if (tabs) {
       if (learnObserver) learnObserver.disconnect();
-      const sync = () => markSideTab(tabs.querySelector(".tab.is-active")?.dataset.tab || tool || "lesson");
+      const sync = () => markSideTab(tabs.querySelector(".tab.is-active")?.dataset.tab || tool || "report");
       learnObserver = new MutationObserver(sync);
       learnObserver.observe(tabs, { subtree: true, attributes: true, childList: true });
       sync();

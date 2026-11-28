@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>آموزش من | گفتاریار</title>
   <link id="bsCss" rel="stylesheet" href="/static/vendor/bootstrap/bootstrap.rtl.min.css" data-rtl="/static/vendor/bootstrap/bootstrap.rtl.min.css" data-ltr="/static/vendor/bootstrap/bootstrap.min.css">
-  <link rel="stylesheet" href="/static/css/app.css?v=51">
+  <link rel="stylesheet" href="/static/css/app.css?v=52">
 </head>
 <body>
   <!--site-header-->
@@ -13,9 +13,9 @@
   <div id="appView" hidden>
 
     <nav class="tabs">
-      <button class="tab is-active" type="button" data-tab="lesson">جلسه</button>
+      <button class="tab is-active" type="button" data-tab="report">داشبورد</button>
+      <button class="tab" type="button" data-tab="lesson">جلسه</button>
       <button class="tab" type="button" data-tab="accent">لهجه</button>
-      <button class="tab" type="button" data-tab="report">گزارش‌ها</button>
       <button class="tab" type="button" data-tab="progress">پیشرفت</button>
       <button class="tab" type="button" data-tab="help">کمک‌آموزشی</button>
       <button class="tab" type="button" data-tab="test">آزمون‌ها</button>
@@ -25,7 +25,14 @@
     <section class="plan-alert" id="planAlert" role="alert" hidden></section>
 
     <main class="wrap">
-      <section id="tab-lesson">
+      <section id="tab-report">
+        <div class="card">
+          <h2 class="accent-title" data-fa="داشبورد" data-en="Dashboard">داشبورد</h2>
+          <div id="reportBox"><p class="muted" data-fa="در حال بارگذاری…" data-en="Loading…">در حال بارگذاری…</p></div>
+        </div>
+      </section>
+
+      <section id="tab-lesson" hidden>
         <div class="card" id="setupBox" hidden>
           <h2 class="accent-title" id="lessonPageTitle" data-fa="جلسه" data-en="Lesson">جلسه</h2>
           <h2>شروع یک جلسه</h2>
@@ -131,13 +138,6 @@
           <p class="muted">لهجه‌ای را انتخاب کنید. معلم با همان لهجه صحبت می‌کند و درک صدای شما هم بر همان اساس انجام می‌شود. برای شنیدن نمونه، روی «پخش نمونه» بزنید.</p>
           <p class="notice" id="accentNotice" hidden></p>
           <div class="accent-list" id="accentList"></div>
-        </div>
-      </section>
-
-      <section id="tab-report" hidden>
-        <div class="card">
-          <h2 class="accent-title" data-fa="گزارش‌ها" data-en="Reports">گزارش‌ها</h2>
-          <div id="reportBox"></div>
         </div>
       </section>
 
@@ -278,12 +278,12 @@
     </main>
   </div>
 
-  <script src="/static/js/common.js?v=26"></script>
-  <script src="/static/js/student-i18n.js?v=5"></script>
+  <script src="/static/js/common.js?v=28"></script>
+  <script src="/static/js/student-i18n.js?v=6"></script>
   <script src="/static/js/accents.js?v=5"></script>
   <script src="/static/js/lesson.js?v=10"></script>
-  <script src="/static/js/report-view.js?v=13"></script>
-  <script src="/static/js/student.js?v=17"></script>
-  <script src="/static/js/student-tools.js?v=12"></script>
+  <script src="/static/js/report-view.js?v=14"></script>
+  <script src="/static/js/student.js?v=18"></script>
+  <script src="/static/js/student-tools.js?v=13"></script>
 </body>
 </html>

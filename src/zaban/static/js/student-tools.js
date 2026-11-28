@@ -178,7 +178,7 @@
       box.appendChild(action);
       box.appendChild(el("h3", "", Z.pick("همه‌ی دفعات", "All attempts")));
       lesson.attempts.forEach((attempt) => box.appendChild(attemptCard(attempt)));
-      const link = el("a", "", Z.pick("دیدن گزارش کامل در صفحه‌ی گزارش‌ها", "See the full report on My report"));
+      const link = el("a", "", Z.pick("دیدن گزارش کامل در داشبورد", "See the full report on the dashboard"));
       link.href = Z.url("/student?tab=report");
       box.appendChild(el("p", "", "")).appendChild(link);
     } else if (lesson.status === "current") {

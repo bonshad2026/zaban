@@ -140,22 +140,28 @@
       $("freeStartBtn").disabled = true;
       Z.showError($("startError"), Z.tr("پلن شما فعال نیست، بنابراین جلسه فعلاً شروع نمی‌شود. لطفاً پلن خود را فعال کنید."));
     }
-    selectTab("lesson");
+    const params = new URLSearchParams(location.search);
     const { session } = await Z.request("GET", `/v1/students/${me.id}/sessions/active`);
     if (session) {
       lastKind = session.session_kind === "free" ? "free" : "lesson";
       showSetup("running");
+      selectTab("lesson");
       Lesson.resume(session);
-    } else if (new URLSearchParams(location.search).get("free") === "1") {
+      return;
+    }
+    if (params.get("free") === "1") {
       // The free talk waits for its start button. Nothing starts by itself.
       showSetup("free");
-    } else {
-      showSetup("lesson");
+      selectTab("lesson");
+      return;
     }
-    // A header link can open a tool directly, for example ?tab=progress or ?tab=payments.
-    const wanted = new URLSearchParams(location.search).get("tab");
-    const tool = wanted && wanted !== "lesson" ? document.querySelector(`.tab[data-tab="${wanted}"]`) : null;
-    if (tool) tool.click();
+    showSetup("lesson");
+    // The dashboard is the page that opens first. A header link can open another one, for example ?tab=progress.
+    // The tab is clicked, not selected here, so the tools' own sections follow it too.
+    const wanted = params.get("tab") || "report";
+    const button = document.querySelector(`.tab[data-tab="${wanted}"]`);
+    if (button) button.click();
+    else selectTab(wanted);
   }
 
   // Which card is shown: "lesson" (choose a lesson), "free" (choose a free talk) or "running" (the chat).
@@ -329,15 +335,18 @@
     box.innerHTML = "";
     box.appendChild(Z.el("p", "muted", Z.tr("در حال بارگذاری گزارش…")));
     try {
-      const [progress, partner, analysis] = await Promise.all([
+      const [progress, partner, analysis, plan] = await Promise.all([
         Z.request("GET", "/v1/web/student/progress"),
         Z.request("GET", "/v1/web/student/partner"),
         Z.request("GET", "/v1/web/student/analysis"),
+        // The plan and its tokens are one card of the dashboard. Without them the card still opens the plan page.
+        Z.request("GET", "/v1/web/student/plan-status").catch(() => null),
       ]);
       ReportView.render($("reportBox"), {
         progress,
         partner,
         analysis,
+        plan,
         // The full progress view is the progress tab, which stays as it is for now.
         onShowProgress: () => document.querySelector('.tab[data-tab="progress"]').click(),
       });

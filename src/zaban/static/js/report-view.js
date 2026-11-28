@@ -3,8 +3,10 @@
   const tr = (fa) => (typeof Z.tr === "function" ? Z.tr(fa) : fa);
   const pick = (fa, en) => (typeof Z.pick === "function" ? Z.pick(fa, en) : (document.documentElement.lang === "en" ? en : fa));
   // The report view of a learner. The learner page and a teacher's student profile both use it, so the reports look the same.
-  // Three blocks, top to bottom: the status (where the learner is), the level of each skill, and the list of reports.
-  // The data comes in as one object: progress, partner (levels and criteria), items and onShowProgress.
+  // The learner's page calls it the dashboard: cards in a grid of two columns (one on a phone). In order: the progress of
+  // the lessons, the level of each skill, the learner's own status, and the plan with the tokens. The teacher's page adds
+  // the list of reports below them. The data comes in as one object: progress, partner (levels and criteria), analysis,
+  // plan, items and onShowProgress.
 
   // The five skills in the order the progress page shows them. The icons are the ones the level page uses.
   const SKILLS = [
@@ -31,35 +33,66 @@
   };
   const CRITERIA = [["range", "دامنه", "Range"], ["accuracy", "دقت", "Accuracy"], ["fluency", "روانی", "Fluency"], ["interaction", "تعامل", "Interaction"], ["coherence", "انسجام", "Coherence"]];
 
-  // Where the learner is in the lesson path, with the progress bar and the button to the full progress view.
-  function statusBlock(progress, onShowProgress) {
-    const block = Z.el("section", "report-block");
-    block.appendChild(Z.el("h2", null, tr("گزارش وضعیت")));
+  // One card of the dashboard: its title, then whatever the caller adds inside it.
+  function card(title, className) {
+    const node = Z.el("article", `dash-card${className ? ` ${className}` : ""}`);
+    node.appendChild(Z.el("h2", "dash-title", tr(title)));
+    return node;
+  }
+
+  // A whole percent, written the way the language writes it: ۴۲٪ in Persian, 42% in English.
+  function percentText(percent) {
+    const value = Math.round(Math.max(0, Math.min(100, Number(percent) || 0)));
+    return pick(`${value}٪`, `${value}%`);
+  }
+
+  // The ring of a card: a track circle and a filled circle, with the percent in the middle.
+  // The filled part is one dash of the circle's length, so the value only moves its offset.
+  const DONUT_SIZE = 132;
+  const DONUT_STROKE = 11;
+  function donut(percent) {
+    const value = Math.max(0, Math.min(100, Number(percent) || 0));
+    const radius = (DONUT_SIZE - DONUT_STROKE) / 2;
+    const length = 2 * Math.PI * radius;
+    const box = Z.el("div", "dash-donut");
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", `0 0 ${DONUT_SIZE} ${DONUT_SIZE}`);
+    svg.setAttribute("aria-hidden", "true");
+    [["donut-track", 0], ["donut-fill", length * (1 - value / 100)]].forEach(([name, offset]) => {
+      const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      circle.setAttribute("class", name);
+      circle.setAttribute("cx", String(DONUT_SIZE / 2));
+      circle.setAttribute("cy", String(DONUT_SIZE / 2));
+      circle.setAttribute("r", String(radius));
+      circle.setAttribute("stroke-width", String(DONUT_STROKE));
+      circle.setAttribute("stroke-dasharray", String(length));
+      circle.setAttribute("stroke-dashoffset", String(offset));
+      svg.appendChild(circle);
+    });
+    box.append(svg, Z.el("span", "donut-value", percentText(value)));
+    return box;
+  }
+
+  // Where the learner is in the lesson path: the percent as a ring, the step, and the button to the full progress view.
+  function progressCard(progress, onShowProgress) {
+    const block = card("پیشرفت جلسات");
     if (!progress || progress.started === false || !progress.total) {
       block.appendChild(Z.el("p", "muted", tr("هنوز برنامه‌ای برای شما تعیین نشده است.")));
       return block;
     }
-    const head = Z.el("div", "report-status-head");
-    head.append(
-      Z.el("strong", "", pick(`مرحله‌ی ${progress.current} از ${progress.total}`, `Step ${progress.current} of ${progress.total}`)),
-      Z.el("span", "", `${progress.percent}٪`),
-    );
-    const meter = Z.el("div", "bar");
-    const fill = Z.el("span");
-    fill.style.width = `${Math.min(100, Math.max(0, progress.percent))}%`;
-    meter.appendChild(fill);
+    block.appendChild(donut(progress.percent));
+    block.appendChild(Z.el("p", "dash-meta", pick(`مرحله‌ی ${progress.current} از ${progress.total}`, `Step ${progress.current} of ${progress.total}`)));
     const button = Z.el("button", "ghost", tr("مشاهده جزئیات"));
     button.type = "button";
     button.addEventListener("click", () => onShowProgress && onShowProgress());
-    block.append(head, meter, button);
+    block.appendChild(button);
     return block;
   }
 
   // One line per skill: the icon at the start, then the skill and its level on the same line.
   // Speaking also shows its five criteria inside its line, and takes the full width.
-  function levelBlock(partner) {
-    const block = Z.el("section", "report-block");
-    block.appendChild(Z.el("h2", null, tr("گزارش سطح")));
+  function levelCard(partner) {
+    const block = card("گزارش سطح");
     if (!partner || partner.started === false) {
       block.appendChild(Z.el("p", "muted", tr("سطح مهارت‌ها بعد از شروع یادگیری نشان داده می‌شود.")));
       return block;
@@ -100,14 +133,37 @@
     return box;
   }
 
-  // The button at the top of the page. It opens the newest analysis of the learner in the dialog.
-  function analysisBar(analysis) {
-    const bar = Z.el("div", "report-top");
+  // The learner's own status: the button opens the newest analysis of the learner in the dialog.
+  function analysisCard(analysis) {
+    const block = card("گزارش وضعیت من");
+    block.appendChild(Z.el("p", "muted", tr("آخرین تحلیل وضعیت یادگیری شما را نشان می‌دهد.")));
+    if (analysis && analysis.created_at) {
+      block.appendChild(Z.el("p", "dash-date", `${tr("آخرین به‌روزرسانی")}: ${Z.fmtDateTime(analysis.created_at)}`));
+    }
     const button = Z.el("button", "ghost", tr("مشاهده وضعیت من"));
     button.type = "button";
     button.addEventListener("click", () => openAnalysis(analysis));
-    bar.appendChild(button);
-    return bar;
+    block.appendChild(button);
+    return block;
+  }
+
+  // The plan and its tokens: the end date at the top, then the share of the tokens that is used, as a ring.
+  // The whole card is a link to the plan page, so a tap anywhere on it opens the plan.
+  function planCard(plan) {
+    const link = Z.el("a", "dash-card dash-plan");
+    link.href = Z.url("/plan");
+    link.appendChild(Z.el("h2", "dash-title", tr("پلن و اعتبار")));
+    const active = Boolean(plan && plan.has_active_plan);
+    const expires = active && plan.expires_at ? Z.fmtDate(plan.expires_at) : "—";
+    link.appendChild(Z.el("p", "dash-date", `${tr("تاریخ انقضای پلن")}: ${expires}`));
+    // The server sends the share of the tokens that is left; the ring shows the share that is used.
+    // Without a plan (or without data) the ring stays at zero.
+    const left = plan && plan.tokens_remaining_percent !== null && plan.tokens_remaining_percent !== undefined ? Number(plan.tokens_remaining_percent) : null;
+    const used = left === null ? 0 : Math.max(0, Math.min(100, 100 - left));
+    link.appendChild(Z.el("p", "dash-label", tr("درصد مصرف توکن")));
+    link.appendChild(donut(used));
+    if (!active) link.appendChild(Z.el("p", "muted", tr("بدون پلن فعال")));
+    return link;
   }
 
   function openAnalysis(analysis) {
@@ -125,13 +181,19 @@
   }
 
   function renderReport(box, data) {
-    box.classList.add("report-stack");
-    const blocks = [statusBlock(data.progress, data.onShowProgress), levelBlock(data.partner)];
-    // The teacher's page still shows every report in one list. The learner's own report tab does not.
-    if (data.items) blocks.push(reportList({ kind: "all", items: data.items }));
-    // Only the learner's own page has an analysis; a teacher's view leaves it out.
-    if (data.analysis !== undefined) blocks.unshift(analysisBar(data.analysis));
-    box.replaceChildren(...blocks);
+    const grid = Z.el("div", "dash-grid");
+    grid.appendChild(progressCard(data.progress, data.onShowProgress));
+    grid.appendChild(levelCard(data.partner));
+    // Only the learner's own page has an analysis and a plan; a teacher's view leaves both out.
+    if (data.analysis !== undefined) grid.appendChild(analysisCard(data.analysis));
+    if (data.plan !== undefined) grid.appendChild(planCard(data.plan));
+    // The teacher's page still shows every report in one list, across the whole width.
+    if (data.items) {
+      const list = reportList({ kind: "all", items: data.items });
+      list.classList.add("dash-wide");
+      grid.appendChild(list);
+    }
+    box.replaceChildren(grid);
   }
 
   // The reports of one kind (lesson, talk or test) are listed inside the card that starts that kind. A row opens its details.
